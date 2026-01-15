@@ -1,0 +1,54 @@
+# Cloud Build configuration for deploying to Cloud Run
+# Triggered automatically on push to main branch
+
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:latest'
+      - '.'
+
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:latest'
+
+  # Deploy container image to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'outrigger-seo-audit'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--memory'
+      - '1Gi'
+      - '--timeout'
+      - '540s'
+      - '--set-env-vars'
+      - 'MONDAY_BOARD_ID=18395774522'
+      - '--set-secrets'
+      - 'MONDAY_API_TOKEN=monday-api-token:latest'
+
+images:
+  - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

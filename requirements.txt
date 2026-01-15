@@ -1,0 +1,26 @@
+# Core dependencies
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# SEO/Content analysis
+html5lib>=1.1
+
+# Monday.com API
+gql>=3.5.0
+requests-toolbelt>=1.0.0
+
+# Google Cloud
+functions-framework>=3.5.0
+google-cloud-secret-manager>=2.18.0
+
+# Scheduling & utilities
+python-dateutil>=2.8.2
+pytz>=2024.1
+
+# Async support
+aiohttp>=3.9.0
+asyncio>=3.4.3
+
+# Logging & monitoring
+google-cloud-logging>=3.9.0
