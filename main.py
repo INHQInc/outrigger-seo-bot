@@ -218,12 +218,11 @@ class MondayClient:
     def _get_column_id(self, field_name):
         """Get column ID by common field name variations"""
         field_mappings = {
-            'issue_description': ['issue_description', 'description', 'text'],
-            'issue_type': ['issue_type', 'type', 'label'],
+            'issue_description': ['issue_description', 'description'],
+            'issue_type': ['issue_type'],
             'status': ['status'],
-            'page_url': ['page_url', 'url', 'link'],
-            'priority': ['priority'],
-            'date_found': ['date_found', 'date', 'created'],
+            'page_url': ['page_url', 'url'],
+            'date_found': ['date_found'],
         }
         for key in field_mappings.get(field_name, [field_name]):
             if key in self.columns:
@@ -239,7 +238,8 @@ class MondayClient:
         if not self.api_token:
             return None
 
-        task_title = f"[{issue['severity']}] {issue['title']} - {issue['url'][:50]}"
+        # Create a cleaner task title - details go in columns
+        task_title = f"{issue['title']} - {issue['url'].split('/')[-1][:40] or issue['url'][:40]}"
 
         # Check for duplicate
         if self.is_duplicate(task_title):
@@ -249,31 +249,34 @@ class MondayClient:
         # Build column values JSON
         column_values = {}
 
-        # Issue Description (text column)
+        # Issue Description (long_text column)
         desc_col = self._get_column_id('issue_description')
         if desc_col:
             description = ISSUE_DESCRIPTIONS.get(issue['type'], issue['title'])
-            column_values[desc_col] = description
+            col_type = self.columns.get('issue_description', {}).get('type', '')
+            if col_type == 'long_text':
+                column_values[desc_col] = {"text": description}
+            else:
+                column_values[desc_col] = description
 
-        # Issue Type (text or label column)
+        # Issue Type (text column)
         type_col = self._get_column_id('issue_type')
         if type_col:
-            column_values[type_col] = issue['type'].replace('_', ' ').title()
+            issue_type_value = issue['type'].replace('_', ' ').title()
+            col_type = self.columns.get('issue_type', {}).get('type', '')
+            if col_type == 'color':  # status/label column
+                column_values[type_col] = {"label": issue_type_value}
+            else:
+                column_values[type_col] = issue_type_value
 
-        # Page URL (text or link column)
+        # Page URL (link or text column)
         url_col = self._get_column_id('page_url')
         if url_col:
-            # For link columns, use JSON format; for text, use plain string
-            if self.columns.get('page_url', {}).get('type') == 'link':
-                column_values[url_col] = json.dumps({"url": issue['url'], "text": issue['url'][:50]})
+            col_type = self.columns.get('page_url', {}).get('type', '')
+            if col_type == 'link':
+                column_values[url_col] = {"url": issue['url'], "text": "View Page"}
             else:
                 column_values[url_col] = issue['url']
-
-        # Priority (status column) - map severity to priority
-        priority_col = self._get_column_id('priority')
-        if priority_col:
-            priority_map = {'High': 'High', 'Medium': 'Medium', 'Low': 'Low'}
-            column_values[priority_col] = {"label": priority_map.get(issue['severity'], 'Medium')}
 
         # Date Found (date column)
         date_col = self._get_column_id('date_found')
