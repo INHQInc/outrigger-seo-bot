@@ -91,20 +91,23 @@ class ConfigManager:
         """Get all brand standards"""
         return self.brand_standards
 
-    def is_check_enabled(self, check_type, check_name):
-        """Check if a specific audit check is enabled"""
-        # If no rules loaded, default to enabled (backward compatibility)
+    def is_check_enabled(self, check_type):
+        """Check if a specific audit check is enabled in Firestore config.
+
+        IMPORTANT: Only runs checks that are explicitly defined AND enabled in the admin dashboard.
+        No default/fallback checks - if it's not in Firestore, it doesn't run.
+        """
+        # If no rules loaded from Firestore, NO checks run
         if not self._loaded or not self.seo_rules:
-            return True
+            return False
 
-        # Look for a matching rule
+        # Look for a matching rule that is enabled
         for rule in self.seo_rules:
-            if rule.get('checkType') == check_type:
-                # If we find a matching type, check if enabled
-                return rule.get('enabled', True)
+            if rule.get('checkType') == check_type and rule.get('enabled', False):
+                return True
 
-        # Default to enabled if no specific rule found
-        return True
+        # Not found or not enabled = don't run
+        return False
 
 
 # Global config manager
@@ -617,8 +620,33 @@ class SitemapParser:
             ]
 
 class SEOAuditor:
-    def audit(self, url):
+    def audit(self, url, config=None):
+        """
+        Audit a URL for SEO issues.
+
+        IMPORTANT: Only runs checks that are explicitly enabled in the Firestore config.
+        If no config is provided or no rules are enabled, no checks will run.
+
+        Config checkTypes supported:
+        - title: Title tag checks (missing_title, short_title)
+        - meta: Meta description checks (missing_meta, short_meta)
+        - h1: H1 tag checks (missing_h1, multiple_h1)
+        - canonical: Canonical tag check
+        - schema: All schema checks (hotel, localbusiness, organization, faq, review, etc.)
+        - content: Content quality checks (thin_content)
+        - geo: Geo meta tags check
+        - og: Open Graph checks (og:image, og:title, og:description)
+        - alt: Image alt tag checks
+        - robots: Robots meta tag check
+        - speakable: Speakable schema check
+        """
         issues = []
+
+        # If no config provided, no checks run
+        if not config:
+            print(f"No config provided for {url} - skipping all checks")
+            return issues
+
         try:
             resp = fetch_with_scraper_api(url)
             print(f"Auditing {url} - Status: {resp.status_code}")
@@ -632,105 +660,114 @@ class SEOAuditor:
                 return issues
 
             # ============ TIER 1: CRITICAL CHECKS ============
+            # Only run if enabled in config
 
-            # Title tag (Critical)
-            if not title_tag or not title_tag.text.strip():
-                issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
-            elif len(title_tag.text.strip()) < 30:
-                issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'High', 'url': url})
+            # Title tag (Critical) - checkType: 'title'
+            if config.is_check_enabled('title'):
+                if not title_tag or not title_tag.text.strip():
+                    issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
+                elif len(title_tag.text.strip()) < 30:
+                    issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'High', 'url': url})
 
-            # Meta description (Critical)
-            meta_desc = soup.find('meta', attrs={'name': 'description'})
-            if not meta_desc or not meta_desc.get('content', '').strip():
-                issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
-            elif len(meta_desc.get('content', '').strip()) < 120:
-                issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'High', 'url': url})
+            # Meta description (Critical) - checkType: 'meta'
+            if config.is_check_enabled('meta'):
+                meta_desc = soup.find('meta', attrs={'name': 'description'})
+                if not meta_desc or not meta_desc.get('content', '').strip():
+                    issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
+                elif len(meta_desc.get('content', '').strip()) < 120:
+                    issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'High', 'url': url})
 
-            # H1 tag (Critical)
-            h1_tags = soup.find_all('h1')
-            if not h1_tags:
-                issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
-            elif len(h1_tags) > 1:
-                issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
+            # H1 tag (Critical) - checkType: 'h1'
+            if config.is_check_enabled('h1'):
+                h1_tags = soup.find_all('h1')
+                if not h1_tags:
+                    issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
+                elif len(h1_tags) > 1:
+                    issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
 
-            # Canonical tag (Critical)
-            canonical = soup.find('link', attrs={'rel': 'canonical'})
-            if not canonical or not canonical.get('href'):
-                issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
+            # Canonical tag (Critical) - checkType: 'canonical'
+            if config.is_check_enabled('canonical'):
+                canonical = soup.find('link', attrs={'rel': 'canonical'})
+                if not canonical or not canonical.get('href'):
+                    issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
 
             # ============ SCHEMA/STRUCTURED DATA CHECKS ============
+            # checkType: 'schema'
 
-            # Find all JSON-LD scripts
-            schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
+            # Only parse schemas if schema check is enabled
             schemas = []
-            for script in schema_scripts:
-                try:
-                    schema_data = json.loads(script.string)
-                    if isinstance(schema_data, list):
-                        schemas.extend(schema_data)
-                    else:
-                        schemas.append(schema_data)
-                except:
-                    pass
-
-            # Get all @type values from schemas
             schema_types = set()
-            def extract_types(obj):
-                if isinstance(obj, dict):
-                    if '@type' in obj:
-                        t = obj['@type']
-                        if isinstance(t, list):
-                            schema_types.update(t)
+            if config.is_check_enabled('schema'):
+                # Find all JSON-LD scripts
+                schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
+                for script in schema_scripts:
+                    try:
+                        schema_data = json.loads(script.string)
+                        if isinstance(schema_data, list):
+                            schemas.extend(schema_data)
                         else:
-                            schema_types.add(t)
-                    for v in obj.values():
-                        extract_types(v)
-                elif isinstance(obj, list):
-                    for item in obj:
-                        extract_types(item)
+                            schemas.append(schema_data)
+                    except:
+                        pass
 
-            for schema in schemas:
-                extract_types(schema)
-
-            print(f"Found schema types: {schema_types}")
-
-            # Check for missing schemas - Critical for hotels
-            if not schemas:
-                issues.append({'type': 'missing_schema', 'title': 'No JSON-LD structured data', 'severity': 'Critical', 'url': url})
-            else:
-                # Hotel/LodgingBusiness schema - Critical for hotel pages
-                is_hotel_page = '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower()
-                if is_hotel_page:
-                    if not any(t in schema_types for t in ['Hotel', 'LodgingBusiness', 'Resort', 'Suite', 'HotelRoom']):
-                        issues.append({'type': 'missing_hotel_schema', 'title': 'Missing Hotel/LodgingBusiness schema', 'severity': 'Critical', 'url': url})
-
-                # LocalBusiness schema - Critical for Outrigger
-                if not any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Resort']):
-                    issues.append({'type': 'missing_localbusiness_schema', 'title': 'Missing LocalBusiness/Hotel schema', 'severity': 'Critical', 'url': url})
-
-                # Check for address in schema - Critical for local SEO
-                has_address = False
-                def check_address(obj):
-                    nonlocal has_address
+                # Get all @type values from schemas
+                def extract_types(obj):
                     if isinstance(obj, dict):
-                        if 'address' in obj or 'location' in obj or 'geo' in obj:
-                            has_address = True
-                            return
+                        if '@type' in obj:
+                            t = obj['@type']
+                            if isinstance(t, list):
+                                schema_types.update(t)
+                            else:
+                                schema_types.add(t)
                         for v in obj.values():
-                            check_address(v)
+                            extract_types(v)
                     elif isinstance(obj, list):
                         for item in obj:
-                            check_address(item)
+                            extract_types(item)
 
                 for schema in schemas:
-                    check_address(schema)
+                    extract_types(schema)
 
-                if not has_address and any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Organization']):
-                    issues.append({'type': 'missing_address_schema', 'title': 'Missing address in schema', 'severity': 'Critical', 'url': url})
+                print(f"Found schema types: {schema_types}")
+
+                # Check for missing schemas - Critical for hotels
+                if not schemas:
+                    issues.append({'type': 'missing_schema', 'title': 'No JSON-LD structured data', 'severity': 'Critical', 'url': url})
+                else:
+                    # Hotel/LodgingBusiness schema - Critical for hotel pages
+                    is_hotel_page = '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower()
+                    if is_hotel_page:
+                        if not any(t in schema_types for t in ['Hotel', 'LodgingBusiness', 'Resort', 'Suite', 'HotelRoom']):
+                            issues.append({'type': 'missing_hotel_schema', 'title': 'Missing Hotel/LodgingBusiness schema', 'severity': 'Critical', 'url': url})
+
+                    # LocalBusiness schema - Critical for Outrigger
+                    if not any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Resort']):
+                        issues.append({'type': 'missing_localbusiness_schema', 'title': 'Missing LocalBusiness/Hotel schema', 'severity': 'Critical', 'url': url})
+
+                    # Check for address in schema - Critical for local SEO
+                    has_address = False
+                    def check_address(obj):
+                        nonlocal has_address
+                        if isinstance(obj, dict):
+                            if 'address' in obj or 'location' in obj or 'geo' in obj:
+                                has_address = True
+                                return
+                            for v in obj.values():
+                                check_address(v)
+                        elif isinstance(obj, list):
+                            for item in obj:
+                                check_address(item)
+
+                    for schema in schemas:
+                        check_address(schema)
+
+                    if not has_address and any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Organization']):
+                        issues.append({'type': 'missing_address_schema', 'title': 'Missing address in schema', 'severity': 'Critical', 'url': url})
 
             # ============ TIER 2: HIGH PRIORITY (GEO/LLM) ============
 
-            if schemas:
+            # Schema-related checks (part of 'schema' checkType)
+            if config.is_check_enabled('schema') and schemas:
                 # Organization schema - Important for brand identity
                 if not any(t in schema_types for t in ['Organization', 'Corporation', 'Hotel', 'Resort']):
                     issues.append({'type': 'missing_organization_schema', 'title': 'Missing Organization schema', 'severity': 'High', 'url': url})
@@ -743,97 +780,106 @@ class SEOAuditor:
                 if not any(t in schema_types for t in ['Offer', 'PriceSpecification', 'AggregateOffer']):
                     issues.append({'type': 'missing_offer_schema', 'title': 'Missing Offer/Pricing schema', 'severity': 'High', 'url': url})
 
-            # FAQ schema check - High priority for LLM optimization
-            faq_indicators = soup.find_all(['details', 'summary']) or soup.find_all(class_=re.compile(r'faq|accordion|question', re.I))
-            if faq_indicators and 'FAQPage' not in schema_types:
-                issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'High', 'url': url})
+                # FAQ schema check - High priority for LLM optimization
+                faq_indicators = soup.find_all(['details', 'summary']) or soup.find_all(class_=re.compile(r'faq|accordion|question', re.I))
+                if faq_indicators and 'FAQPage' not in schema_types:
+                    issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'High', 'url': url})
 
-            # Thin content check - Important for LLMs
-            # Get text content (excluding scripts, styles, etc.)
-            for tag in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
-                tag.decompose()
-            text_content = soup.get_text(separator=' ', strip=True)
-            word_count = len(text_content.split())
-            if word_count < 300:
-                issues.append({'type': 'thin_content', 'title': f'Thin content ({word_count} words)', 'severity': 'High', 'url': url})
+            # Thin content check - checkType: 'content'
+            if config.is_check_enabled('content'):
+                # Get text content (excluding scripts, styles, etc.)
+                soup_content = BeautifulSoup(resp.text, 'html.parser')  # Fresh parse
+                for tag in soup_content(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+                    tag.decompose()
+                text_content = soup_content.get_text(separator=' ', strip=True)
+                word_count = len(text_content.split())
+                if word_count < 300:
+                    issues.append({'type': 'thin_content', 'title': f'Thin content ({word_count} words)', 'severity': 'High', 'url': url})
 
-            # Geo meta tags - Important for location-based AI
-            geo_region = soup.find('meta', attrs={'name': 'geo.region'})
-            geo_placename = soup.find('meta', attrs={'name': 'geo.placename'})
-            if not geo_region and not geo_placename:
-                issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'High', 'url': url})
+            # Geo meta tags - checkType: 'geo'
+            if config.is_check_enabled('geo'):
+                geo_region = soup.find('meta', attrs={'name': 'geo.region'})
+                geo_placename = soup.find('meta', attrs={'name': 'geo.placename'})
+                if not geo_region and not geo_placename:
+                    issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'High', 'url': url})
 
-            # Open Graph image - High priority for social/sharing
-            og_image = soup.find('meta', attrs={'property': 'og:image'})
-            if not og_image or not og_image.get('content'):
-                issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'High', 'url': url})
+            # Open Graph checks - checkType: 'og'
+            if config.is_check_enabled('og'):
+                og_image = soup.find('meta', attrs={'property': 'og:image'})
+                if not og_image or not og_image.get('content'):
+                    issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'High', 'url': url})
 
-            # Open Graph title/description
-            og_title = soup.find('meta', attrs={'property': 'og:title'})
-            if not og_title or not og_title.get('content'):
-                issues.append({'type': 'missing_og_title', 'title': 'Missing Open Graph title', 'severity': 'Medium', 'url': url})
+                og_title = soup.find('meta', attrs={'property': 'og:title'})
+                if not og_title or not og_title.get('content'):
+                    issues.append({'type': 'missing_og_title', 'title': 'Missing Open Graph title', 'severity': 'Medium', 'url': url})
 
-            og_desc = soup.find('meta', attrs={'property': 'og:description'})
-            if not og_desc or not og_desc.get('content'):
-                issues.append({'type': 'missing_og_description', 'title': 'Missing Open Graph description', 'severity': 'Medium', 'url': url})
+                og_desc = soup.find('meta', attrs={'property': 'og:description'})
+                if not og_desc or not og_desc.get('content'):
+                    issues.append({'type': 'missing_og_description', 'title': 'Missing Open Graph description', 'severity': 'Medium', 'url': url})
 
             # ============ TIER 3: MEDIUM PRIORITY ============
 
-            # Image alt tags
-            # Re-parse since we decomposed some tags above
-            soup_fresh = BeautifulSoup(resp.text, 'html.parser')
-            images = soup_fresh.find_all('img')
-            images_without_alt = []
-            for img in images:
-                if not img.get('alt') or not img.get('alt').strip():
-                    img_src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
-                    if img_src:
-                        img_name = img_src.split('/')[-1].split('?')[0][:50]
-                        images_without_alt.append(img_name)
+            # Image alt tags - checkType: 'alt'
+            if config.is_check_enabled('alt'):
+                # Re-parse since we may have decomposed some tags above
+                soup_fresh = BeautifulSoup(resp.text, 'html.parser')
+                images = soup_fresh.find_all('img')
+                images_without_alt = []
+                for img in images:
+                    if not img.get('alt') or not img.get('alt').strip():
+                        img_src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
+                        if img_src:
+                            img_name = img_src.split('/')[-1].split('?')[0][:50]
+                            images_without_alt.append(img_name)
 
-            # Create individual issues for each image missing alt tag (limit to first 3)
-            for img_name in images_without_alt[:3]:
-                issues.append({
-                    'type': 'missing_alt_tags',
-                    'title': f'Missing alt tag: {img_name}',
-                    'severity': 'Medium',
-                    'url': url
-                })
+                # Create individual issues for each image missing alt tag (limit to first 3)
+                for img_name in images_without_alt[:3]:
+                    issues.append({
+                        'type': 'missing_alt_tags',
+                        'title': f'Missing alt tag: {img_name}',
+                        'severity': 'Medium',
+                        'url': url
+                    })
 
-            if len(images_without_alt) > 3:
-                issues.append({
-                    'type': 'missing_alt_tags',
-                    'title': f'Additional {len(images_without_alt) - 3} images missing alt tags',
-                    'severity': 'Medium',
-                    'url': url
-                })
+                if len(images_without_alt) > 3:
+                    issues.append({
+                        'type': 'missing_alt_tags',
+                        'title': f'Additional {len(images_without_alt) - 3} images missing alt tags',
+                        'severity': 'Medium',
+                        'url': url
+                    })
 
-            # Breadcrumb schema
-            if schemas and 'BreadcrumbList' not in schema_types:
+            # Breadcrumb schema - part of 'schema' checkType
+            if config.is_check_enabled('schema') and schemas and 'BreadcrumbList' not in schema_types:
                 issues.append({'type': 'missing_breadcrumb_schema', 'title': 'Missing BreadcrumbList schema', 'severity': 'Medium', 'url': url})
 
-            # Robots meta tag
-            robots = soup_fresh.find('meta', attrs={'name': 'robots'})
-            if not robots:
-                issues.append({'type': 'missing_robots', 'title': 'Missing robots meta tag', 'severity': 'Low', 'url': url})
+            # Robots meta tag - checkType: 'robots'
+            if config.is_check_enabled('robots'):
+                soup_robots = BeautifulSoup(resp.text, 'html.parser')
+                robots = soup_robots.find('meta', attrs={'name': 'robots'})
+                if not robots:
+                    issues.append({'type': 'missing_robots', 'title': 'Missing robots meta tag', 'severity': 'Low', 'url': url})
 
             # ============ GEO/LLM SPECIFIC CHECKS ============
+            # These are also part of 'schema' checkType
 
-            # Speakable schema for voice assistants
-            if schemas and 'Speakable' not in schema_types:
-                # Only flag for main content pages
-                if is_hotel_page or '/destination' in url.lower() or '/about' in url.lower():
-                    issues.append({'type': 'missing_speakable_schema', 'title': 'Missing Speakable schema for voice search', 'severity': 'Medium', 'url': url})
+            if config.is_check_enabled('schema') and schemas:
+                # Speakable schema for voice assistants - checkType: 'speakable' (or part of schema)
+                is_hotel_page = '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower()
+                if 'Speakable' not in schema_types:
+                    # Only flag for main content pages
+                    if is_hotel_page or '/destination' in url.lower() or '/about' in url.lower():
+                        issues.append({'type': 'missing_speakable_schema', 'title': 'Missing Speakable schema for voice search', 'severity': 'Medium', 'url': url})
 
-            # TouristAttraction schema for attraction pages
-            if '/attraction' in url.lower() or '/things-to-do' in url.lower() or '/activities' in url.lower():
-                if 'TouristAttraction' not in schema_types:
-                    issues.append({'type': 'missing_tourist_attraction_schema', 'title': 'Missing TouristAttraction schema', 'severity': 'High', 'url': url})
+                # TouristAttraction schema for attraction pages
+                if '/attraction' in url.lower() or '/things-to-do' in url.lower() or '/activities' in url.lower():
+                    if 'TouristAttraction' not in schema_types:
+                        issues.append({'type': 'missing_tourist_attraction_schema', 'title': 'Missing TouristAttraction schema', 'severity': 'High', 'url': url})
 
-            # Event schema for event pages
-            if '/event' in url.lower() or '/special' in url.lower() or '/offer' in url.lower():
-                if 'Event' not in schema_types:
-                    issues.append({'type': 'missing_event_schema', 'title': 'Missing Event schema', 'severity': 'High', 'url': url})
+                # Event schema for event pages
+                if '/event' in url.lower() or '/special' in url.lower() or '/offer' in url.lower():
+                    if 'Event' not in schema_types:
+                        issues.append({'type': 'missing_event_schema', 'title': 'Missing Event schema', 'severity': 'High', 'url': url})
 
             print(f"Found {len(issues)} issues for {url}")
         except Exception as e:
@@ -1175,7 +1221,8 @@ def hello_http(request):
             }
 
             for u in urls:
-                issues = auditor.audit(u['url'])
+                # Pass config_manager to auditor so it only runs enabled checks
+                issues = auditor.audit(u['url'], config=config_manager)
                 results['issues'] += len(issues)
                 for issue in issues:
                     result = monday.create_task(issue)
