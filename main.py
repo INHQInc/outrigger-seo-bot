@@ -548,12 +548,44 @@ class MondayClient:
             print(f"Error in fallback task creation: {e}")
         return None
 
+def test_monday_columns():
+    """Test endpoint to debug Monday.com column population"""
+    monday = MondayClient()
+    if not monday.init():
+        return {"error": "Monday API token not configured"}
+
+    # Create a test item with fake data
+    test_issue = {
+        'type': 'missing_meta',
+        'title': 'TEST ITEM - Delete Me',
+        'severity': 'High',
+        'url': 'https://www.outrigger.com/test-page-delete-me'
+    }
+
+    result = {
+        "columns_found": monday.columns,
+        "test_issue": test_issue,
+    }
+
+    # Try to create the test item
+    task_id = monday.create_task(test_issue)
+    result["task_created"] = task_id
+
+    return result
+
 @functions_framework.http
 def hello_http(request):
     headers = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'}
     if request.method == 'OPTIONS':
         return ('', 204, headers)
     if request.method == 'GET':
+        # Check for test mode
+        if request.args.get('test') == 'true':
+            try:
+                result = test_monday_columns()
+                return jsonify({"status": "test", "result": result}), 200, headers
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500, headers
         return jsonify({"status": "healthy", "service": "outrigger-seo-audit", "scraper_api_configured": bool(SCRAPER_API_KEY)}), 200, headers
     if request.method == 'POST':
         try:
