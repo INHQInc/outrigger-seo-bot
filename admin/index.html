@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outrigger SEO Audit Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --teal: #006272;
+            --gold: #c4a35a;
+            --sunset: #e07c3e;
+        }
+        .bg-teal { background-color: var(--teal); }
+        .bg-gold { background-color: var(--gold); }
+        .bg-sunset { background-color: var(--sunset); }
+        .text-teal { color: var(--teal); }
+        .text-gold { color: var(--gold); }
+        .text-sunset { color: var(--sunset); }
+        .border-teal { border-color: var(--teal); }
+        .border-gold { border-color: var(--gold); }
+        .hover-teal:hover { background-color: var(--teal); color: white; }
+        .tab-active { background-color: white; color: var(--teal); border-bottom: 3px solid var(--gold); }
+        .tab-inactive { background-color: rgba(255,255,255,0.1); color: white; }
+        .btn-primary { background-color: var(--teal); }
+        .btn-primary:hover { background-color: #004d5a; }
+        .btn-gold { background-color: var(--gold); }
+        .btn-gold:hover { background-color: #a8893d; }
+        .btn-sunset { background-color: var(--sunset); }
+        .btn-sunset:hover { background-color: #c46a32; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-teal text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none">
+                        <circle cx="50" cy="50" r="45" fill="#c4a35a"/>
+                        <path d="M30 70 L50 30 L70 70 Z" fill="#006272"/>
+                        <circle cx="50" cy="55" r="8" fill="white"/>
+                    </svg>
+                    <div>
+                        <h1 class="text-2xl font-bold">Outrigger SEO Audit Admin</h1>
+                        <p class="text-sm opacity-80">Configure audit rules and brand standards</p>
+                    </div>
+                </div>
+                <div id="connectionStatus" class="flex items-center gap-2 text-sm">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span>Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="bg-teal">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex gap-1">
+                <button onclick="showTab('seo')" id="tab-seo" class="px-6 py-3 font-medium transition-all tab-active rounded-t-lg">
+                    SEO/GEO Rules
+                </button>
+                <button onclick="showTab('voice')" id="tab-voice" class="px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg">
+                    Voice &amp; Tone
+                </button>
+                <button onclick="showTab('brand')" id="tab-brand" class="px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg">
+                    Brand Standards
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- SEO/GEO Rules Tab -->
+        <div id="panel-seo" class="tab-panel">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-teal">SEO/GEO Check Rules</h2>
+                    <button onclick="addSeoRule()" class="btn-primary text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span>+</span> Add Rule
+                    </button>
+                </div>
+                <div id="seoRulesList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Loading rules...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Voice & Tone Tab -->
+        <div id="panel-voice" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-teal">Voice &amp; Tone Guidelines</h2>
+                    <button onclick="addVoiceRule()" class="btn-gold text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span>+</span> Add Guideline
+                    </button>
+                </div>
+                <div id="voiceRulesList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Loading guidelines...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Brand Standards Tab -->
+        <div id="panel-brand" class="tab-panel hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-teal">Brand Standards</h2>
+                    <button onclick="addBrandStandard()" class="btn-sunset text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                        <span>+</span> Add Standard
+                    </button>
+                </div>
+                <div id="brandStandardsList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Loading standards...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal for Adding/Editing -->
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <h3 id="modalTitle" class="text-xl font-bold text-teal mb-4">Add Rule</h3>
+                <form id="modalForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                        <input type="text" id="formName" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                        <textarea id="formDescription" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required></textarea>
+                    </div>
+                    <div id="extraFields"></div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="formEnabled" class="w-4 h-4 text-teal-600 rounded" checked>
+                        <label for="formEnabled" class="text-sm text-gray-700">Enabled</label>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg flex-1">Save</button>
+                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDu4Ka6oFSUOH_7PAZW7k9-2u46SlmbBWE",
+            authDomain: "project-85d26db5-f70f-487e-b0e.firebaseapp.com",
+            projectId: "project-85d26db5-f70f-487e-b0e",
+            storageBucket: "project-85d26db5-f70f-487e-b0e.firebasestorage.app",
+            messagingSenderId: "22338575803",
+            appId: "1:22338575803:web:58fef3f290892f25c5f89e"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // State
+        let currentTab = 'seo';
+        let currentEditId = null;
+        let currentCollection = null;
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            var statusEl = document.getElementById('connectionStatus');
+            if (connected) {
+                statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-green-400"></span><span>Connected to Firestore</span>';
+            } else {
+                statusEl.innerHTML = '<span class="w-2 h-2 rounded-full bg-red-400"></span><span>Connection Error</span>';
+            }
+        }
+
+        // Tab Navigation
+        function showTab(tabName) {
+            currentTab = tabName;
+            var tabs = ['seo', 'voice', 'brand'];
+            tabs.forEach(function(tab) {
+                var tabBtn = document.getElementById('tab-' + tab);
+                var panel = document.getElementById('panel-' + tab);
+                if (tab === tabName) {
+                    tabBtn.className = 'px-6 py-3 font-medium transition-all tab-active rounded-t-lg';
+                    panel.classList.remove('hidden');
+                } else {
+                    tabBtn.className = 'px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg';
+                    panel.classList.add('hidden');
+                }
+            });
+        }
+
+        // Load SEO Rules
+        function loadSeoRules() {
+            var container = document.getElementById('seoRulesList');
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading rules...</p>';
+
+            db.collection('seoRules').orderBy('name').get()
+                .then(function(snapshot) {
+                    updateConnectionStatus(true);
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No SEO rules configured. Click "Add Rule" to create one.</p>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        html += createRuleCard(doc.id, rule, 'seo');
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error loading SEO rules:', error);
+                    updateConnectionStatus(false);
+                    container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading rules. Check console for details.</p>';
+                });
+        }
+
+        // Load Voice Rules
+        function loadVoiceRules() {
+            var container = document.getElementById('voiceRulesList');
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading guidelines...</p>';
+
+            db.collection('voiceRules').orderBy('name').get()
+                .then(function(snapshot) {
+                    updateConnectionStatus(true);
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No voice guidelines configured. Click "Add Guideline" to create one.</p>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        html += createRuleCard(doc.id, rule, 'voice');
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error loading voice rules:', error);
+                    updateConnectionStatus(false);
+                    container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading guidelines. Check console for details.</p>';
+                });
+        }
+
+        // Load Brand Standards
+        function loadBrandStandards() {
+            var container = document.getElementById('brandStandardsList');
+            container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading standards...</p>';
+
+            db.collection('brandStandards').orderBy('name').get()
+                .then(function(snapshot) {
+                    updateConnectionStatus(true);
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No brand standards configured. Click "Add Standard" to create one.</p>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var standard = doc.data();
+                        html += createRuleCard(doc.id, standard, 'brand');
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error loading brand standards:', error);
+                    updateConnectionStatus(false);
+                    container.innerHTML = '<p class="text-red-500 text-center py-8">Error loading standards. Check console for details.</p>';
+                });
+        }
+
+        // Create rule card HTML
+        function createRuleCard(id, data, type) {
+            var statusClass = data.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600';
+            var statusText = data.enabled ? 'Enabled' : 'Disabled';
+            var borderColor = type === 'seo' ? 'border-l-teal' : (type === 'voice' ? 'border-l-4 border-l-[#c4a35a]' : 'border-l-4 border-l-[#e07c3e]');
+
+            return '<div class="border rounded-lg p-4 ' + borderColor + ' border-l-4 hover:shadow-md transition-shadow">' +
+                '<div class="flex justify-between items-start">' +
+                    '<div class="flex-1">' +
+                        '<div class="flex items-center gap-3 mb-2">' +
+                            '<h3 class="font-semibold text-gray-900">' + escapeHtml(data.name) + '</h3>' +
+                            '<span class="px-2 py-1 text-xs rounded-full ' + statusClass + '">' + statusText + '</span>' +
+                        '</div>' +
+                        '<p class="text-gray-600 text-sm">' + escapeHtml(data.description) + '</p>' +
+                    '</div>' +
+                    '<div class="flex gap-2 ml-4">' +
+                        '<button onclick="editRule(\'' + type + '\', \'' + id + '\')" class="text-teal hover:bg-gray-100 p-2 rounded">Edit</button>' +
+                        '<button onclick="deleteRule(\'' + type + '\', \'' + id + '\')" class="text-red-600 hover:bg-red-50 p-2 rounded">Delete</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Modal functions
+        function openModal(title, collection) {
+            currentCollection = collection;
+            currentEditId = null;
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('formName').value = '';
+            document.getElementById('formDescription').value = '';
+            document.getElementById('formEnabled').checked = true;
+            document.getElementById('extraFields').innerHTML = '';
+            document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+            document.getElementById('modal').classList.remove('flex');
+            currentEditId = null;
+            currentCollection = null;
+        }
+
+        // Add functions
+        function addSeoRule() {
+            openModal('Add SEO/GEO Rule', 'seoRules');
+            document.getElementById('extraFields').innerHTML =
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type</label>' +
+                    '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                        '<option value="meta">Meta Tags</option>' +
+                        '<option value="content">Content Analysis</option>' +
+                        '<option value="technical">Technical SEO</option>' +
+                        '<option value="geo">GEO/AI Optimization</option>' +
+                    '</select>' +
+                '</div>';
+        }
+
+        function addVoiceRule() {
+            openModal('Add Voice Guideline', 'voiceRules');
+            document.getElementById('extraFields').innerHTML =
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">Category</label>' +
+                    '<select id="formCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                        '<option value="tone">Tone of Voice</option>' +
+                        '<option value="language">Language Style</option>' +
+                        '<option value="audience">Target Audience</option>' +
+                        '<option value="messaging">Key Messaging</option>' +
+                    '</select>' +
+                '</div>';
+        }
+
+        function addBrandStandard() {
+            openModal('Add Brand Standard', 'brandStandards');
+            document.getElementById('extraFields').innerHTML =
+                '<div>' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">Standard Type</label>' +
+                    '<select id="formStandardType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                        '<option value="visual">Visual Identity</option>' +
+                        '<option value="terminology">Terminology</option>' +
+                        '<option value="compliance">Compliance</option>' +
+                        '<option value="accessibility">Accessibility</option>' +
+                    '</select>' +
+                '</div>';
+        }
+
+        // Edit rule
+        function editRule(type, id) {
+            var collectionName = type === 'seo' ? 'seoRules' : (type === 'voice' ? 'voiceRules' : 'brandStandards');
+            currentCollection = collectionName;
+            currentEditId = id;
+
+            db.collection(collectionName).doc(id).get()
+                .then(function(doc) {
+                    if (doc.exists) {
+                        var data = doc.data();
+                        document.getElementById('modalTitle').textContent = 'Edit ' + data.name;
+                        document.getElementById('formName').value = data.name || '';
+                        document.getElementById('formDescription').value = data.description || '';
+                        document.getElementById('formEnabled').checked = data.enabled !== false;
+                        document.getElementById('extraFields').innerHTML = '';
+                        document.getElementById('modal').classList.remove('hidden');
+                        document.getElementById('modal').classList.add('flex');
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error loading rule:', error);
+                    alert('Error loading rule for editing');
+                });
+        }
+
+        // Delete rule
+        function deleteRule(type, id) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+
+            var collectionName = type === 'seo' ? 'seoRules' : (type === 'voice' ? 'voiceRules' : 'brandStandards');
+
+            db.collection(collectionName).doc(id).delete()
+                .then(function() {
+                    loadAllData();
+                })
+                .catch(function(error) {
+                    console.error('Error deleting:', error);
+                    alert('Error deleting item');
+                });
+        }
+
+        // Form submission
+        document.getElementById('modalForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            var data = {
+                name: document.getElementById('formName').value,
+                description: document.getElementById('formDescription').value,
+                enabled: document.getElementById('formEnabled').checked,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // Add extra fields based on collection
+            var checkType = document.getElementById('formCheckType');
+            var category = document.getElementById('formCategory');
+            var standardType = document.getElementById('formStandardType');
+
+            if (checkType) data.checkType = checkType.value;
+            if (category) data.category = category.value;
+            if (standardType) data.standardType = standardType.value;
+
+            var savePromise;
+            if (currentEditId) {
+                savePromise = db.collection(currentCollection).doc(currentEditId).update(data);
+            } else {
+                data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                savePromise = db.collection(currentCollection).add(data);
+            }
+
+            savePromise
+                .then(function() {
+                    closeModal();
+                    loadAllData();
+                })
+                .catch(function(error) {
+                    console.error('Error saving:', error);
+                    alert('Error saving: ' + error.message);
+                });
+        });
+
+        // Load all data
+        function loadAllData() {
+            loadSeoRules();
+            loadVoiceRules();
+            loadBrandStandards();
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAllData();
+        });
+    </script>
+</body>
+</html>
