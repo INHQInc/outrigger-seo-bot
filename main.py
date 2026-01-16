@@ -8,11 +8,94 @@ import gzip
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from flask import jsonify
+from google.cloud import firestore
 
 SITEMAP_URL = 'https://www.outrigger.com/sitemap.xml'
 DAYS_TO_CHECK = 7
 MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
+FIRESTORE_PROJECT_ID = os.environ.get('FIRESTORE_PROJECT_ID', 'project-85d26db5-f70f-487e-b0e')
+
+# Initialize Firestore client
+try:
+    db = firestore.Client(project=FIRESTORE_PROJECT_ID)
+    print(f"Connected to Firestore project: {FIRESTORE_PROJECT_ID}")
+except Exception as e:
+    print(f"Warning: Could not connect to Firestore: {e}")
+    db = None
+
+
+class ConfigManager:
+    """Manages configuration from Firestore"""
+
+    def __init__(self):
+        self.seo_rules = []
+        self.voice_rules = []
+        self.brand_standards = []
+        self._loaded = False
+
+    def load_config(self):
+        """Load all configuration from Firestore"""
+        if not db:
+            print("Firestore not available, using default config")
+            return False
+
+        try:
+            # Load SEO Rules
+            seo_docs = db.collection('seoRules').where('enabled', '==', True).stream()
+            self.seo_rules = [{'id': doc.id, **doc.to_dict()} for doc in seo_docs]
+            print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore")
+
+            # Load Voice Rules
+            voice_docs = db.collection('voiceRules').where('enabled', '==', True).stream()
+            self.voice_rules = [{'id': doc.id, **doc.to_dict()} for doc in voice_docs]
+            print(f"Loaded {len(self.voice_rules)} voice rules from Firestore")
+
+            # Load Brand Standards
+            brand_docs = db.collection('brandStandards').where('enabled', '==', True).stream()
+            self.brand_standards = [{'id': doc.id, **doc.to_dict()} for doc in brand_docs]
+            print(f"Loaded {len(self.brand_standards)} brand standards from Firestore")
+
+            self._loaded = True
+            return True
+        except Exception as e:
+            print(f"Error loading config from Firestore: {e}")
+            return False
+
+    def get_seo_rules_by_type(self, check_type):
+        """Get SEO rules filtered by check type"""
+        return [r for r in self.seo_rules if r.get('checkType') == check_type]
+
+    def get_all_seo_rules(self):
+        """Get all enabled SEO rules"""
+        return self.seo_rules
+
+    def get_voice_rules(self):
+        """Get all voice/tone guidelines"""
+        return self.voice_rules
+
+    def get_brand_standards(self):
+        """Get all brand standards"""
+        return self.brand_standards
+
+    def is_check_enabled(self, check_type, check_name):
+        """Check if a specific audit check is enabled"""
+        # If no rules loaded, default to enabled (backward compatibility)
+        if not self._loaded or not self.seo_rules:
+            return True
+
+        # Look for a matching rule
+        for rule in self.seo_rules:
+            if rule.get('checkType') == check_type:
+                # If we find a matching type, check if enabled
+                return rule.get('enabled', True)
+
+        # Default to enabled if no specific rule found
+        return True
+
+
+# Global config manager
+config_manager = ConfigManager()
 
 # Issue type descriptions for the Issue Description field - verbose for clarity
 ISSUE_DESCRIPTIONS = {
@@ -1016,9 +1099,44 @@ def hello_http(request):
                 return jsonify({"status": "test", "result": result}), 200, headers
             except Exception as e:
                 return jsonify({"error": str(e)}), 500, headers
-        return jsonify({"status": "healthy", "service": "outrigger-seo-audit", "scraper_api_configured": bool(SCRAPER_API_KEY)}), 200, headers
+
+        # Check for config endpoint - shows what rules are loaded from Firestore
+        if request.args.get('config') == 'true':
+            try:
+                config_manager.load_config()
+                return jsonify({
+                    "status": "config",
+                    "firestore_connected": db is not None,
+                    "seo_rules": len(config_manager.seo_rules),
+                    "voice_rules": len(config_manager.voice_rules),
+                    "brand_standards": len(config_manager.brand_standards),
+                    "rules_detail": {
+                        "seo": [{"name": r.get("name"), "type": r.get("checkType"), "enabled": r.get("enabled")} for r in config_manager.seo_rules],
+                        "voice": [{"name": r.get("name")} for r in config_manager.voice_rules],
+                        "brand": [{"name": r.get("name")} for r in config_manager.brand_standards]
+                    }
+                }), 200, headers
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({"error": str(e)}), 500, headers
+
+        return jsonify({
+            "status": "healthy",
+            "service": "outrigger-seo-audit",
+            "scraper_api_configured": bool(SCRAPER_API_KEY),
+            "firestore_connected": db is not None,
+            "firestore_project": FIRESTORE_PROJECT_ID,
+            "config_endpoint": "Add ?config=true to see loaded rules from admin dashboard"
+        }), 200, headers
+
     if request.method == 'POST':
         try:
+            # Load configuration from Firestore admin dashboard
+            config_loaded = config_manager.load_config()
+            print(f"Config loaded from Firestore: {config_loaded}")
+            print(f"SEO rules: {len(config_manager.seo_rules)}, Voice rules: {len(config_manager.voice_rules)}, Brand standards: {len(config_manager.brand_standards)}")
+
             parser = SitemapParser()
             auditor = SEOAuditor()
             monday = MondayClient()
@@ -1030,7 +1148,18 @@ def hello_http(request):
                 print("WARNING: SCRAPER_API_KEY not configured - may be blocked by Cloudflare")
 
             urls = parser.get_urls(days=DAYS_TO_CHECK)
-            results = {'pages': len(urls), 'issues': 0, 'tasks_created': 0, 'duplicates_skipped': 0}
+            results = {
+                'pages': len(urls),
+                'issues': 0,
+                'tasks_created': 0,
+                'duplicates_skipped': 0,
+                'config_loaded': config_loaded,
+                'rules_used': {
+                    'seo': len(config_manager.seo_rules),
+                    'voice': len(config_manager.voice_rules),
+                    'brand': len(config_manager.brand_standards)
+                }
+            }
 
             for u in urls:
                 issues = auditor.audit(u['url'])
@@ -1046,5 +1175,7 @@ def hello_http(request):
             return jsonify({"status": "success", "results": results}), 200, headers
         except Exception as e:
             print(f"Error in main handler: {e}")
+            import traceback
+            traceback.print_exc()
             return jsonify({"error": str(e)}), 500, headers
     return jsonify({"error": "Method not allowed"}), 405, headers

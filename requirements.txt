@@ -13,6 +13,7 @@ requests-toolbelt>=1.0.0
 # Google Cloud
 functions-framework>=3.5.0
 google-cloud-secret-manager>=2.18.0
+google-cloud-firestore>=2.14.0
 
 # Scheduling & utilities
 python-dateutil>=2.8.2
