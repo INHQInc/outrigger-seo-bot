@@ -48,9 +48,14 @@
                         <p class="text-sm opacity-80">Configure audit rules and brand standards</p>
                     </div>
                 </div>
-                <div id="connectionStatus" class="flex items-center gap-2 text-sm">
-                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
-                    <span>Connecting...</span>
+                <div class="flex items-center gap-4">
+                    <button onclick="seedDefaultRules()" class="bg-gold text-white px-3 py-1 rounded text-sm hover:bg-opacity-80">
+                        Load Default Rules
+                    </button>
+                    <div id="connectionStatus" class="flex items-center gap-2 text-sm">
+                        <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                        <span>Connecting...</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -332,10 +337,16 @@
                 '<div>' +
                     '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type</label>' +
                     '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
-                        '<option value="meta">Meta Tags</option>' +
-                        '<option value="content">Content Analysis</option>' +
-                        '<option value="technical">Technical SEO</option>' +
-                        '<option value="geo">GEO/AI Optimization</option>' +
+                        '<option value="title">Title Tag</option>' +
+                        '<option value="meta">Meta Description</option>' +
+                        '<option value="h1">H1 Heading</option>' +
+                        '<option value="canonical">Canonical Tag</option>' +
+                        '<option value="schema">Schema/Structured Data</option>' +
+                        '<option value="content">Content Quality</option>' +
+                        '<option value="geo">Geo Meta Tags</option>' +
+                        '<option value="og">Open Graph Tags</option>' +
+                        '<option value="alt">Image Alt Tags</option>' +
+                        '<option value="robots">Robots Meta Tag</option>' +
                     '</select>' +
                 '</div>';
         }
@@ -453,6 +464,73 @@
             loadSeoRules();
             loadVoiceRules();
             loadBrandStandards();
+        }
+
+        // Seed default rules (run once to populate)
+        async function seedDefaultRules() {
+            if (!confirm('This will add all recommended SEO/GEO rules. Continue?')) return;
+
+            const seoRules = [
+                // TIER 1: CRITICAL
+                { name: 'Title Tag Check', checkType: 'title', description: 'Checks for missing or too-short title tags. Title should be 50-60 characters and include primary keywords.', enabled: true, severity: 'Critical', tier: 1 },
+                { name: 'Meta Description Check', checkType: 'meta', description: 'Checks for missing or too-short meta descriptions. Should be 150-160 characters with compelling copy and call-to-action.', enabled: true, severity: 'Critical', tier: 1 },
+                { name: 'H1 Tag Check', checkType: 'h1', description: 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1 describing the main topic.', enabled: true, severity: 'Critical', tier: 1 },
+                { name: 'Canonical Tag Check', checkType: 'canonical', description: 'Checks for missing canonical URLs. Canonical tags prevent duplicate content issues and consolidate ranking signals.', enabled: true, severity: 'Critical', tier: 1 },
+                // TIER 2: HIGH PRIORITY
+                { name: 'Schema/Structured Data Check', checkType: 'schema', description: 'Comprehensive schema.org checks including Hotel, LocalBusiness, Organization, FAQ, Review, Offer, Breadcrumb, and Speakable schemas. Critical for AI/LLM visibility.', enabled: true, severity: 'High', tier: 2 },
+                { name: 'Thin Content Check', checkType: 'content', description: 'Flags pages with less than 300 words of content. Thin pages rank poorly and provide insufficient information for AI assistants.', enabled: true, severity: 'High', tier: 2 },
+                { name: 'Geo Meta Tags Check', checkType: 'geo', description: 'Checks for geo.region and geo.placename meta tags. Important for location-based searches and AI travel recommendations.', enabled: true, severity: 'High', tier: 2 },
+                { name: 'Open Graph Tags Check', checkType: 'og', description: 'Checks for og:image, og:title, and og:description. Essential for social sharing - posts with images get 2-3x more engagement.', enabled: true, severity: 'High', tier: 2 },
+                // TIER 3: MEDIUM
+                { name: 'Image Alt Tags Check', checkType: 'alt', description: 'Checks for missing alt text on images. Required for ADA accessibility compliance and helps images appear in search results.', enabled: true, severity: 'Medium', tier: 3 },
+                { name: 'Robots Meta Tag Check', checkType: 'robots', description: 'Checks for presence of robots meta tag. Good practice to explicitly declare indexing instructions.', enabled: false, severity: 'Low', tier: 3 },
+            ];
+
+            const voiceRules = [
+                { name: 'Warm & Welcoming', category: 'tone', description: 'Content should convey genuine Hawaiian hospitality - warm, welcoming, and relaxed. Avoid corporate jargon.', enabled: true },
+                { name: 'Adventure & Discovery', category: 'tone', description: 'Inspire a sense of adventure and discovery. Highlight unique experiences and hidden gems.', enabled: true },
+                { name: 'Authentic Local Voice', category: 'language', description: 'Use authentic Hawaiian and local terms appropriately (aloha, mahalo, ohana). Include cultural context.', enabled: true },
+                { name: 'Sensory Language', category: 'language', description: 'Use vivid sensory language - describe sounds of waves, smell of plumeria, feel of warm sand.', enabled: true },
+            ];
+
+            const brandStandards = [
+                { name: 'Brand Name Usage', standardType: 'terminology', description: 'Always use "Outrigger" not "OUTRIGGER" or "outrigger". Full name is "Outrigger Hotels & Resorts".', enabled: true },
+                { name: 'Property Names', standardType: 'terminology', description: 'Use official property names exactly as registered. Include location identifiers.', enabled: true },
+                { name: 'Color Palette', standardType: 'visual', description: 'Primary: Teal (#006272), Gold (#c4a35a), Sunset Orange (#e07c3e). Use consistently.', enabled: true },
+                { name: 'Image Standards', standardType: 'visual', description: 'Images should be high-resolution, authentic (not stock), and showcase real guest experiences.', enabled: true },
+            ];
+
+            let added = 0;
+
+            // Add SEO rules
+            for (const rule of seoRules) {
+                const existing = await db.collection('seoRules').where('checkType', '==', rule.checkType).get();
+                if (existing.empty) {
+                    await db.collection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
+                }
+            }
+
+            // Add Voice rules
+            for (const rule of voiceRules) {
+                const existing = await db.collection('voiceRules').where('name', '==', rule.name).get();
+                if (existing.empty) {
+                    await db.collection('voiceRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
+                }
+            }
+
+            // Add Brand standards
+            for (const standard of brandStandards) {
+                const existing = await db.collection('brandStandards').where('name', '==', standard.name).get();
+                if (existing.empty) {
+                    await db.collection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
+                }
+            }
+
+            alert('Added ' + added + ' new rules/standards. Refreshing...');
+            loadAllData();
         }
 
         // Initialize
