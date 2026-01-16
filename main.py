@@ -409,21 +409,28 @@ class MondayClient:
             'issue_description': ['issue_description', 'description', 'issue_desc'],
             'issue_type': ['issue_type', 'type', 'issuetype'],
             'status': ['status'],
-            'page_url': ['page_url', 'url', 'pageurl', 'link'],
+            'page_url': ['url', 'page_url', 'pageurl', 'link'],  # 'url' first since column is named "URL"
             'date_found': ['date_found', 'datefound', 'date', 'found_date'],
         }
+        print(f"Looking for field: {field_name}, mappings: {field_mappings.get(field_name)}")
+        print(f"Current columns: {list(self.columns.keys())}")
+
         # First try exact matches
         for key in field_mappings.get(field_name, [field_name]):
             if key in self.columns:
+                print(f"Found exact match: {key} -> {self.columns[key]['id']}")
                 return self.columns[key]['id']
         # Then try partial matches (but be more specific)
         for key in field_mappings.get(field_name, [field_name]):
             for col_name in self.columns:
                 # For page_url, look for columns containing 'url' but not other fields
                 if field_name == 'page_url' and 'url' in col_name:
+                    print(f"Found partial match: {col_name} -> {self.columns[col_name]['id']}")
                     return self.columns[col_name]['id']
                 elif key in col_name or col_name in key:
+                    print(f"Found partial match: {col_name} -> {self.columns[col_name]['id']}")
                     return self.columns[col_name]['id']
+        print(f"No match found for {field_name}")
         return None
 
     def is_duplicate(self, task_title):
