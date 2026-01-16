@@ -451,59 +451,19 @@ class MondayClient:
             print(f"Skipping duplicate: {task_title[:60]}...")
             return "duplicate"
 
-        # Build column values JSON
+        # Build column values JSON - only Task (name) and URL for now
         column_values = {}
 
-        # Issue Description (long_text column)
-        desc_col = self._get_column_id('issue_description')
-        if desc_col:
-            description = ISSUE_DESCRIPTIONS.get(issue['type'], issue['title'])
-            col_type = self.columns.get('issue_description', {}).get('type', '')
-            if col_type == 'long_text':
-                column_values[desc_col] = {"text": description}
-            else:
-                column_values[desc_col] = description
-
-        # Issue Type (text column)
-        type_col = self._get_column_id('issue_type')
-        if type_col:
-            issue_type_value = issue['type'].replace('_', ' ').title()
-            col_type = self.columns.get('issue_type', {}).get('type', '')
-            if col_type == 'color':  # status/label column
-                column_values[type_col] = {"label": issue_type_value}
-            else:
-                column_values[type_col] = issue_type_value
-
-        # Page URL (link or text column)
+        # Page URL (link column)
         url_col = self._get_column_id('page_url')
         print(f"Looking for Page URL column. Found: {url_col}")
         print(f"Available columns: {self.columns}")
         if url_col:
-            # Find the actual column type by ID
-            col_type = None
-            for col_name, col_info in self.columns.items():
-                if col_info['id'] == url_col:
-                    col_type = col_info['type']
-                    break
-            print(f"Page URL column ID: {url_col}, type: {col_type}, url: {issue['url']}")
             # For link columns, Monday.com requires both url and text
             column_values[url_col] = {"url": issue['url'], "text": issue['url']}
             print(f"Setting URL column value: {column_values[url_col]}")
         else:
             print(f"WARNING: Could not find Page URL column!")
-
-        # Date Found (date column)
-        date_col = self._get_column_id('date_found')
-        if date_col:
-            today = datetime.now().strftime("%Y-%m-%d")
-            column_values[date_col] = {"date": today}
-
-        # Status (status column) - use a valid status from the board
-        # Valid statuses are: Stuck (101), Working on it (108), Done (153)
-        # We'll skip setting status to avoid errors - let it use default
-        # status_col = self._get_column_id('status')
-        # if status_col:
-        #     column_values[status_col] = {"index": 108}  # "Working on it"
 
         print(f"Creating task with columns: {list(column_values.keys())}")
 
