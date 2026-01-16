@@ -479,13 +479,8 @@ class MondayClient:
                     col_type = col_info['type']
                     break
             print(f"Page URL column ID: {url_col}, type: {col_type}, url: {issue['url']}")
-            if col_type == 'link':
-                column_values[url_col] = {"url": issue['url'], "text": "View Page"}
-            elif col_type == 'text':
-                # Text columns need just the string value directly
-                column_values[url_col] = str(issue['url'])
-            else:
-                column_values[url_col] = issue['url']
+            # For link columns, Monday.com requires both url and text
+            column_values[url_col] = {"url": issue['url'], "text": issue['url']}
             print(f"Setting URL column value: {column_values[url_col]}")
         else:
             print(f"WARNING: Could not find Page URL column!")
