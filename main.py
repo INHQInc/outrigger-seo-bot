@@ -16,11 +16,37 @@ SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
 # Issue type descriptions for the Issue Description field
 ISSUE_DESCRIPTIONS = {
+    # Basic SEO
     'missing_title': 'The page is missing a <title> tag. This is critical for SEO as the title appears in search results and browser tabs.',
     'short_title': 'The page title is less than 30 characters. Titles should be 50-60 characters for optimal SEO.',
     'missing_meta': 'The page is missing a meta description. This description appears in search results and affects click-through rates.',
+    'short_meta': 'The meta description is less than 120 characters. Optimal length is 150-160 characters for search results.',
     'missing_h1': 'The page is missing an H1 heading tag. Every page should have exactly one H1 for proper content hierarchy.',
-    'multiple_h1': 'The page has multiple H1 tags. Best practice is to have exactly one H1 per page.'
+    'multiple_h1': 'The page has multiple H1 tags. Best practice is to have exactly one H1 per page.',
+
+    # Technical SEO
+    'missing_canonical': 'The page is missing a canonical tag. This helps prevent duplicate content issues and consolidates ranking signals.',
+    'missing_robots': 'The page is missing a robots meta tag. This controls how search engines crawl and index the page.',
+
+    # Open Graph
+    'missing_og_title': 'The page is missing an Open Graph title (og:title). This affects how the page appears when shared on social media.',
+    'missing_og_description': 'The page is missing an Open Graph description (og:description). This affects social media sharing previews.',
+    'missing_og_image': 'The page is missing an Open Graph image (og:image). Social shares without images get significantly less engagement.',
+
+    # Images
+    'missing_alt_tags': 'Images on this page are missing alt tags. Alt tags are important for accessibility and image SEO.',
+
+    # Schema/Structured Data
+    'missing_schema': 'The page has no JSON-LD structured data. Schema markup helps search engines understand page content.',
+    'missing_organization_schema': 'The page is missing Organization schema. This helps establish brand identity in search results.',
+    'missing_localbusiness_schema': 'The page is missing LocalBusiness schema. This is critical for local SEO and Google Maps visibility.',
+    'missing_breadcrumb_schema': 'The page is missing BreadcrumbList schema. Breadcrumbs improve navigation and search result appearance.',
+    'missing_faq_schema': 'The page has FAQ content but no FAQPage schema. FAQ schema can generate rich results in search.',
+    'missing_hotel_schema': 'The page is missing Hotel or LodgingBusiness schema. This is essential for hotel/resort pages.',
+
+    # GEO/Local SEO
+    'missing_geo_tags': 'The page is missing geo meta tags (geo.region, geo.placename). These help with local search visibility.',
+    'missing_address_schema': 'The page is missing PostalAddress in schema. Complete address info improves local SEO.',
 }
 
 def fetch_with_scraper_api(url):
@@ -117,29 +143,175 @@ class SEOAuditor:
             soup = BeautifulSoup(resp.text, 'html.parser')
 
             # Check if we got a real page (not Cloudflare challenge)
-            title = soup.find('title')
-            if title and 'Just a moment' in title.text:
+            title_tag = soup.find('title')
+            if title_tag and 'Just a moment' in title_tag.text:
                 print(f"Warning: Got Cloudflare challenge page for {url}")
                 return issues
 
-            if not title or not title.text.strip():
+            # ============ BASIC SEO CHECKS ============
+
+            # Title tag
+            if not title_tag or not title_tag.text.strip():
                 issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'High', 'url': url})
-            elif len(title.text.strip()) < 30:
+            elif len(title_tag.text.strip()) < 30:
                 issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'Medium', 'url': url})
 
+            # Meta description
             meta_desc = soup.find('meta', attrs={'name': 'description'})
             if not meta_desc or not meta_desc.get('content', '').strip():
                 issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'High', 'url': url})
+            elif len(meta_desc.get('content', '').strip()) < 120:
+                issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'Medium', 'url': url})
 
+            # H1 tags
             h1_tags = soup.find_all('h1')
             if not h1_tags:
                 issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Medium', 'url': url})
             elif len(h1_tags) > 1:
                 issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
 
+            # ============ TECHNICAL SEO CHECKS ============
+
+            # Canonical tag
+            canonical = soup.find('link', attrs={'rel': 'canonical'})
+            if not canonical or not canonical.get('href'):
+                issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Medium', 'url': url})
+
+            # Robots meta tag
+            robots = soup.find('meta', attrs={'name': 'robots'})
+            if not robots:
+                issues.append({'type': 'missing_robots', 'title': 'Missing robots meta tag', 'severity': 'Low', 'url': url})
+
+            # ============ OPEN GRAPH CHECKS ============
+
+            og_title = soup.find('meta', attrs={'property': 'og:title'})
+            if not og_title or not og_title.get('content'):
+                issues.append({'type': 'missing_og_title', 'title': 'Missing Open Graph title', 'severity': 'Medium', 'url': url})
+
+            og_desc = soup.find('meta', attrs={'property': 'og:description'})
+            if not og_desc or not og_desc.get('content'):
+                issues.append({'type': 'missing_og_description', 'title': 'Missing Open Graph description', 'severity': 'Medium', 'url': url})
+
+            og_image = soup.find('meta', attrs={'property': 'og:image'})
+            if not og_image or not og_image.get('content'):
+                issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'Medium', 'url': url})
+
+            # ============ IMAGE ALT TAG CHECKS ============
+
+            images = soup.find_all('img')
+            images_without_alt = []
+            for img in images:
+                if not img.get('alt') or not img.get('alt').strip():
+                    # Get image source/name
+                    img_src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
+                    if img_src:
+                        # Extract filename from URL
+                        img_name = img_src.split('/')[-1].split('?')[0][:50]
+                        images_without_alt.append(img_name)
+
+            # Create individual issues for each image missing alt tag (limit to first 5)
+            for img_name in images_without_alt[:5]:
+                issues.append({
+                    'type': 'missing_alt_tags',
+                    'title': f'Missing alt tag: {img_name}',
+                    'severity': 'Medium',
+                    'url': url
+                })
+
+            # If more than 5 images missing alt, add a summary
+            if len(images_without_alt) > 5:
+                issues.append({
+                    'type': 'missing_alt_tags',
+                    'title': f'Additional {len(images_without_alt) - 5} images missing alt tags',
+                    'severity': 'Medium',
+                    'url': url
+                })
+
+            # ============ SCHEMA/STRUCTURED DATA CHECKS ============
+
+            # Find all JSON-LD scripts
+            schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
+            schemas = []
+            for script in schema_scripts:
+                try:
+                    schema_data = json.loads(script.string)
+                    if isinstance(schema_data, list):
+                        schemas.extend(schema_data)
+                    else:
+                        schemas.append(schema_data)
+                except:
+                    pass
+
+            # Get all @type values from schemas
+            schema_types = set()
+            def extract_types(obj):
+                if isinstance(obj, dict):
+                    if '@type' in obj:
+                        t = obj['@type']
+                        if isinstance(t, list):
+                            schema_types.update(t)
+                        else:
+                            schema_types.add(t)
+                    for v in obj.values():
+                        extract_types(v)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        extract_types(item)
+
+            for schema in schemas:
+                extract_types(schema)
+
+            print(f"Found schema types: {schema_types}")
+
+            # Check for missing schemas
+            if not schemas:
+                issues.append({'type': 'missing_schema', 'title': 'No JSON-LD structured data', 'severity': 'High', 'url': url})
+            else:
+                # Organization schema
+                if not any(t in schema_types for t in ['Organization', 'Corporation', 'Hotel', 'Resort']):
+                    issues.append({'type': 'missing_organization_schema', 'title': 'Missing Organization schema', 'severity': 'Medium', 'url': url})
+
+                # LocalBusiness/Hotel schema - important for Outrigger
+                if not any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Resort']):
+                    issues.append({'type': 'missing_localbusiness_schema', 'title': 'Missing LocalBusiness/Hotel schema', 'severity': 'High', 'url': url})
+
+                # Breadcrumb schema
+                if 'BreadcrumbList' not in schema_types:
+                    issues.append({'type': 'missing_breadcrumb_schema', 'title': 'Missing BreadcrumbList schema', 'severity': 'Low', 'url': url})
+
+                # Check for Hotel-specific schema on hotel pages
+                if '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower():
+                    if not any(t in schema_types for t in ['Hotel', 'LodgingBusiness', 'Resort', 'Suite', 'HotelRoom']):
+                        issues.append({'type': 'missing_hotel_schema', 'title': 'Missing Hotel/LodgingBusiness schema', 'severity': 'High', 'url': url})
+
+                # Check for address in schema (for local SEO)
+                has_address = False
+                for schema in schemas:
+                    if isinstance(schema, dict):
+                        if 'address' in schema or 'location' in schema:
+                            has_address = True
+                            break
+                if not has_address and any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Organization']):
+                    issues.append({'type': 'missing_address_schema', 'title': 'Missing address in schema', 'severity': 'Medium', 'url': url})
+
+            # FAQ schema check - only if page has FAQ content
+            faq_indicators = soup.find_all(['details', 'summary']) or soup.find_all(class_=re.compile(r'faq|accordion', re.I))
+            if faq_indicators and 'FAQPage' not in schema_types:
+                issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'Low', 'url': url})
+
+            # ============ GEO/LOCAL SEO CHECKS ============
+
+            # Geo meta tags
+            geo_region = soup.find('meta', attrs={'name': 'geo.region'})
+            geo_placename = soup.find('meta', attrs={'name': 'geo.placename'})
+            if not geo_region and not geo_placename:
+                issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'Low', 'url': url})
+
             print(f"Found {len(issues)} issues for {url}")
         except Exception as e:
             print(f"Error auditing {url}: {e}")
+            import traceback
+            traceback.print_exc()
         return issues
 
 class MondayClient:
@@ -218,15 +390,21 @@ class MondayClient:
     def _get_column_id(self, field_name):
         """Get column ID by common field name variations"""
         field_mappings = {
-            'issue_description': ['issue_description', 'description'],
-            'issue_type': ['issue_type'],
+            'issue_description': ['issue_description', 'description', 'issue_desc'],
+            'issue_type': ['issue_type', 'type', 'issuetype'],
             'status': ['status'],
-            'page_url': ['page_url', 'url'],
-            'date_found': ['date_found'],
+            'page_url': ['page_url', 'url', 'pageurl', 'link', 'page'],
+            'date_found': ['date_found', 'datefound', 'date', 'found_date'],
         }
+        # First try exact matches
         for key in field_mappings.get(field_name, [field_name]):
             if key in self.columns:
                 return self.columns[key]['id']
+        # Then try partial matches
+        for key in field_mappings.get(field_name, [field_name]):
+            for col_name in self.columns:
+                if key in col_name or col_name in key:
+                    return self.columns[col_name]['id']
         return None
 
     def is_duplicate(self, task_title):
@@ -272,7 +450,13 @@ class MondayClient:
         # Page URL (link or text column)
         url_col = self._get_column_id('page_url')
         if url_col:
-            col_type = self.columns.get('page_url', {}).get('type', '')
+            # Find the actual column type by ID
+            col_type = None
+            for col_name, col_info in self.columns.items():
+                if col_info['id'] == url_col:
+                    col_type = col_info['type']
+                    break
+            print(f"Page URL column ID: {url_col}, type: {col_type}")
             if col_type == 'link':
                 column_values[url_col] = {"url": issue['url'], "text": "View Page"}
             else:

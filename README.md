@@ -1,14 +1,100 @@
-# Outrigger SEO Audit System
+# Outrigger SEO & GEO Audit System
 
-Automated weekly SEO audit system for outrigger.com that creates tasks in Monday.com for any issues found.
+Automated SEO and GEO auditing system for outrigger.com that runs weekly, identifies issues, and creates tasks in Monday.com for tracking and resolution.
 
 ## Overview
 
-This system:
-1. Parses outrigger.com sitemap to find pages updated in the last 7 days
-2. Runs SEO audits checking for title, meta description, and H1 tag issues
-3. Creates tasks in Monday.com board for any issues found
-4. Runs automatically every Thursday at 9:00 AM (Los Angeles time)
+This Cloud Run function:
+1. Parses the outrigger.com sitemap for pages updated in the last 7 days
+2. Audits each page for 18+ SEO/GEO issues
+3. Creates tasks in Monday.com with detailed issue information
+4. Runs automatically every Thursday at 9 AM via Cloud Scheduler
+
+## SEO/GEO Checks Performed
+
+### Basic SEO (6 checks)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Missing page title | High | Page has no `<title>` tag |
+| Title too short | Medium | Title is less than 30 characters |
+| Missing meta description | High | No meta description tag |
+| Meta description too short | Medium | Meta description under 120 characters |
+| Missing H1 tag | Medium | Page has no H1 heading |
+| Multiple H1 tags | Low | Page has more than one H1 |
+
+### Technical SEO (2 checks)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Missing canonical tag | Medium | No canonical URL specified |
+| Missing robots meta tag | Low | No robots directive |
+
+### Open Graph / Social (3 checks)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Missing og:title | Medium | No Open Graph title for social sharing |
+| Missing og:description | Medium | No Open Graph description |
+| Missing og:image | Medium | No Open Graph image |
+
+### Image Accessibility (1 check)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Missing alt tags | Medium | Images without alt text (lists individual filenames, up to 5 per page) |
+
+### Schema/Structured Data (6 checks)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| No JSON-LD structured data | High | Page has no schema markup |
+| Missing Organization schema | Medium | No Organization/Corporation schema |
+| Missing LocalBusiness/Hotel schema | High | No LocalBusiness or Hotel schema (critical for hotels) |
+| Missing BreadcrumbList schema | Low | No breadcrumb structured data |
+| Missing Hotel schema on hotel pages | High | Hotel/room pages without Hotel/LodgingBusiness schema |
+| Missing address in schema | Medium | Schema exists but no address/location |
+
+### GEO/Local SEO (1 check)
+| Check | Severity | Description |
+|-------|----------|-------------|
+| Missing geo meta tags | Low | No geo.region or geo.placename tags |
+
+### Conditional Checks
+| Check | Severity | Description |
+|-------|----------|-------------|
+| FAQ content without FAQPage schema | Low | Page has FAQ elements but no FAQ schema |
+
+## Architecture
+
+```
+┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Cloud Scheduler    │────▶│  Cloud Run       │────▶│  Monday.com     │
+│  (Weekly Thursday)  │     │  Function        │     │  Board          │
+└─────────────────────┘     └──────────────────┘     └─────────────────┘
+                                    │
+                                    ▼
+                            ┌──────────────────┐
+                            │  ScraperAPI      │
+                            │  (Cloudflare     │
+                            │   bypass)        │
+                            └──────────────────┘
+                                    │
+                                    ▼
+                            ┌──────────────────┐
+                            │  outrigger.com   │
+                            │  sitemap.xml     │
+                            └──────────────────┘
+```
+
+## Monday.com Board Columns
+
+The system populates these columns in your Monday.com board:
+
+| Column | Type | Content |
+|--------|------|---------|
+| Task | Name | Issue title + page identifier |
+| Issue Description | Long Text | Detailed explanation of the issue and how to fix it |
+| Issue Type | Text | Category of the issue (e.g., "Missing Meta", "Missing Alt Tags") |
+| Page URL | Link/Text | Full URL of the affected page |
+| Date Found | Date | Date the issue was detected |
+| Status | Status | Set to "Open" by default |
+| Person | People | Left empty for manual assignment |
 
 ## Deployment Details
 
@@ -31,158 +117,81 @@ This system:
 
 ### Monday.com Integration
 - **Board ID**: `18395774522`
-- **API Token**: Stored as environment variable `MONDAY_API_TOKEN`
+- **Board Name**: SEO & GEO Weekly Audit
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `MONDAY_API_TOKEN` | Monday.com API token for authentication |
-| `MONDAY_BOARD_ID` | (Optional) Monday.com board ID, defaults to 18395774522 |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `MONDAY_API_TOKEN` | Yes | Monday.com API token for authentication |
+| `MONDAY_BOARD_ID` | No | Monday.com board ID (defaults to 18395774522) |
+| `SCRAPER_API_KEY` | Yes | ScraperAPI key for bypassing Cloudflare protection |
 
-## Files
+## Features
+
+### Duplicate Detection
+The system checks for existing items in Monday.com before creating new tasks. If an issue with the same title already exists, it's skipped to prevent duplicate entries.
+
+### Cloudflare Bypass
+Uses ScraperAPI to bypass Cloudflare protection on outrigger.com, ensuring reliable page fetching.
+
+### Dynamic Column Mapping
+Automatically detects Monday.com board column IDs and types, adapting to different column configurations.
+
+### Individual Image Tracking
+When images are missing alt tags, each image filename is listed individually (up to 5 per page), making it easy to identify and fix specific images.
+
+### Severity Levels
+Issues are categorized by severity:
+- **High**: Critical SEO issues that significantly impact rankings
+- **Medium**: Important issues that should be addressed
+- **Low**: Minor issues or best practice recommendations
+
+## File Structure
 
 ```
 outrigger-seo-audit/
-├── main.py              # Cloud Function entry point
+├── main.py              # Main Cloud Function code
 ├── requirements.txt     # Python dependencies
-├── .gitignore          # Git ignore patterns
-├── .gcloudignore       # GCloud deploy ignore patterns
-└── README.md           # This file
+├── Dockerfile          # Container configuration
+├── cloudbuild.yaml     # CI/CD configuration
+├── deploy.sh           # Deployment script
+├── README.md           # This file
+├── .gitignore          # Git ignore rules
+├── .gcloudignore       # Cloud ignore rules
+├── config/             # Configuration files
+├── src/                # Additional source files
+└── tests/              # Test files
 ```
 
-## main.py Code
+## API Endpoints
 
-```python
-import functions_framework
-import os
-import json
-import time
-import requests
-from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
-import xml.etree.ElementTree as ET
-from flask import jsonify
+### GET /
+Health check endpoint.
 
-SITEMAP_URL = 'https://www.outrigger.com/sitemap.xml'
-DAYS_TO_CHECK = 7
-MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
-
-class SitemapParser:
-    def __init__(self, sitemap_url=SITEMAP_URL):
-        self.sitemap_url = sitemap_url
-
-    def get_urls(self, days=7):
-        try:
-            resp = requests.get(self.sitemap_url, timeout=30)
-            root = ET.fromstring(resp.content)
-            ns = {'sm': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
-            cutoff = datetime.now() - timedelta(days=days)
-            urls = []
-            for url in root.findall('.//sm:url', ns):
-                loc = url.find('sm:loc', ns)
-                lastmod = url.find('sm:lastmod', ns)
-                if loc is not None:
-                    url_data = {'url': loc.text}
-                    if lastmod is not None:
-                        try:
-                            mod_date = datetime.fromisoformat(lastmod.text.replace('Z', '+00:00'))
-                            if mod_date.replace(tzinfo=None) > cutoff:
-                                urls.append(url_data)
-                        except:
-                            urls.append(url_data)
-            return urls[:20]
-        except Exception as e:
-            print(f"Error parsing sitemap: {e}")
-            return []
-
-class SEOAuditor:
-    def audit(self, url):
-        issues = []
-        try:
-            resp = requests.get(url, timeout=30)
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            title = soup.find('title')
-            if not title or not title.text.strip():
-                issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'High', 'url': url})
-            elif len(title.text.strip()) < 30:
-                issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'Medium', 'url': url})
-            meta_desc = soup.find('meta', attrs={'name': 'description'})
-            if not meta_desc or not meta_desc.get('content', '').strip():
-                issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'High', 'url': url})
-            h1_tags = soup.find_all('h1')
-            if not h1_tags:
-                issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Medium', 'url': url})
-            elif len(h1_tags) > 1:
-                issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
-        except Exception as e:
-            print(f"Error auditing {url}: {e}")
-        return issues
-
-class MondayClient:
-    def __init__(self):
-        self.api_token = os.environ.get('MONDAY_API_TOKEN')
-        self.board_id = MONDAY_BOARD_ID
-        self.api_url = "https://api.monday.com/v2"
-
-    def init(self):
-        return self.api_token is not None
-
-    def create_task(self, title):
-        if not self.api_token:
-            return None
-        query = '''mutation ($board_id: ID!, $item_name: String!) {
-            create_item (board_id: $board_id, item_name: $item_name) { id }
-        }'''
-        variables = {"board_id": self.board_id, "item_name": title}
-        headers = {"Authorization": self.api_token, "Content-Type": "application/json"}
-        try:
-            resp = requests.post(self.api_url, json={"query": query, "variables": variables}, headers=headers, timeout=30)
-            data = resp.json()
-            if 'data' in data and 'create_item' in data['data']:
-                return data['data']['create_item']['id']
-        except Exception as e:
-            print(f"Error creating Monday task: {e}")
-        return None
-
-@functions_framework.http
-def hello_http(request):
-    headers = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'}
-    if request.method == 'OPTIONS':
-        return ('', 204, headers)
-    if request.method == 'GET':
-        return jsonify({"status": "healthy", "service": "outrigger-seo-audit"}), 200, headers
-    if request.method == 'POST':
-        try:
-            parser = SitemapParser()
-            auditor = SEOAuditor()
-            monday = MondayClient()
-            if not monday.init():
-                return jsonify({"error": "Monday API token not configured"}), 500, headers
-            urls = parser.get_urls(days=DAYS_TO_CHECK)
-            results = {'pages': len(urls), 'issues': 0, 'tasks_created': 0}
-            for u in urls:
-                issues = auditor.audit(u['url'])
-                results['issues'] += len(issues)
-                for issue in issues:
-                    task_title = f"[{issue['severity']}] {issue['title']} - {u['url'][:50]}"
-                    if monday.create_task(task_title):
-                        results['tasks_created'] += 1
-                time.sleep(0.5)
-            return jsonify({"status": "success", "results": results}), 200, headers
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500, headers
-    return jsonify({"error": "Method not allowed"}), 405, headers
+**Response:**
+```json
+{
+  "status": "healthy",
+  "service": "outrigger-seo-audit",
+  "scraper_api_configured": true
+}
 ```
 
-## requirements.txt
+### POST /
+Trigger an audit run.
 
-```
-functions-framework==3.*
-requests==2.31.*
-beautifulsoup4==4.12.*
-lxml==5.1.*
-flask==3.0.*
+**Response:**
+```json
+{
+  "status": "success",
+  "results": {
+    "pages": 20,
+    "issues": 45,
+    "tasks_created": 42,
+    "duplicates_skipped": 3
+  }
+}
 ```
 
 ## Deployment Commands
@@ -197,7 +206,7 @@ gcloud functions deploy outrigger-seo-audit \
   --entry-point=hello_http \
   --trigger-http \
   --allow-unauthenticated \
-  --set-env-vars MONDAY_API_TOKEN=your-token-here
+  --set-env-vars MONDAY_API_TOKEN=your-token-here,SCRAPER_API_KEY=your-key-here
 ```
 
 ### Create Cloud Scheduler Job
@@ -207,24 +216,64 @@ gcloud scheduler jobs create http outrigger-seo-audit-weekly \
   --schedule="0 9 * * 4" \
   --time-zone="America/Los_Angeles" \
   --uri="https://outrigger-seo-audit-22338575803.us-central1.run.app" \
-  --http-method=POST \
-  --oidc-service-account-email=22338575803-compute@developer.gserviceaccount.com
+  --http-method=POST
 ```
 
-### Test the Function
+### Test the Function (Force Run)
 ```bash
 curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app
 ```
 
-## SEO Checks Performed
+## Dependencies
 
-| Check | Severity | Description |
-|-------|----------|-------------|
-| Missing Title | High | Page has no `<title>` tag |
-| Short Title | Medium | Title is less than 30 characters |
-| Missing Meta Description | High | No meta description tag |
-| Missing H1 | Medium | Page has no `<h1>` tag |
-| Multiple H1 | Low | Page has more than one `<h1>` tag |
+```
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+html5lib>=1.1
+gql>=3.5.0
+requests-toolbelt>=1.0.0
+functions-framework>=3.5.0
+google-cloud-secret-manager>=2.18.0
+python-dateutil>=2.8.2
+pytz>=2024.1
+aiohttp>=3.9.0
+google-cloud-logging>=3.9.0
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"Not authenticated" from Monday.com**
+   - Regenerate your Monday.com API token
+   - Ensure the token has write permissions
+   - Update the `MONDAY_API_TOKEN` environment variable
+
+2. **"Cloudflare challenge page" in logs**
+   - Check ScraperAPI key is configured
+   - Verify ScraperAPI account has credits
+   - Check the `SCRAPER_API_KEY` environment variable
+
+3. **Columns not populating**
+   - Check column names match expected patterns
+   - Review logs for "Found columns:" message
+   - Ensure column types are compatible (text, long_text, link, date, status)
+
+4. **No pages found in sitemap**
+   - Verify sitemap URL is accessible
+   - Check if pages have been updated in the last 7 days
+   - Review logs for sitemap parsing errors
+
+### Viewing Logs
+
+**Via Google Cloud Console:**
+Cloud Run > outrigger-seo-audit > Observability > Logs
+
+**Via CLI:**
+```bash
+gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=outrigger-seo-audit" --limit=100
+```
 
 ## Monitoring
 
@@ -232,12 +281,34 @@ curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app
 - **Scheduler Logs**: Google Cloud Console > Cloud Scheduler > outrigger-seo-audit-weekly
 - **Monday.com Board**: Check board ID 18395774522 for created tasks
 
-## Troubleshooting
+## Issue Descriptions
 
-1. **Function not running**: Check Cloud Scheduler job status and logs
-2. **No tasks created**: Verify MONDAY_API_TOKEN environment variable is set
-3. **API errors**: Check Cloud Run logs for detailed error messages
+The system provides detailed descriptions for each issue type to help developers understand and fix the problems:
 
-## Created
-- **Date**: January 15, 2026
-- **By**: Claude Code Assistant
+| Issue Type | Description |
+|------------|-------------|
+| missing_title | The page is missing a `<title>` tag. This is critical for SEO as the title appears in search results and browser tabs. |
+| short_title | The page title is less than 30 characters. Titles should be 50-60 characters for optimal SEO. |
+| missing_meta | The page is missing a meta description. This description appears in search results and affects click-through rates. |
+| short_meta | The meta description is less than 120 characters. Optimal length is 150-160 characters for search results. |
+| missing_canonical | The page is missing a canonical tag. This helps prevent duplicate content issues and consolidates ranking signals. |
+| missing_og_title | The page is missing an Open Graph title (og:title). This affects how the page appears when shared on social media. |
+| missing_og_image | The page is missing an Open Graph image (og:image). Social shares without images get significantly less engagement. |
+| missing_alt_tags | Images on this page are missing alt tags. Alt tags are important for accessibility and image SEO. |
+| missing_schema | The page has no JSON-LD structured data. Schema markup helps search engines understand page content. |
+| missing_localbusiness_schema | The page is missing LocalBusiness schema. This is critical for local SEO and Google Maps visibility. |
+| missing_hotel_schema | The page is missing Hotel or LodgingBusiness schema. This is essential for hotel/resort pages. |
+
+## Version History
+
+- **v1.0** (Jan 15, 2026): Initial release with basic SEO checks
+- **v2.0** (Jan 16, 2026): Added ScraperAPI integration for Cloudflare bypass
+- **v3.0** (Jan 16, 2026): Added comprehensive SEO/GEO checks (18+ checks), duplicate detection, dynamic column mapping, individual image alt tag tracking
+
+## License
+
+Proprietary - Outrigger Hotels & Resorts
+
+## Support
+
+Contact the development team for support or feature requests.
