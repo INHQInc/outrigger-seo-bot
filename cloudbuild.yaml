@@ -2,6 +2,13 @@
 # Triggered automatically on push to main branch
 
 steps:
+  # Upload admin dashboard to Cloud Storage
+  - name: 'gcr.io/cloud-builders/gsutil'
+    args:
+      - 'cp'
+      - 'admin/index.html'
+      - 'gs://outrigger-audit-admin/index.html'
+
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args:
