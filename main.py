@@ -9,12 +9,14 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from flask import jsonify
 from google.cloud import firestore
+import anthropic
 
 SITEMAP_URL = 'https://www.outrigger.com/sitemap.xml'
 DAYS_TO_CHECK = 7
 MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 FIRESTORE_PROJECT_ID = os.environ.get('FIRESTORE_PROJECT_ID', 'project-85d26db5-f70f-487e-b0e')
+ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
 
 # Initialize Firestore client
 try:
@@ -23,6 +25,182 @@ try:
 except Exception as e:
     print(f"Warning: Could not connect to Firestore: {e}")
     db = None
+
+# Initialize Anthropic client
+anthropic_client = None
+if ANTHROPIC_API_KEY:
+    try:
+        anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        print("Anthropic client initialized successfully")
+    except Exception as e:
+        print(f"Warning: Could not initialize Anthropic client: {e}")
+
+
+class LLMAuditor:
+    """
+    LLM-powered SEO/GEO auditor that evaluates pages against natural language rules.
+
+    Instead of hardcoded checks, this uses Claude to interpret rules written in plain English
+    and determine if a page passes or fails each rule.
+    """
+
+    def __init__(self, client=None):
+        self.client = client or anthropic_client
+        if not self.client:
+            print("Warning: LLMAuditor initialized without Anthropic client")
+
+    def audit_page_with_rules(self, html_content: str, url: str, rules: list) -> list:
+        """
+        Audit a page against a list of rules using Claude.
+
+        Args:
+            html_content: The raw HTML of the page
+            url: The URL being audited
+            rules: List of rule dicts with 'name', 'prompt', 'severity', etc.
+
+        Returns:
+            List of issues found (each issue is a dict)
+        """
+        if not self.client:
+            print("LLMAuditor: No Anthropic client available, skipping LLM audit")
+            return []
+
+        if not rules:
+            print("LLMAuditor: No rules provided, skipping audit")
+            return []
+
+        # Truncate HTML if too long (Claude has context limits)
+        max_html_length = 50000
+        if len(html_content) > max_html_length:
+            html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
+
+        # Build the rules section for the prompt
+        rules_text = ""
+        for i, rule in enumerate(rules, 1):
+            rules_text += f"""
+Rule {i}: {rule.get('name', 'Unnamed Rule')}
+Severity: {rule.get('severity', 'Medium')}
+Check: {rule.get('prompt', rule.get('description', 'No prompt provided'))}
+"""
+
+        # Create the audit prompt
+        system_prompt = """You are an expert SEO and GEO (Generative Engine Optimization) auditor for hospitality websites.
+Your task is to analyze HTML pages and determine if they pass or fail specific SEO/GEO rules.
+
+For each rule, you must analyze the HTML and determine:
+1. PASS - The page meets the requirements of the rule
+2. FAIL - The page does not meet the requirements
+
+When a rule FAILs, provide:
+- A specific, actionable issue title (short, ~50 chars)
+- A detailed description explaining why it failed and how to fix it
+
+Be thorough but accurate - only flag real issues. Consider the context of hospitality/hotel websites."""
+
+        user_prompt = f"""Analyze this webpage and check it against the following SEO/GEO rules.
+
+URL: {url}
+
+=== HTML CONTENT ===
+{html_content}
+=== END HTML ===
+
+=== RULES TO CHECK ===
+{rules_text}
+=== END RULES ===
+
+For each rule, respond with a JSON array. Each element should be:
+- For PASS: {{"rule_index": N, "status": "pass"}}
+- For FAIL: {{"rule_index": N, "status": "fail", "title": "Short issue title", "description": "Detailed description with why it failed and how to fix it"}}
+
+IMPORTANT: Return ONLY the JSON array, no other text. Example:
+[
+  {{"rule_index": 1, "status": "pass"}},
+  {{"rule_index": 2, "status": "fail", "title": "Missing meta description", "description": "The page lacks a meta description tag..."}}
+]"""
+
+        try:
+            print(f"LLMAuditor: Sending {len(rules)} rules to Claude for {url}")
+
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4000,
+                system=system_prompt,
+                messages=[{"role": "user", "content": user_prompt}]
+            )
+
+            # Parse the response
+            response_text = response.content[0].text.strip()
+            print(f"LLMAuditor: Received response ({len(response_text)} chars)")
+
+            # Try to extract JSON from the response
+            # Handle case where model might include markdown code blocks
+            if "```json" in response_text:
+                response_text = response_text.split("```json")[1].split("```")[0].strip()
+            elif "```" in response_text:
+                response_text = response_text.split("```")[1].split("```")[0].strip()
+
+            results = json.loads(response_text)
+
+            # Convert results to issues list
+            issues = []
+            for result in results:
+                if result.get('status') == 'fail':
+                    rule_idx = result.get('rule_index', 1) - 1
+                    if 0 <= rule_idx < len(rules):
+                        rule = rules[rule_idx]
+                        issues.append({
+                            'type': f"llm_{rule.get('checkType', 'custom')}",
+                            'title': result.get('title', rule.get('name', 'SEO Issue')),
+                            'severity': rule.get('severity', 'Medium'),
+                            'url': url,
+                            'description': result.get('description', ''),
+                            'rule_name': rule.get('name', '')
+                        })
+
+            print(f"LLMAuditor: Found {len(issues)} issues for {url}")
+            return issues
+
+        except json.JSONDecodeError as e:
+            print(f"LLMAuditor: Failed to parse JSON response: {e}")
+            print(f"Response was: {response_text[:500]}...")
+            return []
+        except Exception as e:
+            print(f"LLMAuditor: Error during audit: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    def batch_audit(self, html_content: str, url: str, rules: list, batch_size: int = 5) -> list:
+        """
+        Audit a page in batches to handle many rules efficiently.
+
+        Args:
+            html_content: The raw HTML of the page
+            url: The URL being audited
+            rules: List of all rules to check
+            batch_size: Number of rules to check per API call
+
+        Returns:
+            List of all issues found
+        """
+        all_issues = []
+
+        # Process rules in batches
+        for i in range(0, len(rules), batch_size):
+            batch = rules[i:i + batch_size]
+            batch_issues = self.audit_page_with_rules(html_content, url, batch)
+            all_issues.extend(batch_issues)
+
+            # Small delay between batches to avoid rate limits
+            if i + batch_size < len(rules):
+                time.sleep(0.5)
+
+        return all_issues
+
+
+# Global LLM auditor instance
+llm_auditor = LLMAuditor()
 
 
 class ConfigManager:
@@ -33,6 +211,8 @@ class ConfigManager:
         self.voice_rules = []
         self.brand_standards = []
         self._loaded = False
+        self._llm_rules = []  # Rules that have prompts for LLM evaluation
+        self._legacy_rules = []  # Rules that use checkType for hardcoded checks
 
     def load_config(self):
         """Load all configuration from Firestore"""
@@ -54,6 +234,12 @@ class ConfigManager:
                 all_seo.append({'id': doc.id, **doc_data})
             self.seo_rules = [r for r in all_seo if r.get('enabled', False)]
             print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore (from {len(all_seo)} total)")
+
+            # Separate LLM-based rules (have 'prompt' field) from legacy rules (have 'checkType')
+            self._llm_rules = [r for r in self.seo_rules if r.get('prompt')]
+            self._legacy_rules = [r for r in self.seo_rules if r.get('checkType') and not r.get('prompt')]
+            print(f"  - LLM rules (with prompts): {len(self._llm_rules)}")
+            print(f"  - Legacy rules (checkType only): {len(self._legacy_rules)}")
 
             # Load Voice Rules
             voice_docs = db.collection('voiceRules').stream()
@@ -101,13 +287,25 @@ class ConfigManager:
         if not self._loaded or not self.seo_rules:
             return False
 
-        # Look for a matching rule that is enabled
-        for rule in self.seo_rules:
+        # Look for a matching LEGACY rule (no prompt) that is enabled
+        for rule in self._legacy_rules:
             if rule.get('checkType') == check_type and rule.get('enabled', False):
                 return True
 
         # Not found or not enabled = don't run
         return False
+
+    def get_llm_rules(self):
+        """Get all LLM-based rules (rules with 'prompt' field)"""
+        return self._llm_rules
+
+    def get_legacy_rules(self):
+        """Get all legacy rules (rules with 'checkType' but no 'prompt')"""
+        return self._legacy_rules
+
+    def has_llm_rules(self):
+        """Check if there are any LLM-based rules to evaluate"""
+        return len(self._llm_rules) > 0
 
 
 # Global config manager
@@ -881,7 +1079,16 @@ class SEOAuditor:
                     if 'Event' not in schema_types:
                         issues.append({'type': 'missing_event_schema', 'title': 'Missing Event schema', 'severity': 'High', 'url': url})
 
-            print(f"Found {len(issues)} issues for {url}")
+            # ============ LLM-BASED RULES ============
+            # Run any rules that have natural language prompts
+            if config.has_llm_rules():
+                llm_rules = config.get_llm_rules()
+                print(f"Running {len(llm_rules)} LLM-based rules for {url}")
+                llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
+                issues.extend(llm_issues)
+                print(f"LLM audit found {len(llm_issues)} additional issues")
+
+            print(f"Found {len(issues)} total issues for {url}")
         except Exception as e:
             print(f"Error auditing {url}: {e}")
             import traceback
@@ -1043,7 +1250,14 @@ class MondayClient:
         # Issue Description (long_text column)
         desc_col = self._get_column_id('issue_description')
         if desc_col:
-            description = ISSUE_DESCRIPTIONS.get(issue['type'], f"SEO issue detected: {issue['title']}")
+            # First check if issue has LLM-generated description
+            if issue.get('description'):
+                description = issue['description']
+                if issue.get('rule_name'):
+                    description = f"Rule: {issue['rule_name']}\n\n{description}"
+            else:
+                # Fall back to hardcoded descriptions
+                description = ISSUE_DESCRIPTIONS.get(issue['type'], f"SEO issue detected: {issue['title']}")
             column_values[desc_col] = {"text": description}
             print(f"Setting Issue Description column")
 

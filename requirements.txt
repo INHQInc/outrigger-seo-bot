@@ -3,6 +3,9 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 
+# Anthropic Claude API for LLM-powered auditing
+anthropic>=0.40.0
+
 # SEO/Content analysis
 html5lib>=1.1
 

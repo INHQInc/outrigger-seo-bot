@@ -51,7 +51,7 @@ steps:
       - '--set-env-vars'
       - 'MONDAY_BOARD_ID=18395774522'
       - '--set-secrets'
-      - 'MONDAY_API_TOKEN=monday-api-token:latest'
+      - 'MONDAY_API_TOKEN=monday-api-token:latest,ANTHROPIC_API_KEY=anthropic-api-key:latest,SCRAPER_API_KEY=scraper-api-key:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/outrigger-seo-audit:$COMMIT_SHA'

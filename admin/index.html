@@ -128,7 +128,7 @@
 
     <!-- Modal for Adding/Editing -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6">
                 <h3 id="modalTitle" class="text-xl font-bold text-teal mb-4">Add Rule</h3>
                 <form id="modalForm" class="space-y-4">
@@ -137,8 +137,8 @@
                         <input type="text" id="formName" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                        <textarea id="formDescription" rows="3" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required></textarea>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-gray-400 font-normal">(shown in dashboard)</span></label>
+                        <textarea id="formDescription" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required></textarea>
                     </div>
                     <div id="extraFields"></div>
                     <div class="flex items-center gap-2">
@@ -285,12 +285,32 @@
             var statusText = data.enabled ? 'Enabled' : 'Disabled';
             var borderColor = type === 'seo' ? 'border-l-teal' : (type === 'voice' ? 'border-l-4 border-l-[#c4a35a]' : 'border-l-4 border-l-[#e07c3e]');
 
+            // Badge for LLM-powered rules
+            var llmBadge = '';
+            if (data.prompt) {
+                llmBadge = '<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">🤖 AI-Powered</span>';
+            }
+
+            // Severity badge for SEO rules
+            var severityBadge = '';
+            if (data.severity) {
+                var severityClass = {
+                    'Critical': 'bg-red-100 text-red-800',
+                    'High': 'bg-orange-100 text-orange-800',
+                    'Medium': 'bg-yellow-100 text-yellow-800',
+                    'Low': 'bg-blue-100 text-blue-800'
+                }[data.severity] || 'bg-gray-100 text-gray-800';
+                severityBadge = '<span class="px-2 py-1 text-xs rounded-full ' + severityClass + '">' + data.severity + '</span>';
+            }
+
             return '<div class="border rounded-lg p-4 ' + borderColor + ' border-l-4 hover:shadow-md transition-shadow">' +
                 '<div class="flex justify-between items-start">' +
                     '<div class="flex-1">' +
-                        '<div class="flex items-center gap-3 mb-2">' +
+                        '<div class="flex items-center gap-2 mb-2 flex-wrap">' +
                             '<h3 class="font-semibold text-gray-900">' + escapeHtml(data.name) + '</h3>' +
                             '<span class="px-2 py-1 text-xs rounded-full ' + statusClass + '">' + statusText + '</span>' +
+                            severityBadge +
+                            llmBadge +
                         '</div>' +
                         '<p class="text-gray-600 text-sm">' + escapeHtml(data.description) + '</p>' +
                     '</div>' +
@@ -334,8 +354,8 @@
         function addSeoRule() {
             openModal('Add SEO/GEO Rule', 'seoRules');
             document.getElementById('extraFields').innerHTML =
-                '<div>' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type</label>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type <span class="text-gray-400 font-normal">(identifier)</span></label>' +
                     '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
                         '<option value="title">Title Tag</option>' +
                         '<option value="meta">Meta Description</option>' +
@@ -347,7 +367,22 @@
                         '<option value="og">Open Graph Tags</option>' +
                         '<option value="alt">Image Alt Tags</option>' +
                         '<option value="robots">Robots Meta Tag</option>' +
+                        '<option value="custom">Custom (LLM-only)</option>' +
                     '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">Severity</label>' +
+                    '<select id="formSeverity" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                        '<option value="Critical">Critical</option>' +
+                        '<option value="High">High</option>' +
+                        '<option value="Medium" selected>Medium</option>' +
+                        '<option value="Low">Low</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-gray-700 mb-1">LLM Audit Prompt <span class="text-gray-400 font-normal">(optional - enables AI-powered checking)</span></label>' +
+                    '<textarea id="formPrompt" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent font-mono text-sm" placeholder="Describe what the AI should check for. Example:\n\nCheck if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag\n2. The title is less than 30 characters\n3. The title is generic like &quot;Home&quot;"></textarea>' +
+                    '<p class="text-xs text-gray-500 mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically. Leave empty to use built-in hardcoded checks.</p>' +
                 '</div>';
         }
 
@@ -393,7 +428,44 @@
                         document.getElementById('formName').value = data.name || '';
                         document.getElementById('formDescription').value = data.description || '';
                         document.getElementById('formEnabled').checked = data.enabled !== false;
-                        document.getElementById('extraFields').innerHTML = '';
+
+                        // Build extra fields based on type
+                        if (type === 'seo') {
+                            document.getElementById('extraFields').innerHTML =
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type</label>' +
+                                    '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                                        '<option value="title"' + (data.checkType === 'title' ? ' selected' : '') + '>Title Tag</option>' +
+                                        '<option value="meta"' + (data.checkType === 'meta' ? ' selected' : '') + '>Meta Description</option>' +
+                                        '<option value="h1"' + (data.checkType === 'h1' ? ' selected' : '') + '>H1 Heading</option>' +
+                                        '<option value="canonical"' + (data.checkType === 'canonical' ? ' selected' : '') + '>Canonical Tag</option>' +
+                                        '<option value="schema"' + (data.checkType === 'schema' ? ' selected' : '') + '>Schema/Structured Data</option>' +
+                                        '<option value="content"' + (data.checkType === 'content' ? ' selected' : '') + '>Content Quality</option>' +
+                                        '<option value="geo"' + (data.checkType === 'geo' ? ' selected' : '') + '>Geo Meta Tags</option>' +
+                                        '<option value="og"' + (data.checkType === 'og' ? ' selected' : '') + '>Open Graph Tags</option>' +
+                                        '<option value="alt"' + (data.checkType === 'alt' ? ' selected' : '') + '>Image Alt Tags</option>' +
+                                        '<option value="robots"' + (data.checkType === 'robots' ? ' selected' : '') + '>Robots Meta Tag</option>' +
+                                        '<option value="custom"' + (data.checkType === 'custom' ? ' selected' : '') + '>Custom (LLM-only)</option>' +
+                                    '</select>' +
+                                '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-gray-700 mb-1">Severity</label>' +
+                                    '<select id="formSeverity" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                                        '<option value="Critical"' + (data.severity === 'Critical' ? ' selected' : '') + '>Critical</option>' +
+                                        '<option value="High"' + (data.severity === 'High' ? ' selected' : '') + '>High</option>' +
+                                        '<option value="Medium"' + (data.severity === 'Medium' || !data.severity ? ' selected' : '') + '>Medium</option>' +
+                                        '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
+                                    '</select>' +
+                                '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-gray-700 mb-1">LLM Audit Prompt <span class="text-gray-400 font-normal">(optional)</span></label>' +
+                                    '<textarea id="formPrompt" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent font-mono text-sm">' + escapeHtml(data.prompt || '') + '</textarea>' +
+                                    '<p class="text-xs text-gray-500 mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
+                                '</div>';
+                        } else {
+                            document.getElementById('extraFields').innerHTML = '';
+                        }
+
                         document.getElementById('modal').classList.remove('hidden');
                         document.getElementById('modal').classList.add('flex');
                     }
@@ -435,10 +507,16 @@
             var checkType = document.getElementById('formCheckType');
             var category = document.getElementById('formCategory');
             var standardType = document.getElementById('formStandardType');
+            var severity = document.getElementById('formSeverity');
+            var prompt = document.getElementById('formPrompt');
 
             if (checkType) data.checkType = checkType.value;
             if (category) data.category = category.value;
             if (standardType) data.standardType = standardType.value;
+            if (severity) data.severity = severity.value;
+            if (prompt && prompt.value.trim()) {
+                data.prompt = prompt.value.trim();
+            }
 
             var savePromise;
             if (currentEditId) {
@@ -468,22 +546,102 @@
 
         // Seed default rules (run once to populate)
         async function seedDefaultRules() {
-            if (!confirm('This will add all recommended SEO/GEO rules. Continue?')) return;
+            if (!confirm('This will add all recommended SEO/GEO rules with AI-powered prompts. Continue?')) return;
 
             const seoRules = [
-                // TIER 1: CRITICAL
-                { name: 'Title Tag Check', checkType: 'title', description: 'Checks for missing or too-short title tags. Title should be 50-60 characters and include primary keywords.', enabled: true, severity: 'Critical', tier: 1 },
-                { name: 'Meta Description Check', checkType: 'meta', description: 'Checks for missing or too-short meta descriptions. Should be 150-160 characters with compelling copy and call-to-action.', enabled: true, severity: 'Critical', tier: 1 },
-                { name: 'H1 Tag Check', checkType: 'h1', description: 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1 describing the main topic.', enabled: true, severity: 'Critical', tier: 1 },
-                { name: 'Canonical Tag Check', checkType: 'canonical', description: 'Checks for missing canonical URLs. Canonical tags prevent duplicate content issues and consolidate ranking signals.', enabled: true, severity: 'Critical', tier: 1 },
+                // TIER 1: CRITICAL - All with LLM prompts
+                {
+                    name: 'Title Tag Check',
+                    checkType: 'title',
+                    description: 'Checks for missing or too-short title tags. Title should be 50-60 characters and include primary keywords.',
+                    prompt: 'Check if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag entirely, OR\n2. The title is empty or contains only whitespace, OR\n3. The title is less than 30 characters (too short to be descriptive), OR\n4. The title is generic like "Home" or "Page" without context\n\nFor a hotel/hospitality site, a good title should include the property name, location, and ideally brand.',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1
+                },
+                {
+                    name: 'Meta Description Check',
+                    checkType: 'meta',
+                    description: 'Checks for missing or too-short meta descriptions. Should be 150-160 characters with compelling copy.',
+                    prompt: 'Check if this page has a proper meta description. The rule FAILS if:\n1. The page is missing a <meta name="description"> tag, OR\n2. The meta description content is empty, OR\n3. The meta description is less than 120 characters (too short), OR\n4. The meta description is over 160 characters (will be truncated)\n\nFor a hotel site, meta descriptions should be compelling and include a call-to-action.',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1
+                },
+                {
+                    name: 'H1 Tag Check',
+                    checkType: 'h1',
+                    description: 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1.',
+                    prompt: 'Check if this page has proper H1 heading structure. The rule FAILS if:\n1. The page has NO <h1> tag at all, OR\n2. The page has MORE than one <h1> tag (should have exactly one), OR\n3. The H1 is empty or contains only whitespace\n\nBest practice: Each page should have exactly one H1 that clearly describes the main topic.',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1
+                },
+                {
+                    name: 'Canonical Tag Check',
+                    checkType: 'canonical',
+                    description: 'Checks for missing canonical URLs to prevent duplicate content issues.',
+                    prompt: 'Check if this page has a canonical tag. The rule FAILS if:\n1. The page is missing a <link rel="canonical"> tag, OR\n2. The canonical tag exists but has no href value, OR\n3. The canonical href is empty or invalid\n\nA canonical tag tells search engines which version of a page is the "master" copy.',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1
+                },
                 // TIER 2: HIGH PRIORITY
-                { name: 'Schema/Structured Data Check', checkType: 'schema', description: 'Comprehensive schema.org checks including Hotel, LocalBusiness, Organization, FAQ, Review, Offer, Breadcrumb, and Speakable schemas. Critical for AI/LLM visibility.', enabled: true, severity: 'High', tier: 2 },
-                { name: 'Thin Content Check', checkType: 'content', description: 'Flags pages with less than 300 words of content. Thin pages rank poorly and provide insufficient information for AI assistants.', enabled: true, severity: 'High', tier: 2 },
-                { name: 'Geo Meta Tags Check', checkType: 'geo', description: 'Checks for geo.region and geo.placename meta tags. Important for location-based searches and AI travel recommendations.', enabled: true, severity: 'High', tier: 2 },
-                { name: 'Open Graph Tags Check', checkType: 'og', description: 'Checks for og:image, og:title, and og:description. Essential for social sharing - posts with images get 2-3x more engagement.', enabled: true, severity: 'High', tier: 2 },
+                {
+                    name: 'Schema/Structured Data Check',
+                    checkType: 'schema',
+                    description: 'Comprehensive schema.org checks for Hotel, LocalBusiness, Organization, FAQ schemas. Critical for AI/LLM visibility.',
+                    prompt: 'Check if this page has appropriate JSON-LD structured data. The rule FAILS if:\n1. The page has NO <script type="application/ld+json"> tags, OR\n2. For hotel/resort pages: Missing Hotel, LodgingBusiness, or LocalBusiness schema, OR\n3. Schema exists but is missing critical properties like name, address, or description\n\nThis is CRITICAL for AI/LLM visibility - ChatGPT and Google AI pull from structured data.',
+                    enabled: true,
+                    severity: 'High',
+                    tier: 2
+                },
+                {
+                    name: 'Thin Content Check',
+                    checkType: 'content',
+                    description: 'Flags pages with less than 300 words of content. Thin pages rank poorly.',
+                    prompt: 'Analyze the main content (excluding navigation, headers, footers). The rule FAILS if:\n1. The page has less than approximately 300 words of actual content, OR\n2. The content is mostly duplicated/boilerplate text, OR\n3. The main content area appears empty or contains only images without supporting text\n\nFor hotel pages, there should be substantial descriptive content about property features and amenities.',
+                    enabled: true,
+                    severity: 'High',
+                    tier: 2
+                },
+                {
+                    name: 'Geo Meta Tags Check',
+                    checkType: 'geo',
+                    description: 'Checks for geo.region and geo.placename meta tags for location-based searches.',
+                    prompt: 'Check if this page has geographic meta tags. The rule FAILS if:\n1. The page is missing BOTH geo.region and geo.placename meta tags\n\nLook for these tags:\n- <meta name="geo.region" content="US-HI">\n- <meta name="geo.placename" content="Honolulu">\n\nThese help AI travel assistants understand location context.',
+                    enabled: true,
+                    severity: 'High',
+                    tier: 2
+                },
+                {
+                    name: 'Open Graph Tags Check',
+                    checkType: 'og',
+                    description: 'Checks for og:image, og:title, og:description for social sharing.',
+                    prompt: 'Check if this page has proper Open Graph tags. The rule FAILS if:\n1. Missing og:image tag (critical for social engagement), OR\n2. Missing og:title tag, OR\n3. Missing og:description tag\n\nLook for meta tags with property attribute:\n- <meta property="og:image" content="...">\n- <meta property="og:title" content="...">\n- <meta property="og:description" content="...">',
+                    enabled: true,
+                    severity: 'High',
+                    tier: 2
+                },
                 // TIER 3: MEDIUM
-                { name: 'Image Alt Tags Check', checkType: 'alt', description: 'Checks for missing alt text on images. Required for ADA accessibility compliance and helps images appear in search results.', enabled: true, severity: 'Medium', tier: 3 },
-                { name: 'Robots Meta Tag Check', checkType: 'robots', description: 'Checks for presence of robots meta tag. Good practice to explicitly declare indexing instructions.', enabled: false, severity: 'Low', tier: 3 },
+                {
+                    name: 'Image Alt Tags Check',
+                    checkType: 'alt',
+                    description: 'Checks for missing alt text on images for ADA accessibility compliance.',
+                    prompt: 'Check if images have proper alt text for accessibility. The rule FAILS if:\n1. Multiple <img> tags are missing the alt attribute, OR\n2. Images have empty alt="" attributes (unless decorative), OR\n3. Alt text is generic like "image" instead of descriptive\n\nNote: A few missing alt tags on decorative images is acceptable. Flag only if there is a significant pattern.',
+                    enabled: true,
+                    severity: 'Medium',
+                    tier: 3
+                },
+                {
+                    name: 'Robots Meta Tag Check',
+                    checkType: 'robots',
+                    description: 'Checks for presence of robots meta tag to explicitly declare indexing instructions.',
+                    prompt: 'Check if this page has a robots meta tag. The rule FAILS if:\n1. The page is missing a <meta name="robots"> tag\n\nThis is a LOW priority check - only flag if completely missing.',
+                    enabled: false,
+                    severity: 'Low',
+                    tier: 3
+                },
             ];
 
             const voiceRules = [
@@ -502,12 +660,20 @@
 
             let added = 0;
 
-            // Add SEO rules
+            // Add SEO rules (or update existing ones with prompts)
             for (const rule of seoRules) {
                 const existing = await db.collection('seoRules').where('checkType', '==', rule.checkType).get();
                 if (existing.empty) {
                     await db.collection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                     added++;
+                } else {
+                    // Update existing rule with prompt if it doesn't have one
+                    const doc = existing.docs[0];
+                    const data = doc.data();
+                    if (!data.prompt && rule.prompt) {
+                        await db.collection('seoRules').doc(doc.id).update({ prompt: rule.prompt });
+                        added++;
+                    }
                 }
             }
 
