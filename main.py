@@ -41,25 +41,31 @@ class ConfigManager:
             return False
 
         try:
-            # Load SEO Rules
-            seo_docs = db.collection('seoRules').where('enabled', '==', True).stream()
-            self.seo_rules = [{'id': doc.id, **doc.to_dict()} for doc in seo_docs]
-            print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore")
+            # Load SEO Rules - get all docs and filter enabled ones in Python
+            # (avoids need for composite index)
+            seo_docs = db.collection('seoRules').stream()
+            all_seo = [{'id': doc.id, **doc.to_dict()} for doc in seo_docs]
+            self.seo_rules = [r for r in all_seo if r.get('enabled', False)]
+            print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore (from {len(all_seo)} total)")
 
             # Load Voice Rules
-            voice_docs = db.collection('voiceRules').where('enabled', '==', True).stream()
-            self.voice_rules = [{'id': doc.id, **doc.to_dict()} for doc in voice_docs]
-            print(f"Loaded {len(self.voice_rules)} voice rules from Firestore")
+            voice_docs = db.collection('voiceRules').stream()
+            all_voice = [{'id': doc.id, **doc.to_dict()} for doc in voice_docs]
+            self.voice_rules = [r for r in all_voice if r.get('enabled', False)]
+            print(f"Loaded {len(self.voice_rules)} voice rules from Firestore (from {len(all_voice)} total)")
 
             # Load Brand Standards
-            brand_docs = db.collection('brandStandards').where('enabled', '==', True).stream()
-            self.brand_standards = [{'id': doc.id, **doc.to_dict()} for doc in brand_docs]
-            print(f"Loaded {len(self.brand_standards)} brand standards from Firestore")
+            brand_docs = db.collection('brandStandards').stream()
+            all_brand = [{'id': doc.id, **doc.to_dict()} for doc in brand_docs]
+            self.brand_standards = [r for r in all_brand if r.get('enabled', False)]
+            print(f"Loaded {len(self.brand_standards)} brand standards from Firestore (from {len(all_brand)} total)")
 
             self._loaded = True
             return True
         except Exception as e:
             print(f"Error loading config from Firestore: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def get_seo_rules_by_type(self, check_type):
