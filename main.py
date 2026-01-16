@@ -14,39 +14,307 @@ DAYS_TO_CHECK = 7
 MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
-# Issue type descriptions for the Issue Description field
+# Issue type descriptions for the Issue Description field - verbose for clarity
 ISSUE_DESCRIPTIONS = {
     # Basic SEO
-    'missing_title': 'The page is missing a <title> tag. This is critical for SEO as the title appears in search results and browser tabs.',
-    'short_title': 'The page title is less than 30 characters. Titles should be 50-60 characters for optimal SEO.',
-    'missing_meta': 'The page is missing a meta description. This description appears in search results and affects click-through rates.',
-    'short_meta': 'The meta description is less than 120 characters. Optimal length is 150-160 characters for search results.',
-    'missing_h1': 'The page is missing an H1 heading tag. Every page should have exactly one H1 for proper content hierarchy.',
-    'multiple_h1': 'The page has multiple H1 tags. Best practice is to have exactly one H1 per page.',
+    'missing_title': '''CRITICAL SEO ISSUE: Missing Page Title
+
+The page is missing a <title> tag entirely. The title tag is one of the most important on-page SEO elements.
+
+WHY IT MATTERS:
+- The title appears as the clickable headline in Google search results
+- It shows in browser tabs helping users identify your page
+- Search engines use it as a primary ranking signal
+
+HOW TO FIX:
+Add a unique, descriptive <title> tag in the <head> section of your HTML. Keep it between 50-60 characters and include relevant keywords for the page content.
+
+Example: <title>Beachfront Resort in Waikiki | Outrigger Hotels Hawaii</title>''',
+
+    'short_title': '''SEO ISSUE: Page Title Too Short
+
+The page title is less than 30 characters, which doesn't provide enough context for search engines or users.
+
+WHY IT MATTERS:
+- Short titles miss opportunities to include valuable keywords
+- They may not fully describe the page content to searchers
+- Google may rewrite titles that are too short or non-descriptive
+
+HOW TO FIX:
+Expand the title to 50-60 characters. Include the primary keyword, location (if relevant), and brand name. Make it compelling to encourage clicks.
+
+Example: Instead of "Hawaii Hotels" use "Luxury Beachfront Hotels in Waikiki, Hawaii | Outrigger"''',
+
+    'missing_meta': '''HIGH PRIORITY: Missing Meta Description
+
+The page has no meta description tag. This is a missed opportunity to control how your page appears in search results.
+
+WHY IT MATTERS:
+- The meta description appears as the snippet text under the title in search results
+- A compelling description increases click-through rates (CTR)
+- Without one, Google will auto-generate text from your page (often poorly)
+
+HOW TO FIX:
+Add a meta description tag in the <head> section. Write 150-160 characters that summarize the page and include a call-to-action.
+
+Example: <meta name="description" content="Experience paradise at our oceanfront Waikiki resort. Stunning views, world-class amenities, and authentic Hawaiian hospitality. Book direct for best rates.">''',
+
+    'short_meta': '''SEO ISSUE: Meta Description Too Short
+
+The meta description is under 120 characters. You're not using the full space available to convince searchers to click.
+
+WHY IT MATTERS:
+- Google displays up to 155-160 characters in search results
+- Short descriptions may not provide enough information to entice clicks
+- You're missing keyword opportunities
+
+HOW TO FIX:
+Expand to 150-160 characters. Include primary keywords naturally, highlight unique selling points, and add a call-to-action.''',
+
+    'missing_h1': '''CONTENT STRUCTURE ISSUE: Missing H1 Heading
+
+The page has no H1 heading tag. Every page should have exactly one H1 that describes the main topic.
+
+WHY IT MATTERS:
+- The H1 tells search engines what the page is primarily about
+- It provides structure and hierarchy for your content
+- Screen readers use H1 tags to help visually impaired users navigate
+
+HOW TO FIX:
+Add a single H1 tag near the top of your page content (not in the header/navigation). It should describe the main topic and ideally include your primary keyword.
+
+Example: <h1>Oceanfront Luxury Suites in Waikiki Beach</h1>''',
+
+    'multiple_h1': '''CONTENT STRUCTURE ISSUE: Multiple H1 Tags
+
+The page has more than one H1 heading. Best practice is to have exactly one H1 per page.
+
+WHY IT MATTERS:
+- Multiple H1s can confuse search engines about the page's main topic
+- It weakens the semantic structure of your content
+- May dilute keyword relevance signals
+
+HOW TO FIX:
+Keep only one H1 for the main page title. Convert other H1 tags to H2 or H3 based on content hierarchy.''',
 
     # Technical SEO
-    'missing_canonical': 'The page is missing a canonical tag. This helps prevent duplicate content issues and consolidates ranking signals.',
-    'missing_robots': 'The page is missing a robots meta tag. This controls how search engines crawl and index the page.',
+    'missing_canonical': '''TECHNICAL SEO: Missing Canonical Tag
+
+The page is missing a canonical URL tag. This is important for preventing duplicate content issues.
+
+WHY IT MATTERS:
+- Canonical tags tell search engines which version of a page is the "master" copy
+- Without it, Google may index multiple URLs with the same content
+- This can split ranking signals between duplicate pages
+
+HOW TO FIX:
+Add a canonical tag in the <head> section pointing to the preferred URL:
+<link rel="canonical" href="https://www.outrigger.com/your-page-url">
+
+Always use the full absolute URL and ensure it matches your preferred URL format (with or without www, https).''',
+
+    'missing_robots': '''TECHNICAL SEO: Missing Robots Meta Tag
+
+The page has no robots meta tag. While not critical, it's good practice to explicitly declare indexing instructions.
+
+WHY IT MATTERS:
+- Explicitly tells search engines whether to index the page
+- Provides control over whether links should be followed
+- Helps prevent accidental indexing of pages you don't want indexed
+
+HOW TO FIX:
+Add a robots meta tag in the <head> section:
+<meta name="robots" content="index, follow">
+
+Use "noindex" for pages you don't want in search results (like thank you pages or internal search results).''',
 
     # Open Graph
-    'missing_og_title': 'The page is missing an Open Graph title (og:title). This affects how the page appears when shared on social media.',
-    'missing_og_description': 'The page is missing an Open Graph description (og:description). This affects social media sharing previews.',
-    'missing_og_image': 'The page is missing an Open Graph image (og:image). Social shares without images get significantly less engagement.',
+    'missing_og_title': '''SOCIAL MEDIA: Missing Open Graph Title
+
+The page is missing the og:title meta tag. This affects how the page appears when shared on Facebook, LinkedIn, and other social platforms.
+
+WHY IT MATTERS:
+- Social platforms use og:title as the headline when your page is shared
+- Without it, platforms may pull incorrect or truncated text
+- Professional-looking shares get more engagement
+
+HOW TO FIX:
+Add in the <head> section:
+<meta property="og:title" content="Your Page Title Here">
+
+Keep it under 60 characters for best display across platforms.''',
+
+    'missing_og_description': '''SOCIAL MEDIA: Missing Open Graph Description
+
+The page is missing the og:description meta tag for social sharing.
+
+WHY IT MATTERS:
+- This text appears below the title when your page is shared on social media
+- Compelling descriptions increase click-through from social shares
+- Without it, platforms may pull random text from your page
+
+HOW TO FIX:
+Add in the <head> section:
+<meta property="og:description" content="Brief, engaging description of your page content">
+
+Keep it under 200 characters and make it compelling.''',
+
+    'missing_og_image': '''SOCIAL MEDIA: Missing Open Graph Image
+
+The page is missing the og:image meta tag. Social shares without images get significantly less engagement.
+
+WHY IT MATTERS:
+- Posts with images get 2-3x more engagement on social media
+- Without og:image, platforms may show no image or pick a random one
+- A compelling image dramatically increases click-through rates
+
+HOW TO FIX:
+Add in the <head> section:
+<meta property="og:image" content="https://www.outrigger.com/path/to/image.jpg">
+
+Use an image at least 1200x630 pixels for best display. Show the property, destination, or relevant visual.''',
 
     # Images
-    'missing_alt_tags': 'Images on this page are missing alt tags. Alt tags are important for accessibility and image SEO.',
+    'missing_alt_tags': '''ACCESSIBILITY & SEO: Image Missing Alt Text
+
+One or more images on this page are missing alt text attributes.
+
+WHY IT MATTERS:
+- Screen readers use alt text to describe images to visually impaired users (ADA compliance)
+- Search engines use alt text to understand image content
+- Alt text helps images appear in Google Image search results
+- If images fail to load, alt text displays instead
+
+HOW TO FIX:
+Add descriptive alt attributes to all images:
+<img src="beach.jpg" alt="Guests relaxing on Waikiki Beach at sunset with Diamond Head in background">
+
+Be descriptive but concise. Include relevant keywords naturally. Don't stuff keywords or use "image of..." prefix.''',
 
     # Schema/Structured Data
-    'missing_schema': 'The page has no JSON-LD structured data. Schema markup helps search engines understand page content.',
-    'missing_organization_schema': 'The page is missing Organization schema. This helps establish brand identity in search results.',
-    'missing_localbusiness_schema': 'The page is missing LocalBusiness schema. This is critical for local SEO and Google Maps visibility.',
-    'missing_breadcrumb_schema': 'The page is missing BreadcrumbList schema. Breadcrumbs improve navigation and search result appearance.',
-    'missing_faq_schema': 'The page has FAQ content but no FAQPage schema. FAQ schema can generate rich results in search.',
-    'missing_hotel_schema': 'The page is missing Hotel or LodgingBusiness schema. This is essential for hotel/resort pages.',
+    'missing_schema': '''CRITICAL: No Structured Data (JSON-LD)
+
+The page has no JSON-LD structured data markup. This is essential for modern SEO and rich search results.
+
+WHY IT MATTERS:
+- Structured data helps Google understand your content better
+- Enables rich snippets in search results (stars, prices, availability)
+- Required for many Google Search features
+- Competitors with schema markup have a significant advantage
+
+HOW TO FIX:
+Add JSON-LD schema in a <script type="application/ld+json"> tag. For hotel pages, include Hotel, LodgingBusiness, or LocalBusiness schema with:
+- Name, description, address
+- Star rating and reviews
+- Price range and amenities
+- Images and contact info
+
+Use Google's Structured Data Testing Tool to validate.''',
+
+    'missing_organization_schema': '''SCHEMA: Missing Organization Markup
+
+The page is missing Organization or Corporation schema. This helps establish your brand identity in search.
+
+WHY IT MATTERS:
+- Helps Google understand your brand and business
+- Can enable Knowledge Panel features
+- Links your website to your brand entity
+- Supports other schema types
+
+HOW TO FIX:
+Add Organization schema with your company details including name, logo, social profiles, and contact information.''',
+
+    'missing_localbusiness_schema': '''HIGH PRIORITY: Missing LocalBusiness/Hotel Schema
+
+The page is missing LocalBusiness or Hotel schema markup. This is critical for hospitality websites.
+
+WHY IT MATTERS:
+- Essential for appearing in local search results and Google Maps
+- Enables rich results showing ratings, prices, and availability
+- Helps Google understand your property locations
+- Critical for "hotels near me" and location-based searches
+
+HOW TO FIX:
+Add Hotel or LodgingBusiness schema including:
+- Property name and description
+- Full address with geo coordinates
+- Star rating and price range
+- Amenities and room types
+- Check-in/check-out times
+- Contact information''',
+
+    'missing_breadcrumb_schema': '''SCHEMA: Missing Breadcrumb Markup
+
+The page is missing BreadcrumbList schema for navigation structure.
+
+WHY IT MATTERS:
+- Breadcrumbs can appear in search results showing page hierarchy
+- Helps users understand where they are in your site
+- Improves site navigation signals for search engines
+
+HOW TO FIX:
+Add BreadcrumbList schema showing the page hierarchy:
+Home > Hawaii > Oahu > Waikiki Beach Resort''',
+
+    'missing_faq_schema': '''SCHEMA OPPORTUNITY: FAQ Content Without Markup
+
+The page appears to have FAQ content but no FAQPage schema markup.
+
+WHY IT MATTERS:
+- FAQ schema can generate expandable FAQ rich results in Google
+- Takes up more space in search results
+- Directly answers user questions in search
+- Can significantly increase click-through rates
+
+HOW TO FIX:
+Wrap your FAQ content with FAQPage schema, including Question and Answer pairs for each FAQ item.''',
+
+    'missing_hotel_schema': '''CRITICAL FOR HOTELS: Missing Hotel Schema
+
+This appears to be a hotel or room page but lacks Hotel or LodgingBusiness schema.
+
+WHY IT MATTERS:
+- Hotel schema is essential for hospitality businesses
+- Enables rich results with pricing, availability, and ratings
+- Required for Google Hotel Search integration
+- Competitors with proper schema have major advantages
+
+HOW TO FIX:
+Add comprehensive Hotel schema including property details, room types, amenities, pricing, and booking information.''',
 
     # GEO/Local SEO
-    'missing_geo_tags': 'The page is missing geo meta tags (geo.region, geo.placename). These help with local search visibility.',
-    'missing_address_schema': 'The page is missing PostalAddress in schema. Complete address info improves local SEO.',
+    'missing_geo_tags': '''LOCAL SEO: Missing Geo Meta Tags
+
+The page is missing geo.region and geo.placename meta tags.
+
+WHY IT MATTERS:
+- Geo tags help search engines understand your location relevance
+- Can improve visibility in location-based searches
+- Supports local SEO efforts
+
+HOW TO FIX:
+Add geo meta tags in the <head> section:
+<meta name="geo.region" content="US-HI">
+<meta name="geo.placename" content="Honolulu">
+<meta name="geo.position" content="21.2769;-157.8268">''',
+
+    'missing_address_schema': '''LOCAL SEO: Missing Address in Schema
+
+Your schema markup exists but doesn't include complete address information.
+
+WHY IT MATTERS:
+- Complete address data is essential for local search visibility
+- Required for Google Maps integration
+- Helps users find your property location
+- Supports "near me" searches
+
+HOW TO FIX:
+Add PostalAddress to your schema with:
+- streetAddress
+- addressLocality (city)
+- addressRegion (state)
+- postalCode
+- addressCountry''',
 }
 
 def fetch_with_scraper_api(url):
@@ -451,7 +719,7 @@ class MondayClient:
             print(f"Skipping duplicate: {task_title[:60]}...")
             return "duplicate"
 
-        # Build column values JSON - only Task (name) and URL for now
+        # Build column values JSON
         column_values = {}
 
         # Page URL (link column)
@@ -464,6 +732,13 @@ class MondayClient:
             print(f"Setting URL column value: {column_values[url_col]}")
         else:
             print(f"WARNING: Could not find Page URL column!")
+
+        # Issue Description (long_text column)
+        desc_col = self._get_column_id('issue_description')
+        if desc_col:
+            description = ISSUE_DESCRIPTIONS.get(issue['type'], f"SEO issue detected: {issue['title']}")
+            column_values[desc_col] = {"text": description}
+            print(f"Setting Issue Description column")
 
         print(f"Creating task with columns: {list(column_values.keys())}")
 
