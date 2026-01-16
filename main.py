@@ -16,7 +16,9 @@ SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 
 # Issue type descriptions for the Issue Description field - verbose for clarity
 ISSUE_DESCRIPTIONS = {
-    # Basic SEO
+    # ============ TIER 1: CRITICAL ============
+
+    # Basic SEO Fundamentals
     'missing_title': '''CRITICAL SEO ISSUE: Missing Page Title
 
 The page is missing a <title> tag entirely. The title tag is one of the most important on-page SEO elements.
@@ -25,6 +27,7 @@ WHY IT MATTERS:
 - The title appears as the clickable headline in Google search results
 - It shows in browser tabs helping users identify your page
 - Search engines use it as a primary ranking signal
+- AI assistants use titles to understand page content
 
 HOW TO FIX:
 Add a unique, descriptive <title> tag in the <head> section of your HTML. Keep it between 50-60 characters and include relevant keywords for the page content.
@@ -45,7 +48,7 @@ Expand the title to 50-60 characters. Include the primary keyword, location (if 
 
 Example: Instead of "Hawaii Hotels" use "Luxury Beachfront Hotels in Waikiki, Hawaii | Outrigger"''',
 
-    'missing_meta': '''HIGH PRIORITY: Missing Meta Description
+    'missing_meta': '''CRITICAL: Missing Meta Description
 
 The page has no meta description tag. This is a missed opportunity to control how your page appears in search results.
 
@@ -53,6 +56,7 @@ WHY IT MATTERS:
 - The meta description appears as the snippet text under the title in search results
 - A compelling description increases click-through rates (CTR)
 - Without one, Google will auto-generate text from your page (often poorly)
+- LLMs and AI assistants use meta descriptions to summarize pages
 
 HOW TO FIX:
 Add a meta description tag in the <head> section. Write 150-160 characters that summarize the page and include a call-to-action.
@@ -71,7 +75,7 @@ WHY IT MATTERS:
 HOW TO FIX:
 Expand to 150-160 characters. Include primary keywords naturally, highlight unique selling points, and add a call-to-action.''',
 
-    'missing_h1': '''CONTENT STRUCTURE ISSUE: Missing H1 Heading
+    'missing_h1': '''CRITICAL: Missing H1 Heading
 
 The page has no H1 heading tag. Every page should have exactly one H1 that describes the main topic.
 
@@ -79,26 +83,14 @@ WHY IT MATTERS:
 - The H1 tells search engines what the page is primarily about
 - It provides structure and hierarchy for your content
 - Screen readers use H1 tags to help visually impaired users navigate
+- AI/LLMs use H1 to understand the primary topic
 
 HOW TO FIX:
 Add a single H1 tag near the top of your page content (not in the header/navigation). It should describe the main topic and ideally include your primary keyword.
 
 Example: <h1>Oceanfront Luxury Suites in Waikiki Beach</h1>''',
 
-    'multiple_h1': '''CONTENT STRUCTURE ISSUE: Multiple H1 Tags
-
-The page has more than one H1 heading. Best practice is to have exactly one H1 per page.
-
-WHY IT MATTERS:
-- Multiple H1s can confuse search engines about the page's main topic
-- It weakens the semantic structure of your content
-- May dilute keyword relevance signals
-
-HOW TO FIX:
-Keep only one H1 for the main page title. Convert other H1 tags to H2 or H3 based on content hierarchy.''',
-
-    # Technical SEO
-    'missing_canonical': '''TECHNICAL SEO: Missing Canonical Tag
+    'missing_canonical': '''CRITICAL: Missing Canonical Tag
 
 The page is missing a canonical URL tag. This is important for preventing duplicate content issues.
 
@@ -113,22 +105,161 @@ Add a canonical tag in the <head> section pointing to the preferred URL:
 
 Always use the full absolute URL and ensure it matches your preferred URL format (with or without www, https).''',
 
-    'missing_robots': '''TECHNICAL SEO: Missing Robots Meta Tag
+    # Schema - Critical for Hotels
+    'missing_hotel_schema': '''CRITICAL FOR HOTELS: Missing Hotel Schema
 
-The page has no robots meta tag. While not critical, it's good practice to explicitly declare indexing instructions.
+This appears to be a hotel or room page but lacks Hotel or LodgingBusiness schema.
 
 WHY IT MATTERS:
-- Explicitly tells search engines whether to index the page
-- Provides control over whether links should be followed
-- Helps prevent accidental indexing of pages you don't want indexed
+- Hotel schema is essential for hospitality businesses
+- Enables rich results with pricing, availability, and ratings
+- Required for Google Hotel Search integration
+- AI travel assistants (ChatGPT, Google AI) pull from this data
+- Competitors with proper schema have major advantages
 
 HOW TO FIX:
-Add a robots meta tag in the <head> section:
-<meta name="robots" content="index, follow">
+Add comprehensive Hotel schema including property details, room types, amenities, pricing, and booking information.''',
 
-Use "noindex" for pages you don't want in search results (like thank you pages or internal search results).''',
+    'missing_localbusiness_schema': '''CRITICAL: Missing LocalBusiness/Hotel Schema
 
-    # Open Graph
+The page is missing LocalBusiness or Hotel schema markup. This is critical for hospitality websites.
+
+WHY IT MATTERS:
+- Essential for appearing in local search results and Google Maps
+- Enables rich results showing ratings, prices, and availability
+- Helps Google understand your property locations
+- Critical for "hotels near me" and location-based searches
+- AI assistants use this for travel recommendations
+
+HOW TO FIX:
+Add Hotel or LodgingBusiness schema including:
+- Property name and description
+- Full address with geo coordinates
+- Star rating and price range
+- Amenities and room types
+- Check-in/check-out times
+- Contact information''',
+
+    'missing_address_schema': '''CRITICAL: Missing Address in Schema
+
+Your schema markup exists but doesn't include complete address information.
+
+WHY IT MATTERS:
+- Complete address data is essential for local search visibility
+- Required for Google Maps integration
+- Helps users find your property location
+- Supports "near me" searches
+- AI assistants need this for directions and recommendations
+
+HOW TO FIX:
+Add PostalAddress to your schema with:
+- streetAddress
+- addressLocality (city)
+- addressRegion (state)
+- postalCode
+- addressCountry
+- geo coordinates (latitude/longitude)''',
+
+    # ============ TIER 2: HIGH PRIORITY ============
+
+    # GEO/LLM Optimization
+    'missing_organization_schema': '''GEO/LLM: Missing Organization Markup
+
+The page is missing Organization schema. This helps establish your brand identity for both search engines and AI assistants.
+
+WHY IT MATTERS:
+- Helps Google understand your brand and business entity
+- Can enable Knowledge Panel features
+- AI assistants use this to understand who you are
+- Links your website to your brand entity across the web
+
+HOW TO FIX:
+Add Organization schema with your company details including name, logo, social profiles, contact information, and founding date.''',
+
+    'missing_faq_schema': '''GEO/LLM PRIORITY: FAQ Content Without Markup
+
+The page appears to have FAQ content but no FAQPage schema markup.
+
+WHY IT MATTERS:
+- FAQ schema generates expandable FAQ rich results in Google
+- Takes up more space in search results (more visibility)
+- LLMs and AI assistants pull FAQ content for direct answers
+- Critical for voice search and AI-powered travel planning
+- Can significantly increase click-through rates
+
+HOW TO FIX:
+Wrap your FAQ content with FAQPage schema, including Question and Answer pairs for each FAQ item.''',
+
+    'missing_review_schema': '''GEO/LLM: Missing Review/Rating Schema
+
+The page is missing AggregateRating or Review schema markup.
+
+WHY IT MATTERS:
+- Enables star ratings in search results
+- AI assistants cite ratings when recommending hotels
+- Builds trust with potential guests
+- Critical differentiator in competitive searches
+- LLMs reference ratings in travel recommendations
+
+HOW TO FIX:
+Add AggregateRating schema with:
+- ratingValue (average rating)
+- reviewCount (number of reviews)
+- bestRating and worstRating
+Include individual Review schemas if available.''',
+
+    'thin_content': '''GEO/LLM: Thin Content (Under 300 Words)
+
+The page has less than 300 words of content, which may be insufficient for search engines and AI assistants.
+
+WHY IT MATTERS:
+- Search engines prefer substantial, informative content
+- AI/LLMs need enough content to understand and reference your page
+- Thin pages often rank poorly for competitive terms
+- Users expect detailed information about hotels/destinations
+- Voice assistants need content to generate responses
+
+HOW TO FIX:
+Expand page content to at least 500-800 words including:
+- Detailed property/room descriptions
+- Amenities and features
+- Location highlights and nearby attractions
+- Guest experience information
+- Unique selling points''',
+
+    'missing_geo_tags': '''GEO/LLM: Missing Geo Meta Tags
+
+The page is missing geo.region and geo.placename meta tags.
+
+WHY IT MATTERS:
+- Geo tags help search engines understand your location relevance
+- Improves visibility in location-based searches
+- AI travel assistants use geo data for recommendations
+- Supports local SEO and "near me" queries
+
+HOW TO FIX:
+Add geo meta tags in the <head> section:
+<meta name="geo.region" content="US-HI">
+<meta name="geo.placename" content="Honolulu">
+<meta name="geo.position" content="21.2769;-157.8268">''',
+
+    # Social/Sharing - High Priority
+    'missing_og_image': '''HIGH PRIORITY: Missing Open Graph Image
+
+The page is missing the og:image meta tag. Social shares without images get significantly less engagement.
+
+WHY IT MATTERS:
+- Posts with images get 2-3x more engagement on social media
+- Without og:image, platforms may show no image or pick a random one
+- A compelling image dramatically increases click-through rates
+- AI-generated summaries may include images
+
+HOW TO FIX:
+Add in the <head> section:
+<meta property="og:image" content="https://www.outrigger.com/path/to/image.jpg">
+
+Use an image at least 1200x630 pixels for best display. Show the property, destination, or relevant visual.''',
+
     'missing_og_title': '''SOCIAL MEDIA: Missing Open Graph Title
 
 The page is missing the og:title meta tag. This affects how the page appears when shared on Facebook, LinkedIn, and other social platforms.
@@ -159,22 +290,8 @@ Add in the <head> section:
 
 Keep it under 200 characters and make it compelling.''',
 
-    'missing_og_image': '''SOCIAL MEDIA: Missing Open Graph Image
+    # ============ TIER 3: MEDIUM PRIORITY ============
 
-The page is missing the og:image meta tag. Social shares without images get significantly less engagement.
-
-WHY IT MATTERS:
-- Posts with images get 2-3x more engagement on social media
-- Without og:image, platforms may show no image or pick a random one
-- A compelling image dramatically increases click-through rates
-
-HOW TO FIX:
-Add in the <head> section:
-<meta property="og:image" content="https://www.outrigger.com/path/to/image.jpg">
-
-Use an image at least 1200x630 pixels for best display. Show the property, destination, or relevant visual.''',
-
-    # Images
     'missing_alt_tags': '''ACCESSIBILITY & SEO: Image Missing Alt Text
 
 One or more images on this page are missing alt text attributes.
@@ -183,65 +300,13 @@ WHY IT MATTERS:
 - Screen readers use alt text to describe images to visually impaired users (ADA compliance)
 - Search engines use alt text to understand image content
 - Alt text helps images appear in Google Image search results
-- If images fail to load, alt text displays instead
+- AI models use alt text to understand visual content
 
 HOW TO FIX:
 Add descriptive alt attributes to all images:
 <img src="beach.jpg" alt="Guests relaxing on Waikiki Beach at sunset with Diamond Head in background">
 
-Be descriptive but concise. Include relevant keywords naturally. Don't stuff keywords or use "image of..." prefix.''',
-
-    # Schema/Structured Data
-    'missing_schema': '''CRITICAL: No Structured Data (JSON-LD)
-
-The page has no JSON-LD structured data markup. This is essential for modern SEO and rich search results.
-
-WHY IT MATTERS:
-- Structured data helps Google understand your content better
-- Enables rich snippets in search results (stars, prices, availability)
-- Required for many Google Search features
-- Competitors with schema markup have a significant advantage
-
-HOW TO FIX:
-Add JSON-LD schema in a <script type="application/ld+json"> tag. For hotel pages, include Hotel, LodgingBusiness, or LocalBusiness schema with:
-- Name, description, address
-- Star rating and reviews
-- Price range and amenities
-- Images and contact info
-
-Use Google's Structured Data Testing Tool to validate.''',
-
-    'missing_organization_schema': '''SCHEMA: Missing Organization Markup
-
-The page is missing Organization or Corporation schema. This helps establish your brand identity in search.
-
-WHY IT MATTERS:
-- Helps Google understand your brand and business
-- Can enable Knowledge Panel features
-- Links your website to your brand entity
-- Supports other schema types
-
-HOW TO FIX:
-Add Organization schema with your company details including name, logo, social profiles, and contact information.''',
-
-    'missing_localbusiness_schema': '''HIGH PRIORITY: Missing LocalBusiness/Hotel Schema
-
-The page is missing LocalBusiness or Hotel schema markup. This is critical for hospitality websites.
-
-WHY IT MATTERS:
-- Essential for appearing in local search results and Google Maps
-- Enables rich results showing ratings, prices, and availability
-- Helps Google understand your property locations
-- Critical for "hotels near me" and location-based searches
-
-HOW TO FIX:
-Add Hotel or LodgingBusiness schema including:
-- Property name and description
-- Full address with geo coordinates
-- Star rating and price range
-- Amenities and room types
-- Check-in/check-out times
-- Contact information''',
+Be descriptive but concise. Include relevant keywords naturally.''',
 
     'missing_breadcrumb_schema': '''SCHEMA: Missing Breadcrumb Markup
 
@@ -251,70 +316,124 @@ WHY IT MATTERS:
 - Breadcrumbs can appear in search results showing page hierarchy
 - Helps users understand where they are in your site
 - Improves site navigation signals for search engines
+- AI assistants use this to understand site structure
 
 HOW TO FIX:
 Add BreadcrumbList schema showing the page hierarchy:
 Home > Hawaii > Oahu > Waikiki Beach Resort''',
 
-    'missing_faq_schema': '''SCHEMA OPPORTUNITY: FAQ Content Without Markup
+    'multiple_h1': '''CONTENT STRUCTURE: Multiple H1 Tags
 
-The page appears to have FAQ content but no FAQPage schema markup.
-
-WHY IT MATTERS:
-- FAQ schema can generate expandable FAQ rich results in Google
-- Takes up more space in search results
-- Directly answers user questions in search
-- Can significantly increase click-through rates
-
-HOW TO FIX:
-Wrap your FAQ content with FAQPage schema, including Question and Answer pairs for each FAQ item.''',
-
-    'missing_hotel_schema': '''CRITICAL FOR HOTELS: Missing Hotel Schema
-
-This appears to be a hotel or room page but lacks Hotel or LodgingBusiness schema.
+The page has more than one H1 heading. Best practice is to have exactly one H1 per page.
 
 WHY IT MATTERS:
-- Hotel schema is essential for hospitality businesses
-- Enables rich results with pricing, availability, and ratings
-- Required for Google Hotel Search integration
-- Competitors with proper schema have major advantages
+- Multiple H1s can confuse search engines about the page's main topic
+- It weakens the semantic structure of your content
+- May dilute keyword relevance signals
 
 HOW TO FIX:
-Add comprehensive Hotel schema including property details, room types, amenities, pricing, and booking information.''',
+Keep only one H1 for the main page title. Convert other H1 tags to H2 or H3 based on content hierarchy.''',
 
-    # GEO/Local SEO
-    'missing_geo_tags': '''LOCAL SEO: Missing Geo Meta Tags
+    'missing_robots': '''TECHNICAL SEO: Missing Robots Meta Tag
 
-The page is missing geo.region and geo.placename meta tags.
+The page has no robots meta tag. While not critical, it's good practice to explicitly declare indexing instructions.
 
 WHY IT MATTERS:
-- Geo tags help search engines understand your location relevance
-- Can improve visibility in location-based searches
-- Supports local SEO efforts
+- Explicitly tells search engines whether to index the page
+- Provides control over whether links should be followed
+- Helps prevent accidental indexing of pages you don't want indexed
 
 HOW TO FIX:
-Add geo meta tags in the <head> section:
-<meta name="geo.region" content="US-HI">
-<meta name="geo.placename" content="Honolulu">
-<meta name="geo.position" content="21.2769;-157.8268">''',
+Add a robots meta tag in the <head> section:
+<meta name="robots" content="index, follow">
 
-    'missing_address_schema': '''LOCAL SEO: Missing Address in Schema
+Use "noindex" for pages you don't want in search results.''',
 
-Your schema markup exists but doesn't include complete address information.
+    'missing_schema': '''SCHEMA: No Structured Data (JSON-LD)
+
+The page has no JSON-LD structured data markup. This is essential for modern SEO and rich search results.
 
 WHY IT MATTERS:
-- Complete address data is essential for local search visibility
-- Required for Google Maps integration
-- Helps users find your property location
-- Supports "near me" searches
+- Structured data helps Google understand your content better
+- Enables rich snippets in search results (stars, prices, availability)
+- Required for many Google Search features
+- AI assistants rely heavily on structured data
 
 HOW TO FIX:
-Add PostalAddress to your schema with:
-- streetAddress
-- addressLocality (city)
-- addressRegion (state)
-- postalCode
-- addressCountry''',
+Add JSON-LD schema in a <script type="application/ld+json"> tag. For hotel pages, include Hotel, LodgingBusiness, or LocalBusiness schema.
+
+Use Google's Structured Data Testing Tool to validate.''',
+
+    # ============ GEO/LLM SPECIFIC ADDITIONS ============
+
+    'missing_speakable_schema': '''GEO/LLM: Missing Speakable Schema
+
+The page is missing Speakable schema markup for voice assistant optimization.
+
+WHY IT MATTERS:
+- Speakable schema tells voice assistants which content to read aloud
+- Critical for Google Assistant, Alexa, and Siri integration
+- Optimizes your content for voice search queries
+- Growing importance as voice search increases
+
+HOW TO FIX:
+Add Speakable schema identifying the most important text sections:
+- Property name and key description
+- Location information
+- Key amenities and features
+- Pricing highlights''',
+
+    'missing_tourist_attraction_schema': '''GEO/LLM: Missing TouristAttraction Schema
+
+Pages about attractions or destinations are missing TouristAttraction schema.
+
+WHY IT MATTERS:
+- Helps AI travel assistants recommend nearby attractions
+- Improves visibility in "things to do" searches
+- Links your property to local experiences
+- Critical for destination marketing
+
+HOW TO FIX:
+Add TouristAttraction schema for nearby attractions pages including:
+- Attraction name and description
+- Address and geo coordinates
+- Opening hours
+- Tourism type (beach, cultural, adventure, etc.)''',
+
+    'missing_event_schema': '''GEO/LLM: Missing Event Schema
+
+Pages about hotel events or activities are missing Event schema.
+
+WHY IT MATTERS:
+- Events can appear in Google's event search results
+- AI assistants recommend events to travelers
+- Increases visibility for "what's happening" queries
+- Drives bookings for special occasions
+
+HOW TO FIX:
+Add Event schema including:
+- Event name and description
+- Start/end dates and times
+- Location (use your Hotel schema)
+- Ticket/pricing information
+- Event type/category''',
+
+    'missing_offer_schema': '''GEO/LLM: Missing Offer/Pricing Schema
+
+The page is missing Offer or PriceSpecification schema for pricing information.
+
+WHY IT MATTERS:
+- Enables price display in search results
+- AI assistants use pricing data for comparisons
+- Critical for "hotels under $X" searches
+- Helps travelers make booking decisions
+
+HOW TO FIX:
+Add Offer schema within your Hotel schema including:
+- Price and priceCurrency
+- Availability
+- Valid date ranges
+- Room types included''',
 }
 
 def fetch_with_scraper_api(url):
@@ -416,84 +535,32 @@ class SEOAuditor:
                 print(f"Warning: Got Cloudflare challenge page for {url}")
                 return issues
 
-            # ============ BASIC SEO CHECKS ============
+            # ============ TIER 1: CRITICAL CHECKS ============
 
-            # Title tag
+            # Title tag (Critical)
             if not title_tag or not title_tag.text.strip():
-                issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'High', 'url': url})
+                issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
             elif len(title_tag.text.strip()) < 30:
-                issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'Medium', 'url': url})
+                issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'High', 'url': url})
 
-            # Meta description
+            # Meta description (Critical)
             meta_desc = soup.find('meta', attrs={'name': 'description'})
             if not meta_desc or not meta_desc.get('content', '').strip():
-                issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'High', 'url': url})
+                issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
             elif len(meta_desc.get('content', '').strip()) < 120:
-                issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'Medium', 'url': url})
+                issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'High', 'url': url})
 
-            # H1 tags
+            # H1 tag (Critical)
             h1_tags = soup.find_all('h1')
             if not h1_tags:
-                issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Medium', 'url': url})
+                issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
             elif len(h1_tags) > 1:
                 issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
 
-            # ============ TECHNICAL SEO CHECKS ============
-
-            # Canonical tag
+            # Canonical tag (Critical)
             canonical = soup.find('link', attrs={'rel': 'canonical'})
             if not canonical or not canonical.get('href'):
-                issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Medium', 'url': url})
-
-            # Robots meta tag
-            robots = soup.find('meta', attrs={'name': 'robots'})
-            if not robots:
-                issues.append({'type': 'missing_robots', 'title': 'Missing robots meta tag', 'severity': 'Low', 'url': url})
-
-            # ============ OPEN GRAPH CHECKS ============
-
-            og_title = soup.find('meta', attrs={'property': 'og:title'})
-            if not og_title or not og_title.get('content'):
-                issues.append({'type': 'missing_og_title', 'title': 'Missing Open Graph title', 'severity': 'Medium', 'url': url})
-
-            og_desc = soup.find('meta', attrs={'property': 'og:description'})
-            if not og_desc or not og_desc.get('content'):
-                issues.append({'type': 'missing_og_description', 'title': 'Missing Open Graph description', 'severity': 'Medium', 'url': url})
-
-            og_image = soup.find('meta', attrs={'property': 'og:image'})
-            if not og_image or not og_image.get('content'):
-                issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'Medium', 'url': url})
-
-            # ============ IMAGE ALT TAG CHECKS ============
-
-            images = soup.find_all('img')
-            images_without_alt = []
-            for img in images:
-                if not img.get('alt') or not img.get('alt').strip():
-                    # Get image source/name
-                    img_src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
-                    if img_src:
-                        # Extract filename from URL
-                        img_name = img_src.split('/')[-1].split('?')[0][:50]
-                        images_without_alt.append(img_name)
-
-            # Create individual issues for each image missing alt tag (limit to first 5)
-            for img_name in images_without_alt[:5]:
-                issues.append({
-                    'type': 'missing_alt_tags',
-                    'title': f'Missing alt tag: {img_name}',
-                    'severity': 'Medium',
-                    'url': url
-                })
-
-            # If more than 5 images missing alt, add a summary
-            if len(images_without_alt) > 5:
-                issues.append({
-                    'type': 'missing_alt_tags',
-                    'title': f'Additional {len(images_without_alt) - 5} images missing alt tags',
-                    'severity': 'Medium',
-                    'url': url
-                })
+                issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
 
             # ============ SCHEMA/STRUCTURED DATA CHECKS ============
 
@@ -531,49 +598,146 @@ class SEOAuditor:
 
             print(f"Found schema types: {schema_types}")
 
-            # Check for missing schemas
+            # Check for missing schemas - Critical for hotels
             if not schemas:
-                issues.append({'type': 'missing_schema', 'title': 'No JSON-LD structured data', 'severity': 'High', 'url': url})
+                issues.append({'type': 'missing_schema', 'title': 'No JSON-LD structured data', 'severity': 'Critical', 'url': url})
             else:
-                # Organization schema
-                if not any(t in schema_types for t in ['Organization', 'Corporation', 'Hotel', 'Resort']):
-                    issues.append({'type': 'missing_organization_schema', 'title': 'Missing Organization schema', 'severity': 'Medium', 'url': url})
-
-                # LocalBusiness/Hotel schema - important for Outrigger
-                if not any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Resort']):
-                    issues.append({'type': 'missing_localbusiness_schema', 'title': 'Missing LocalBusiness/Hotel schema', 'severity': 'High', 'url': url})
-
-                # Breadcrumb schema
-                if 'BreadcrumbList' not in schema_types:
-                    issues.append({'type': 'missing_breadcrumb_schema', 'title': 'Missing BreadcrumbList schema', 'severity': 'Low', 'url': url})
-
-                # Check for Hotel-specific schema on hotel pages
-                if '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower():
+                # Hotel/LodgingBusiness schema - Critical for hotel pages
+                is_hotel_page = '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower()
+                if is_hotel_page:
                     if not any(t in schema_types for t in ['Hotel', 'LodgingBusiness', 'Resort', 'Suite', 'HotelRoom']):
-                        issues.append({'type': 'missing_hotel_schema', 'title': 'Missing Hotel/LodgingBusiness schema', 'severity': 'High', 'url': url})
+                        issues.append({'type': 'missing_hotel_schema', 'title': 'Missing Hotel/LodgingBusiness schema', 'severity': 'Critical', 'url': url})
 
-                # Check for address in schema (for local SEO)
+                # LocalBusiness schema - Critical for Outrigger
+                if not any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Resort']):
+                    issues.append({'type': 'missing_localbusiness_schema', 'title': 'Missing LocalBusiness/Hotel schema', 'severity': 'Critical', 'url': url})
+
+                # Check for address in schema - Critical for local SEO
                 has_address = False
-                for schema in schemas:
-                    if isinstance(schema, dict):
-                        if 'address' in schema or 'location' in schema:
+                def check_address(obj):
+                    nonlocal has_address
+                    if isinstance(obj, dict):
+                        if 'address' in obj or 'location' in obj or 'geo' in obj:
                             has_address = True
-                            break
+                            return
+                        for v in obj.values():
+                            check_address(v)
+                    elif isinstance(obj, list):
+                        for item in obj:
+                            check_address(item)
+
+                for schema in schemas:
+                    check_address(schema)
+
                 if not has_address and any(t in schema_types for t in ['LocalBusiness', 'Hotel', 'LodgingBusiness', 'Organization']):
-                    issues.append({'type': 'missing_address_schema', 'title': 'Missing address in schema', 'severity': 'Medium', 'url': url})
+                    issues.append({'type': 'missing_address_schema', 'title': 'Missing address in schema', 'severity': 'Critical', 'url': url})
 
-            # FAQ schema check - only if page has FAQ content
-            faq_indicators = soup.find_all(['details', 'summary']) or soup.find_all(class_=re.compile(r'faq|accordion', re.I))
+            # ============ TIER 2: HIGH PRIORITY (GEO/LLM) ============
+
+            if schemas:
+                # Organization schema - Important for brand identity
+                if not any(t in schema_types for t in ['Organization', 'Corporation', 'Hotel', 'Resort']):
+                    issues.append({'type': 'missing_organization_schema', 'title': 'Missing Organization schema', 'severity': 'High', 'url': url})
+
+                # Review/Rating schema - Important for AI recommendations
+                if not any(t in schema_types for t in ['AggregateRating', 'Review']):
+                    issues.append({'type': 'missing_review_schema', 'title': 'Missing Review/Rating schema', 'severity': 'High', 'url': url})
+
+                # Offer/Pricing schema - Important for price searches
+                if not any(t in schema_types for t in ['Offer', 'PriceSpecification', 'AggregateOffer']):
+                    issues.append({'type': 'missing_offer_schema', 'title': 'Missing Offer/Pricing schema', 'severity': 'High', 'url': url})
+
+            # FAQ schema check - High priority for LLM optimization
+            faq_indicators = soup.find_all(['details', 'summary']) or soup.find_all(class_=re.compile(r'faq|accordion|question', re.I))
             if faq_indicators and 'FAQPage' not in schema_types:
-                issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'Low', 'url': url})
+                issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'High', 'url': url})
 
-            # ============ GEO/LOCAL SEO CHECKS ============
+            # Thin content check - Important for LLMs
+            # Get text content (excluding scripts, styles, etc.)
+            for tag in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
+                tag.decompose()
+            text_content = soup.get_text(separator=' ', strip=True)
+            word_count = len(text_content.split())
+            if word_count < 300:
+                issues.append({'type': 'thin_content', 'title': f'Thin content ({word_count} words)', 'severity': 'High', 'url': url})
 
-            # Geo meta tags
+            # Geo meta tags - Important for location-based AI
             geo_region = soup.find('meta', attrs={'name': 'geo.region'})
             geo_placename = soup.find('meta', attrs={'name': 'geo.placename'})
             if not geo_region and not geo_placename:
-                issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'Low', 'url': url})
+                issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'High', 'url': url})
+
+            # Open Graph image - High priority for social/sharing
+            og_image = soup.find('meta', attrs={'property': 'og:image'})
+            if not og_image or not og_image.get('content'):
+                issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'High', 'url': url})
+
+            # Open Graph title/description
+            og_title = soup.find('meta', attrs={'property': 'og:title'})
+            if not og_title or not og_title.get('content'):
+                issues.append({'type': 'missing_og_title', 'title': 'Missing Open Graph title', 'severity': 'Medium', 'url': url})
+
+            og_desc = soup.find('meta', attrs={'property': 'og:description'})
+            if not og_desc or not og_desc.get('content'):
+                issues.append({'type': 'missing_og_description', 'title': 'Missing Open Graph description', 'severity': 'Medium', 'url': url})
+
+            # ============ TIER 3: MEDIUM PRIORITY ============
+
+            # Image alt tags
+            # Re-parse since we decomposed some tags above
+            soup_fresh = BeautifulSoup(resp.text, 'html.parser')
+            images = soup_fresh.find_all('img')
+            images_without_alt = []
+            for img in images:
+                if not img.get('alt') or not img.get('alt').strip():
+                    img_src = img.get('src', '') or img.get('data-src', '') or img.get('data-lazy-src', '')
+                    if img_src:
+                        img_name = img_src.split('/')[-1].split('?')[0][:50]
+                        images_without_alt.append(img_name)
+
+            # Create individual issues for each image missing alt tag (limit to first 3)
+            for img_name in images_without_alt[:3]:
+                issues.append({
+                    'type': 'missing_alt_tags',
+                    'title': f'Missing alt tag: {img_name}',
+                    'severity': 'Medium',
+                    'url': url
+                })
+
+            if len(images_without_alt) > 3:
+                issues.append({
+                    'type': 'missing_alt_tags',
+                    'title': f'Additional {len(images_without_alt) - 3} images missing alt tags',
+                    'severity': 'Medium',
+                    'url': url
+                })
+
+            # Breadcrumb schema
+            if schemas and 'BreadcrumbList' not in schema_types:
+                issues.append({'type': 'missing_breadcrumb_schema', 'title': 'Missing BreadcrumbList schema', 'severity': 'Medium', 'url': url})
+
+            # Robots meta tag
+            robots = soup_fresh.find('meta', attrs={'name': 'robots'})
+            if not robots:
+                issues.append({'type': 'missing_robots', 'title': 'Missing robots meta tag', 'severity': 'Low', 'url': url})
+
+            # ============ GEO/LLM SPECIFIC CHECKS ============
+
+            # Speakable schema for voice assistants
+            if schemas and 'Speakable' not in schema_types:
+                # Only flag for main content pages
+                if is_hotel_page or '/destination' in url.lower() or '/about' in url.lower():
+                    issues.append({'type': 'missing_speakable_schema', 'title': 'Missing Speakable schema for voice search', 'severity': 'Medium', 'url': url})
+
+            # TouristAttraction schema for attraction pages
+            if '/attraction' in url.lower() or '/things-to-do' in url.lower() or '/activities' in url.lower():
+                if 'TouristAttraction' not in schema_types:
+                    issues.append({'type': 'missing_tourist_attraction_schema', 'title': 'Missing TouristAttraction schema', 'severity': 'High', 'url': url})
+
+            # Event schema for event pages
+            if '/event' in url.lower() or '/special' in url.lower() or '/offer' in url.lower():
+                if 'Event' not in schema_types:
+                    issues.append({'type': 'missing_event_schema', 'title': 'Missing Event schema', 'severity': 'High', 'url': url})
 
             print(f"Found {len(issues)} issues for {url}")
         except Exception as e:
