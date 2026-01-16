@@ -29,4 +29,4 @@ ENV PORT=8080
 EXPOSE 8080
 
 # Run with functions-framework for Cloud Run
-CMD ["functions-framework", "--target=audit_handler", "--port=8080"]
+CMD ["functions-framework", "--target=hello_http", "--port=8080"]
