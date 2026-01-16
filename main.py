@@ -378,12 +378,28 @@ class MondayClient:
             data = resp.json()
             if 'data' in data and data['data']['boards']:
                 items = data['data']['boards'][0].get('items_page', {}).get('items', [])
+                url_col_id = self._get_column_id('page_url')
                 for item in items:
-                    # Extract URL and issue type from item name or columns
                     name = item.get('name', '')
-                    # Create a unique key from the item name (which contains severity, issue, and URL)
+                    # Try to get the URL from column values for duplicate key
+                    url = ''
+                    for col in item.get('column_values', []):
+                        if col['id'] == url_col_id:
+                            # URL might be in text or in value (as JSON)
+                            url = col.get('text', '')
+                            if not url and col.get('value'):
+                                try:
+                                    val = json.loads(col['value'])
+                                    url = val.get('url', '') if isinstance(val, dict) else ''
+                                except:
+                                    pass
+                            break
+                    # Create duplicate key matching the format we use when creating
+                    if url:
+                        self.existing_issues.add(f"{name}|{url}")
+                    # Also add just the name for backward compatibility
                     self.existing_issues.add(name)
-                print(f"Found {len(self.existing_issues)} existing items")
+                print(f"Found {len(self.existing_issues)} existing items/keys")
         except Exception as e:
             print(f"Error fetching existing items: {e}")
 
@@ -393,17 +409,20 @@ class MondayClient:
             'issue_description': ['issue_description', 'description', 'issue_desc'],
             'issue_type': ['issue_type', 'type', 'issuetype'],
             'status': ['status'],
-            'page_url': ['page_url', 'url', 'pageurl', 'link', 'page'],
+            'page_url': ['page_url', 'url', 'pageurl', 'link'],
             'date_found': ['date_found', 'datefound', 'date', 'found_date'],
         }
         # First try exact matches
         for key in field_mappings.get(field_name, [field_name]):
             if key in self.columns:
                 return self.columns[key]['id']
-        # Then try partial matches
+        # Then try partial matches (but be more specific)
         for key in field_mappings.get(field_name, [field_name]):
             for col_name in self.columns:
-                if key in col_name or col_name in key:
+                # For page_url, look for columns containing 'url' but not other fields
+                if field_name == 'page_url' and 'url' in col_name:
+                    return self.columns[col_name]['id']
+                elif key in col_name or col_name in key:
                     return self.columns[col_name]['id']
         return None
 
@@ -416,11 +435,12 @@ class MondayClient:
         if not self.api_token:
             return None
 
-        # Create a cleaner task title - details go in columns
-        task_title = f"{issue['title']} - {issue['url'].split('/')[-1][:40] or issue['url'][:40]}"
+        # Task title is ONLY the issue - URL goes in the Page URL column
+        task_title = issue['title']
 
-        # Check for duplicate
-        if self.is_duplicate(task_title):
+        # For duplicate detection, use title + URL combo
+        duplicate_key = f"{issue['title']}|{issue['url']}"
+        if duplicate_key in self.existing_issues:
             print(f"Skipping duplicate: {task_title[:60]}...")
             return "duplicate"
 
@@ -449,6 +469,8 @@ class MondayClient:
 
         # Page URL (link or text column)
         url_col = self._get_column_id('page_url')
+        print(f"Looking for Page URL column. Found: {url_col}")
+        print(f"Available columns: {self.columns}")
         if url_col:
             # Find the actual column type by ID
             col_type = None
@@ -456,11 +478,13 @@ class MondayClient:
                 if col_info['id'] == url_col:
                     col_type = col_info['type']
                     break
-            print(f"Page URL column ID: {url_col}, type: {col_type}")
+            print(f"Page URL column ID: {url_col}, type: {col_type}, url: {issue['url']}")
             if col_type == 'link':
                 column_values[url_col] = {"url": issue['url'], "text": "View Page"}
             else:
                 column_values[url_col] = issue['url']
+        else:
+            print(f"WARNING: Could not find Page URL column!")
 
         # Date Found (date column)
         date_col = self._get_column_id('date_found')
