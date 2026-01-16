@@ -498,10 +498,12 @@ class MondayClient:
             today = datetime.now().strftime("%Y-%m-%d")
             column_values[date_col] = {"date": today}
 
-        # Status (status column) - set to "Open" or default
-        status_col = self._get_column_id('status')
-        if status_col:
-            column_values[status_col] = {"label": "Open"}
+        # Status (status column) - use a valid status from the board
+        # Valid statuses are: Stuck (101), Working on it (108), Done (153)
+        # We'll skip setting status to avoid errors - let it use default
+        # status_col = self._get_column_id('status')
+        # if status_col:
+        #     column_values[status_col] = {"index": 108}  # "Working on it"
 
         print(f"Creating task with columns: {list(column_values.keys())}")
 
