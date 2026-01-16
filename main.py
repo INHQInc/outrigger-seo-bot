@@ -43,8 +43,15 @@ class ConfigManager:
         try:
             # Load SEO Rules - get all docs and filter enabled ones in Python
             # (avoids need for composite index)
-            seo_docs = db.collection('seoRules').stream()
-            all_seo = [{'id': doc.id, **doc.to_dict()} for doc in seo_docs]
+            print(f"Attempting to load from Firestore project: {FIRESTORE_PROJECT_ID}")
+            seo_collection = db.collection('seoRules')
+            print(f"Got collection reference: {seo_collection.id}")
+            seo_docs = seo_collection.stream()
+            all_seo = []
+            for doc in seo_docs:
+                doc_data = doc.to_dict()
+                print(f"  Found SEO doc: {doc.id} -> {doc_data}")
+                all_seo.append({'id': doc.id, **doc_data})
             self.seo_rules = [r for r in all_seo if r.get('enabled', False)]
             print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore (from {len(all_seo)} total)")
 
