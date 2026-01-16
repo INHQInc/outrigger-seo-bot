@@ -679,6 +679,7 @@ class MondayClient:
             'status': ['status'],
             'page_url': ['url', 'page_url', 'pageurl', 'link'],  # 'url' first since column is named "URL"
             'date_found': ['date_found', 'datefound', 'date', 'found_date'],
+            'severity': ['severity', 'priority', 'sev'],  # Severity column with Low/Medium/High/Critical labels
         }
         print(f"Looking for field: {field_name}, mappings: {field_mappings.get(field_name)}")
         print(f"Current columns: {list(self.columns.keys())}")
@@ -739,6 +740,17 @@ class MondayClient:
             description = ISSUE_DESCRIPTIONS.get(issue['type'], f"SEO issue detected: {issue['title']}")
             column_values[desc_col] = {"text": description}
             print(f"Setting Issue Description column")
+
+        # Severity (status column with labels: Low, Medium, High, Critical)
+        severity_col = self._get_column_id('severity')
+        if severity_col:
+            # Map our severity values to Monday.com labels
+            severity_value = issue.get('severity', 'Medium')
+            # Ensure it matches one of the valid options
+            if severity_value not in ['Low', 'Medium', 'High', 'Critical']:
+                severity_value = 'Medium'
+            column_values[severity_col] = {"label": severity_value}
+            print(f"Setting Severity column to: {severity_value}")
 
         print(f"Creating task with columns: {list(column_values.keys())}")
 
