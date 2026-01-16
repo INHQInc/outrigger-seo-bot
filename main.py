@@ -774,6 +774,22 @@ class MondayClient:
                 return data['data']['create_item']['id']
             elif 'errors' in data:
                 print(f"Monday API errors: {data['errors']}")
+                # Check if it's a status label error
+                error_msg = str(data['errors'])
+                if 'status label' in error_msg.lower() or 'label' in error_msg.lower():
+                    # Try again without the severity column
+                    print("Retrying without Severity column...")
+                    severity_col = self._get_column_id('severity')
+                    if severity_col and severity_col in column_values:
+                        del column_values[severity_col]
+                        variables["column_values"] = json.dumps(column_values)
+                        resp2 = requests.post(self.api_url, json={"query": query, "variables": variables},
+                                           headers=self._get_headers(), timeout=30)
+                        data2 = resp2.json()
+                        print(f"Retry response: {data2}")
+                        if 'data' in data2 and 'create_item' in data2['data']:
+                            self.existing_issues.add(task_title)
+                            return data2['data']['create_item']['id']
                 # Try simpler create without column_values if it fails
                 return self._create_simple_task(task_title)
         except Exception as e:
@@ -814,6 +830,7 @@ def test_monday_columns():
     result = {
         "columns_found": monday.columns,
         "test_issue": test_issue,
+        "severity_column_id": monday._get_column_id('severity'),
     }
 
     # Try to create the test item
