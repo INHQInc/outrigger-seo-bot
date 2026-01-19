@@ -84,8 +84,12 @@ Check: {rule.get('prompt', rule.get('description', 'No prompt provided'))}
 """
 
         # Create the audit prompt
-        system_prompt = """You are an expert SEO and GEO (Generative Engine Optimization) auditor for hospitality websites.
-Your task is to analyze HTML pages and determine if they pass or fail specific SEO/GEO rules.
+        system_prompt = """You are an expert SEO, GEO (Generative Engine Optimization), and brand compliance auditor for hospitality websites, specifically Outrigger Hotels & Resorts.
+
+Your task is to analyze HTML pages and determine if they pass or fail specific rules in these categories:
+1. SEO/Technical - title tags, meta descriptions, schema markup, etc.
+2. Voice & Tone - warm hospitality tone, adventure/discovery language, authentic Hawaiian voice
+3. Brand Standards - correct brand name usage, property names, brand compliance
 
 For each rule, you must analyze the HTML and determine:
 1. PASS - The page meets the requirements of the rule
@@ -95,7 +99,8 @@ When a rule FAILs, provide:
 - A specific, actionable issue title (short, ~50 chars)
 - A detailed description explaining why it failed and how to fix it
 
-Be thorough but accurate - only flag real issues. Consider the context of hospitality/hotel websites."""
+Be thorough but accurate - only flag real issues. Consider the context of Hawaiian hospitality/hotel websites.
+For voice/tone rules, be lenient - only fail if there's a clear violation, not just room for improvement."""
 
         user_prompt = f"""Analyze this webpage and check it against the following SEO/GEO rules.
 
@@ -247,11 +252,25 @@ class ConfigManager:
             self.voice_rules = [r for r in all_voice if r.get('enabled', False)]
             print(f"Loaded {len(self.voice_rules)} voice rules from Firestore (from {len(all_voice)} total)")
 
+            # Add voice rules with prompts to LLM rules
+            voice_llm_rules = [r for r in self.voice_rules if r.get('prompt')]
+            if voice_llm_rules:
+                self._llm_rules.extend(voice_llm_rules)
+                print(f"  - Added {len(voice_llm_rules)} voice rules with LLM prompts")
+
             # Load Brand Standards
             brand_docs = db.collection('brandStandards').stream()
             all_brand = [{'id': doc.id, **doc.to_dict()} for doc in brand_docs]
             self.brand_standards = [r for r in all_brand if r.get('enabled', False)]
             print(f"Loaded {len(self.brand_standards)} brand standards from Firestore (from {len(all_brand)} total)")
+
+            # Add brand standards with prompts to LLM rules
+            brand_llm_rules = [r for r in self.brand_standards if r.get('prompt')]
+            if brand_llm_rules:
+                self._llm_rules.extend(brand_llm_rules)
+                print(f"  - Added {len(brand_llm_rules)} brand standards with LLM prompts")
+
+            print(f"Total LLM rules to evaluate: {len(self._llm_rules)}")
 
             self._loaded = True
             return True
@@ -1359,6 +1378,204 @@ def test_monday_columns():
 
     return result
 
+
+def update_voice_brand_rules():
+    """Update existing Voice Rules and Brand Standards in Firestore to add LLM prompts."""
+    if not db:
+        return {"error": "Firestore not connected"}
+
+    # Updated Voice Rules with LLM prompts
+    VOICE_RULES_UPDATE = {
+        'Warm & Welcoming': {
+            'checkType': 'voice_warm',
+            'prompt': '''Analyze the TONE of this page's content. The rule FAILS if:
+1. The content uses cold, corporate, or impersonal language
+2. The writing feels transactional rather than welcoming
+3. There's excessive use of formal business jargon
+4. The tone doesn't convey warmth or hospitality
+
+For a Hawaiian resort brand, content should feel:
+- Warm and inviting, like greeting a guest with "aloha"
+- Relaxed and friendly, not stiff or formal
+- Genuine and heartfelt, not salesy or pushy
+
+Look at headings, body copy, and calls-to-action.
+PASS if the content generally conveys warm Hawaiian hospitality.
+FAIL only if the tone is notably cold, corporate, or unwelcoming.''',
+            'severity': 'Medium',
+            'tier': 3
+        },
+        'Adventure & Discovery': {
+            'checkType': 'voice_adventure',
+            'prompt': '''Analyze whether this page's content inspires adventure and discovery. The rule FAILS if:
+1. For destination/activity pages: Content is bland and doesn't inspire exploration
+2. The writing is purely informational without any sense of excitement
+3. Unique experiences or "hidden gems" are not highlighted when they should be
+
+For hotel/resort pages, look for content that:
+- Highlights unique local experiences
+- Creates a sense of discovery and exploration
+- Makes travelers excited about what they could experience
+
+PASS if the content includes inspiring, discovery-oriented language.
+FAIL only for destination/activity pages that lack any sense of adventure or excitement.
+Note: This is less critical for purely transactional pages (booking, policies).''',
+            'severity': 'Low',
+            'tier': 3
+        },
+        'Authentic Local Voice': {
+            'checkType': 'voice_authentic',
+            'prompt': '''Analyze whether this page uses authentic Hawaiian language and cultural elements appropriately. The rule FAILS if:
+1. Hawaiian terms are misused or used incorrectly
+2. Cultural references are inaccurate or inappropriate
+3. The content appropriates Hawaiian culture without respect
+
+Look for appropriate use of terms like:
+- Aloha (greeting/love/spirit)
+- Mahalo (thank you)
+- Ohana (family)
+- Malama (care/stewardship)
+- Local place names and their correct spelling
+
+PASS if Hawaiian elements are used respectfully and correctly, OR if the page doesn't require Hawaiian language.
+FAIL if Hawaiian terms are misused, misspelled, or culturally inappropriate.
+Note: Not every page needs Hawaiian language - this is about quality when it IS used.''',
+            'severity': 'Medium',
+            'tier': 3
+        },
+        'Sensory Language': {
+            'checkType': 'voice_sensory',
+            'prompt': '''Analyze whether this page uses vivid sensory language to bring the destination to life. The rule FAILS if:
+1. For property/destination pages: Content is purely factual without sensory descriptions
+2. Descriptions miss opportunities to engage the senses
+3. The writing tells but doesn't show what the experience feels like
+
+Good sensory language examples:
+- "Wake to the sound of waves and the scent of plumeria"
+- "Feel the warm sand between your toes"
+- "Watch the sun paint the sky in shades of orange and pink"
+- "Savor fresh-caught fish with tropical flavors"
+
+PASS if property/destination content includes some sensory, experiential language.
+FAIL only for main property pages that completely lack sensory or experiential descriptions.
+Note: Transactional pages (booking, policies) don't need sensory language.''',
+            'severity': 'Low',
+            'tier': 3
+        },
+    }
+
+    # Updated Brand Standards with LLM prompts
+    BRAND_STANDARDS_UPDATE = {
+        'Brand Name Usage': {
+            'checkType': 'brand_name',
+            'prompt': '''Check if the brand name "Outrigger" is used correctly on this page. The rule FAILS if:
+1. The brand name appears in ALL CAPS as "OUTRIGGER" (incorrect)
+2. The brand name appears in all lowercase as "outrigger" (incorrect - unless in a URL)
+3. The brand is misspelled (e.g., "Outriggers", "Out Rigger", "OutRigger")
+
+Correct usage:
+- "Outrigger" (proper case)
+- "Outrigger Hotels & Resorts" (full brand name)
+- "Outrigger Resorts" (acceptable short form)
+
+PASS if "Outrigger" is spelled and capitalized correctly throughout.
+FAIL if there are instances of incorrect capitalization or spelling (excluding URLs).''',
+            'severity': 'High',
+            'tier': 2
+        },
+        'Property Names': {
+            'checkType': 'brand_property',
+            'prompt': '''Check if property names are used consistently and correctly. The rule FAILS if:
+1. Property names are abbreviated incorrectly
+2. Location identifiers are missing when they should be included
+3. Property names are inconsistent within the same page
+
+Outrigger properties should include full names like:
+- "Outrigger Reef Waikiki Beach Resort" (not just "Outrigger Reef" or "Reef Resort")
+- "Outrigger Waikiki Beach Resort"
+- "Outrigger Kona Resort & Spa"
+
+PASS if property names are used consistently and include proper identifiers.
+FAIL if property names are abbreviated, truncated, or inconsistent.
+Note: This is most important on property-specific pages.''',
+            'severity': 'Medium',
+            'tier': 3
+        },
+        'Color Palette': {
+            'checkType': 'brand_colors',
+            'prompt': '''Check if the page uses Outrigger brand colors appropriately. The rule FAILS if:
+1. The page uses significantly off-brand colors for primary elements
+2. Colors clash with the brand palette (Primary: Teal #006272, Gold #c4a35a, Sunset Orange #e07c3e)
+
+Look at CSS styles and inline colors in the HTML.
+Brand-aligned colors include:
+- Teal/Ocean Blue tones (#006272 range)
+- Gold/Sand tones (#c4a35a range)
+- Sunset Orange (#e07c3e range)
+- White and light neutrals for backgrounds
+
+PASS if the color scheme generally aligns with tropical/resort branding.
+FAIL only if there are jarring off-brand colors (like neon, harsh industrial colors, etc).
+Note: This is a soft check - minor variations are acceptable.''',
+            'severity': 'Low',
+            'tier': 3,
+            'enabled': False  # Disable by default - visual checks less reliable
+        },
+        'Image Standards': {
+            'checkType': 'brand_images',
+            'prompt': '''Check if image alt text follows brand standards. The rule FAILS if:
+1. Alt text uses generic descriptions like "hotel room" instead of branded terms
+2. Alt text misses opportunities to include property or destination names
+3. Alt text uses competitor names or off-brand terminology
+
+Good branded alt text examples:
+- "Ocean view suite at Outrigger Waikiki Beach Resort"
+- "Guests enjoying sunset dinner at Outrigger Fiji Beach Resort"
+- "Traditional Hawaiian luau experience"
+
+PASS if alt text generally uses branded, destination-specific language.
+FAIL if alt text is overly generic and misses branding opportunities on key images.''',
+            'severity': 'Low',
+            'tier': 3
+        },
+    }
+
+    results = {"voice_updated": [], "brand_updated": [], "errors": []}
+
+    try:
+        # Update Voice Rules
+        voice_collection = db.collection('voiceRules')
+        voice_docs = list(voice_collection.stream())
+
+        for doc in voice_docs:
+            doc_data = doc.to_dict()
+            name = doc_data.get('name', '')
+
+            if name in VOICE_RULES_UPDATE:
+                update_data = VOICE_RULES_UPDATE[name]
+                doc.reference.update(update_data)
+                results["voice_updated"].append(name)
+
+        # Update Brand Standards
+        brand_collection = db.collection('brandStandards')
+        brand_docs = list(brand_collection.stream())
+
+        for doc in brand_docs:
+            doc_data = doc.to_dict()
+            name = doc_data.get('name', '')
+
+            if name in BRAND_STANDARDS_UPDATE:
+                update_data = BRAND_STANDARDS_UPDATE[name]
+                doc.reference.update(update_data)
+                results["brand_updated"].append(name)
+
+    except Exception as e:
+        results["errors"].append(str(e))
+        import traceback
+        traceback.print_exc()
+
+    return results
+
 @functions_framework.http
 def hello_http(request):
     headers = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'}
@@ -1383,11 +1600,25 @@ def hello_http(request):
                     "seo_rules": len(config_manager.seo_rules),
                     "voice_rules": len(config_manager.voice_rules),
                     "brand_standards": len(config_manager.brand_standards),
+                    "llm_rules_total": len(config_manager.get_llm_rules()),
                     "rules_detail": {
-                        "seo": [{"name": r.get("name"), "type": r.get("checkType"), "enabled": r.get("enabled")} for r in config_manager.seo_rules],
-                        "voice": [{"name": r.get("name")} for r in config_manager.voice_rules],
-                        "brand": [{"name": r.get("name")} for r in config_manager.brand_standards]
+                        "seo": [{"name": r.get("name"), "type": r.get("checkType"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.seo_rules],
+                        "voice": [{"name": r.get("name"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.voice_rules],
+                        "brand": [{"name": r.get("name"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.brand_standards]
                     }
+                }), 200, headers
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({"error": str(e)}), 500, headers
+
+        # Update voice/brand rules with LLM prompts
+        if request.args.get('update_rules') == 'true':
+            try:
+                result = update_voice_brand_rules()
+                return jsonify({
+                    "status": "rules_updated",
+                    "result": result
                 }), 200, headers
             except Exception as e:
                 import traceback
