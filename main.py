@@ -847,7 +847,7 @@ class SitemapParser:
                     {'url': 'https://www.outrigger.com/hotels-resorts/mauritius'}
                 ]
 
-            return urls[:2]  # Limit to 2 pages to conserve ScraperAPI tokens
+            return urls[:1]  # Limit to 1 page for testing
         except Exception as e:
             print(f"Error parsing sitemap: {e}")
             print("Using fallback URLs due to error")
@@ -899,45 +899,61 @@ class SEOAuditor:
                 print(f"Warning: Got Cloudflare challenge page for {url}")
                 return issues
 
+            # TESTING: Limit SEO checks to 1 issue
+            MAX_SEO_ISSUES = 1
+            seo_issue_count = 0
+
             # ============ TIER 1: CRITICAL CHECKS ============
             # Only run if enabled in config
 
             # Title tag (Critical) - checkType: 'title'
-            if config.is_check_enabled('title'):
+            if config.is_check_enabled('title') and seo_issue_count < MAX_SEO_ISSUES:
                 if not title_tag or not title_tag.text.strip():
                     issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
+                    seo_issue_count += 1
                 elif len(title_tag.text.strip()) < 30:
                     issues.append({'type': 'short_title', 'title': 'Title too short', 'severity': 'High', 'url': url})
+                    seo_issue_count += 1
 
             # Meta description (Critical) - checkType: 'meta'
-            if config.is_check_enabled('meta'):
+            if config.is_check_enabled('meta') and seo_issue_count < MAX_SEO_ISSUES:
                 meta_desc = soup.find('meta', attrs={'name': 'description'})
                 if not meta_desc or not meta_desc.get('content', '').strip():
                     issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
+                    seo_issue_count += 1
                 elif len(meta_desc.get('content', '').strip()) < 120:
                     issues.append({'type': 'short_meta', 'title': 'Meta description too short', 'severity': 'High', 'url': url})
+                    seo_issue_count += 1
 
             # H1 tag (Critical) - checkType: 'h1'
-            if config.is_check_enabled('h1'):
+            if config.is_check_enabled('h1') and seo_issue_count < MAX_SEO_ISSUES:
                 h1_tags = soup.find_all('h1')
                 if not h1_tags:
                     issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
+                    seo_issue_count += 1
                 elif len(h1_tags) > 1:
                     issues.append({'type': 'multiple_h1', 'title': 'Multiple H1 tags', 'severity': 'Low', 'url': url})
+                    seo_issue_count += 1
 
             # Canonical tag (Critical) - checkType: 'canonical'
-            if config.is_check_enabled('canonical'):
+            if config.is_check_enabled('canonical') and seo_issue_count < MAX_SEO_ISSUES:
                 canonical = soup.find('link', attrs={'rel': 'canonical'})
                 if not canonical or not canonical.get('href'):
                     issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
+                    seo_issue_count += 1
+
+            # TESTING: Skip remaining SEO checks if we already have 1 issue
+            if seo_issue_count >= MAX_SEO_ISSUES:
+                print(f"Skipping remaining SEO checks - already have {seo_issue_count} issue(s)")
 
             # ============ SCHEMA/STRUCTURED DATA CHECKS ============
             # checkType: 'schema'
-
-            # Only parse schemas if schema check is enabled
+            # Skip if we already have enough SEO issues
             schemas = []
             schema_types = set()
-            if config.is_check_enabled('schema'):
+            if seo_issue_count >= MAX_SEO_ISSUES:
+                pass  # Skip schema checks
+            if config.is_check_enabled('schema') and seo_issue_count < MAX_SEO_ISSUES:
                 # Find all JSON-LD scripts
                 schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
                 for script in schema_scripts:
@@ -1126,13 +1142,12 @@ class SEOAuditor:
             # Limit to first 2 voice rules + first 2 brand rules to conserve API usage
 
             if llm_auditor.client and config.has_llm_rules():
-                voice_rules = config.get_voice_llm_rules()[:2]
-                brand_rules = config.get_brand_llm_rules()[:2]
-                llm_rules = voice_rules + brand_rules
+                # Limit to 1 voice rule for testing
+                voice_rules = config.get_voice_llm_rules()[:1]
+                llm_rules = voice_rules
 
                 print(f"Running {len(llm_rules)} LLM-based rules for {url}")
                 print(f"  - Voice rules: {len(voice_rules)}")
-                print(f"  - Brand rules: {len(brand_rules)}")
 
                 if llm_rules:
                     llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
