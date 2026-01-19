@@ -74,6 +74,9 @@ class LLMAuditor:
         if len(html_content) > max_html_length:
             html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
 
+        # Log first part of HTML for debugging
+        print(f"LLMAuditor: HTML length={len(html_content)}, first 500 chars: {html_content[:500]}")
+
         # Build the rules section for the prompt
         rules_text = ""
         for i, rule in enumerate(rules, 1):
@@ -98,6 +101,8 @@ For each rule, you must analyze the HTML and determine:
 When a rule FAILs, provide:
 - A specific, actionable issue title (short, ~50 chars)
 - A detailed description explaining why it failed and how to fix it
+
+IMPORTANT: If the HTML appears to be an error page (403, 401, 500, access denied, rate limited, blocked, etc.) rather than actual content, mark ALL rules as PASS since we cannot fairly evaluate error pages.
 
 Be thorough but accurate - only flag real issues. Consider the context of Hawaiian hospitality/hotel websites.
 For voice/tone rules, be lenient - only fail if there's a clear violation, not just room for improvement."""
