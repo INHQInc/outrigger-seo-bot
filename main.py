@@ -1115,9 +1115,14 @@ class SEOAuditor:
 
             # ============ LLM-BASED RULES ============
             # Run any rules that have natural language prompts
+            # TEMPORARY: Limit to first 2 voice rules + first 2 brand rules to conserve API usage
             if config.has_llm_rules():
-                llm_rules = config.get_llm_rules()
-                print(f"Running {len(llm_rules)} LLM-based rules for {url}")
+                all_llm_rules = config.get_llm_rules()
+                # Separate voice and brand rules, limit each to 2
+                voice_rules = [r for r in all_llm_rules if r.get('checkType', '').startswith('voice_')][:2]
+                brand_rules = [r for r in all_llm_rules if r.get('checkType', '').startswith('brand_')][:2]
+                llm_rules = voice_rules + brand_rules
+                print(f"Running {len(llm_rules)} LLM-based rules for {url} (limited from {len(all_llm_rules)})")
                 llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
                 issues.extend(llm_issues)
                 print(f"LLM audit found {len(llm_issues)} additional issues")
