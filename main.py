@@ -1400,8 +1400,9 @@ def update_voice_brand_rules():
         return {"error": "Firestore not connected"}
 
     # Updated Voice Rules with LLM prompts
+    # Keys support multiple name variations that might exist in Firestore
     VOICE_RULES_UPDATE = {
-        'Warm & Welcoming': {
+        'Warm & Welcoming Tone': {
             'checkType': 'voice_warm',
             'prompt': '''Analyze the TONE of this page's content. The rule FAILS if:
 1. The content uses cold, corporate, or impersonal language
@@ -1438,7 +1439,7 @@ Note: This is less critical for purely transactional pages (booking, policies).'
             'severity': 'Low',
             'tier': 3
         },
-        'Authentic Local Voice': {
+        'Authentic Hawaiian Voice': {
             'checkType': 'voice_authentic',
             'prompt': '''Analyze whether this page uses authentic Hawaiian language and cultural elements appropriately. The rule FAILS if:
 1. Hawaiian terms are misused or used incorrectly
@@ -1555,7 +1556,21 @@ FAIL if alt text is overly generic and misses branding opportunities on key imag
         },
     }
 
-    results = {"voice_updated": [], "brand_updated": [], "errors": []}
+    results = {"voice_updated": [], "brand_updated": [], "errors": [], "voice_skipped": [], "brand_skipped": []}
+
+    def find_matching_update(name, checkType, update_dict):
+        """Find matching update by exact name, partial name, or checkType."""
+        # Exact match
+        if name in update_dict:
+            return update_dict[name]
+        # Partial match (name contains key or key contains name)
+        for key, value in update_dict.items():
+            if key.lower() in name.lower() or name.lower() in key.lower():
+                return value
+            # Match by checkType
+            if value.get('checkType') == checkType:
+                return value
+        return None
 
     try:
         # Update Voice Rules
@@ -1565,11 +1580,14 @@ FAIL if alt text is overly generic and misses branding opportunities on key imag
         for doc in voice_docs:
             doc_data = doc.to_dict()
             name = doc_data.get('name', '')
+            checkType = doc_data.get('checkType', '')
 
-            if name in VOICE_RULES_UPDATE:
-                update_data = VOICE_RULES_UPDATE[name]
+            update_data = find_matching_update(name, checkType, VOICE_RULES_UPDATE)
+            if update_data:
                 doc.reference.update(update_data)
                 results["voice_updated"].append(name)
+            else:
+                results["voice_skipped"].append(name)
 
         # Update Brand Standards
         brand_collection = db.collection('brandStandards')
@@ -1578,11 +1596,14 @@ FAIL if alt text is overly generic and misses branding opportunities on key imag
         for doc in brand_docs:
             doc_data = doc.to_dict()
             name = doc_data.get('name', '')
+            checkType = doc_data.get('checkType', '')
 
-            if name in BRAND_STANDARDS_UPDATE:
-                update_data = BRAND_STANDARDS_UPDATE[name]
+            update_data = find_matching_update(name, checkType, BRAND_STANDARDS_UPDATE)
+            if update_data:
                 doc.reference.update(update_data)
                 results["brand_updated"].append(name)
+            else:
+                results["brand_skipped"].append(name)
 
     except Exception as e:
         results["errors"].append(str(e))
