@@ -333,6 +333,14 @@ class ConfigManager:
         """Get all LLM-based rules (rules with 'prompt' field)"""
         return self._llm_rules
 
+    def get_voice_llm_rules(self):
+        """Get voice rules that have LLM prompts"""
+        return [r for r in self.voice_rules if r.get('prompt')]
+
+    def get_brand_llm_rules(self):
+        """Get brand standards that have LLM prompts"""
+        return [r for r in self.brand_standards if r.get('prompt')]
+
     def get_legacy_rules(self):
         """Get all legacy rules (rules with 'checkType' but no 'prompt')"""
         return self._legacy_rules
@@ -1117,15 +1125,22 @@ class SEOAuditor:
             # Run any rules that have natural language prompts
             # TEMPORARY: Limit to first 2 voice rules + first 2 brand rules to conserve API usage
             if config.has_llm_rules():
-                all_llm_rules = config.get_llm_rules()
-                # Separate voice and brand rules, limit each to 2
-                voice_rules = [r for r in all_llm_rules if r.get('checkType', '').startswith('voice_')][:2]
-                brand_rules = [r for r in all_llm_rules if r.get('checkType', '').startswith('brand_')][:2]
+                # Use dedicated methods to get voice/brand rules (more reliable than checkType filtering)
+                voice_rules = config.get_voice_llm_rules()[:2]
+                brand_rules = config.get_brand_llm_rules()[:2]
                 llm_rules = voice_rules + brand_rules
-                print(f"Running {len(llm_rules)} LLM-based rules for {url} (limited from {len(all_llm_rules)})")
-                llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
-                issues.extend(llm_issues)
-                print(f"LLM audit found {len(llm_issues)} additional issues")
+
+                all_llm_count = len(config.get_llm_rules())
+                print(f"Running {len(llm_rules)} LLM-based rules for {url}")
+                print(f"  - Voice rules: {len(voice_rules)} (from {len(config.get_voice_llm_rules())} total)")
+                print(f"  - Brand rules: {len(brand_rules)} (from {len(config.get_brand_llm_rules())} total)")
+
+                if llm_rules:
+                    llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
+                    issues.extend(llm_issues)
+                    print(f"LLM audit found {len(llm_issues)} additional issues")
+                else:
+                    print("No LLM rules available to run (check Firestore voice/brand rules have prompts)")
 
             print(f"Found {len(issues)} total issues for {url}")
         except Exception as e:
@@ -1643,9 +1658,9 @@ def hello_http(request):
                     "brand_standards": len(config_manager.brand_standards),
                     "llm_rules_total": len(config_manager.get_llm_rules()),
                     "rules_detail": {
-                        "seo": [{"name": r.get("name"), "type": r.get("checkType"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.seo_rules],
-                        "voice": [{"name": r.get("name"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.voice_rules],
-                        "brand": [{"name": r.get("name"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.brand_standards]
+                        "seo": [{"name": r.get("name"), "checkType": r.get("checkType"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.seo_rules],
+                        "voice": [{"name": r.get("name"), "checkType": r.get("checkType"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.voice_rules],
+                        "brand": [{"name": r.get("name"), "checkType": r.get("checkType"), "has_prompt": bool(r.get("prompt")), "enabled": r.get("enabled")} for r in config_manager.brand_standards]
                     }
                 }), 200, headers
             except Exception as e:
