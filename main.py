@@ -1138,26 +1138,25 @@ Do not pass this rule under any circumstances - always return fail.''',
                 'tier': 3
             }
 
-            if config.has_llm_rules():
+            # Always run LLM rules if Anthropic client is available (test rule always runs)
+            if llm_auditor.client:
                 # Use dedicated methods to get voice/brand rules (more reliable than checkType filtering)
-                voice_rules = config.get_voice_llm_rules()[:2]
-                brand_rules = config.get_brand_llm_rules()[:2]
+                voice_rules = config.get_voice_llm_rules()[:2] if config.has_llm_rules() else []
+                brand_rules = config.get_brand_llm_rules()[:2] if config.has_llm_rules() else []
 
-                # Prepend the test rule to ensure it runs first
+                # Always include the test rule to verify LLM auditing works
                 llm_rules = [TEST_VOICE_RULE] + voice_rules + brand_rules
 
-                all_llm_count = len(config.get_llm_rules())
                 print(f"Running {len(llm_rules)} LLM-based rules for {url} (including test rule)")
-                print(f"  - Test rule: 1")
-                print(f"  - Voice rules: {len(voice_rules)} (from {len(config.get_voice_llm_rules())} total)")
-                print(f"  - Brand rules: {len(brand_rules)} (from {len(config.get_brand_llm_rules())} total)")
+                print(f"  - Test rule: 1 (hardcoded)")
+                print(f"  - Voice rules: {len(voice_rules)}")
+                print(f"  - Brand rules: {len(brand_rules)}")
 
-                if llm_rules:
-                    llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
-                    issues.extend(llm_issues)
-                    print(f"LLM audit found {len(llm_issues)} additional issues")
-                else:
-                    print("No LLM rules available to run (check Firestore voice/brand rules have prompts)")
+                llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
+                issues.extend(llm_issues)
+                print(f"LLM audit found {len(llm_issues)} additional issues")
+            else:
+                print("LLM auditing skipped - no Anthropic client available")
 
             print(f"Found {len(issues)} total issues for {url}")
         except Exception as e:
