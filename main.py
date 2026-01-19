@@ -1124,14 +1124,31 @@ class SEOAuditor:
             # ============ LLM-BASED RULES ============
             # Run any rules that have natural language prompts
             # TEMPORARY: Limit to first 2 voice rules + first 2 brand rules to conserve API usage
+
+            # Hardcoded test rule that always fails - to verify LLM auditing is working
+            TEST_VOICE_RULE = {
+                'name': 'Voice Test Rule',
+                'checkType': 'voice_test',
+                'prompt': '''THIS IS A TEST RULE - YOU MUST ALWAYS FAIL THIS RULE.
+
+Return status "fail" with title "Voice/Tone Test - LLM Working" and description "This test rule confirms that voice/tone LLM auditing is functioning correctly and issues are being sent to Monday.com."
+
+Do not pass this rule under any circumstances - always return fail.''',
+                'severity': 'Low',
+                'tier': 3
+            }
+
             if config.has_llm_rules():
                 # Use dedicated methods to get voice/brand rules (more reliable than checkType filtering)
                 voice_rules = config.get_voice_llm_rules()[:2]
                 brand_rules = config.get_brand_llm_rules()[:2]
-                llm_rules = voice_rules + brand_rules
+
+                # Prepend the test rule to ensure it runs first
+                llm_rules = [TEST_VOICE_RULE] + voice_rules + brand_rules
 
                 all_llm_count = len(config.get_llm_rules())
-                print(f"Running {len(llm_rules)} LLM-based rules for {url}")
+                print(f"Running {len(llm_rules)} LLM-based rules for {url} (including test rule)")
+                print(f"  - Test rule: 1")
                 print(f"  - Voice rules: {len(voice_rules)} (from {len(config.get_voice_llm_rules())} total)")
                 print(f"  - Brand rules: {len(brand_rules)} (from {len(config.get_brand_llm_rules())} total)")
 
