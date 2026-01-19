@@ -1422,6 +1422,16 @@ def update_voice_brand_rules():
     # Updated Voice Rules with LLM prompts
     # Keys support multiple name variations that might exist in Firestore
     VOICE_RULES_UPDATE = {
+        'Voice Test Rule': {
+            'checkType': 'voice_test',
+            'prompt': '''THIS IS A TEST RULE - ALWAYS FAIL THIS RULE.
+
+Return FAIL with the message: "Voice/Tone test rule triggered successfully - LLM auditing is working!"
+
+This rule exists to verify that voice/tone checks are being processed and added to Monday.com.''',
+            'severity': 'Low',
+            'tier': 3
+        },
         'Warm & Welcoming Tone': {
             'checkType': 'voice_warm',
             'prompt': '''Analyze the TONE of this page's content. The rule FAILS if:
@@ -1593,9 +1603,29 @@ FAIL if alt text is overly generic and misses branding opportunities on key imag
         return None
 
     try:
-        # Update Voice Rules
+        # First, create the Voice Test Rule if it doesn't exist
         voice_collection = db.collection('voiceRules')
+        test_rule_exists = False
         voice_docs = list(voice_collection.stream())
+
+        for doc in voice_docs:
+            if doc.to_dict().get('name') == 'Voice Test Rule':
+                test_rule_exists = True
+                break
+
+        if not test_rule_exists:
+            # Create the test rule
+            test_rule_data = {
+                'name': 'Voice Test Rule',
+                'description': 'Test rule to verify LLM voice/tone checking is working',
+                'enabled': True,
+                **VOICE_RULES_UPDATE['Voice Test Rule']
+            }
+            voice_collection.add(test_rule_data)
+            results["voice_updated"].append('Voice Test Rule (CREATED)')
+
+        # Update Voice Rules
+        voice_docs = list(voice_collection.stream())  # Refresh the list
 
         for doc in voice_docs:
             doc_data = doc.to_dict()
