@@ -75,13 +75,23 @@ class LLMAuditor:
             html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
 
         # Log first part of HTML for debugging
-        print(f"LLMAuditor: HTML length={len(html_content)}, first 500 chars: {html_content[:500]}")
+        print(f"LLMAuditor: HTML length={len(html_content)}")
+        print(f"LLMAuditor: First 1000 chars of HTML: {html_content[:1000]}")
+
+        # Check for common error page indicators
+        error_indicators = ['401', '403', 'Unauthorized', 'Access Denied', 'Forbidden', 'blocked', 'rate limit']
+        found_errors = [e for e in error_indicators if e.lower() in html_content[:5000].lower()]
+        if found_errors:
+            print(f"LLMAuditor WARNING: HTML may contain error page indicators: {found_errors}")
 
         # Build the rules section for the prompt
         rules_text = ""
         for i, rule in enumerate(rules, 1):
+            rule_name = rule.get('name', 'Unnamed Rule')
+            rule_prompt = rule.get('prompt', rule.get('description', 'No prompt provided'))
+            print(f"LLMAuditor: Rule {i}: {rule_name} - prompt length: {len(rule_prompt)}")
             rules_text += f"""
-Rule {i}: {rule.get('name', 'Unnamed Rule')}
+Rule {i}: {rule_name}
 Severity: {rule.get('severity', 'Medium')}
 Check: {rule.get('prompt', rule.get('description', 'No prompt provided'))}
 """
