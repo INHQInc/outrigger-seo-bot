@@ -824,7 +824,7 @@ class SitemapParser:
                     {'url': 'https://www.outrigger.com/hotels-resorts/mauritius'}
                 ]
 
-            return urls[:20]
+            return urls[:5]  # Limit to 5 pages to conserve ScraperAPI tokens
         except Exception as e:
             print(f"Error parsing sitemap: {e}")
             print("Using fallback URLs due to error")
