@@ -1122,41 +1122,26 @@ class SEOAuditor:
                         issues.append({'type': 'missing_event_schema', 'title': 'Missing Event schema', 'severity': 'High', 'url': url})
 
             # ============ LLM-BASED RULES ============
-            # Run any rules that have natural language prompts
-            # TEMPORARY: Limit to first 2 voice rules + first 2 brand rules to conserve API usage
+            # Run voice/tone and brand rules using Claude
+            # Limit to first 2 voice rules + first 2 brand rules to conserve API usage
 
-            # Hardcoded test rule that always fails - to verify LLM auditing is working
-            TEST_VOICE_RULE = {
-                'name': 'Voice Test Rule',
-                'checkType': 'voice_test',
-                'prompt': '''THIS IS A TEST RULE - YOU MUST ALWAYS FAIL THIS RULE.
+            if llm_auditor.client and config.has_llm_rules():
+                voice_rules = config.get_voice_llm_rules()[:2]
+                brand_rules = config.get_brand_llm_rules()[:2]
+                llm_rules = voice_rules + brand_rules
 
-Return status "fail" with title "Voice/Tone Test - LLM Working" and description "This test rule confirms that voice/tone LLM auditing is functioning correctly and issues are being sent to Monday.com."
-
-Do not pass this rule under any circumstances - always return fail.''',
-                'severity': 'Low',
-                'tier': 3
-            }
-
-            # Always run LLM rules if Anthropic client is available (test rule always runs)
-            if llm_auditor.client:
-                # Use dedicated methods to get voice/brand rules (more reliable than checkType filtering)
-                voice_rules = config.get_voice_llm_rules()[:2] if config.has_llm_rules() else []
-                brand_rules = config.get_brand_llm_rules()[:2] if config.has_llm_rules() else []
-
-                # Always include the test rule to verify LLM auditing works
-                llm_rules = [TEST_VOICE_RULE] + voice_rules + brand_rules
-
-                print(f"Running {len(llm_rules)} LLM-based rules for {url} (including test rule)")
-                print(f"  - Test rule: 1 (hardcoded)")
+                print(f"Running {len(llm_rules)} LLM-based rules for {url}")
                 print(f"  - Voice rules: {len(voice_rules)}")
                 print(f"  - Brand rules: {len(brand_rules)}")
 
-                llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
-                issues.extend(llm_issues)
-                print(f"LLM audit found {len(llm_issues)} additional issues")
-            else:
+                if llm_rules:
+                    llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
+                    issues.extend(llm_issues)
+                    print(f"LLM audit found {len(llm_issues)} additional issues")
+            elif not llm_auditor.client:
                 print("LLM auditing skipped - no Anthropic client available")
+            else:
+                print("LLM auditing skipped - no LLM rules configured in Firestore")
 
             print(f"Found {len(issues)} total issues for {url}")
         except Exception as e:
