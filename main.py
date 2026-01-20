@@ -1796,9 +1796,21 @@ FAIL if alt text is overly generic and misses branding opportunities on key imag
 
 @functions_framework.http
 def hello_http(request):
-    headers = {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'}
+    # CORS headers for all responses
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': 'application/json'
+    }
+
+    # Handle CORS preflight
     if request.method == 'OPTIONS':
-        return ('', 204, headers)
+        cors_headers = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Max-Age': '3600'
+        }
+        return ('', 204, cors_headers)
     if request.method == 'GET':
         # Check for test mode
         if request.args.get('test') == 'true':
