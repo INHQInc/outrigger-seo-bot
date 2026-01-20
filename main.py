@@ -1727,13 +1727,25 @@ def hello_http(request):
                 traceback.print_exc()
                 return jsonify({"error": str(e)}), 500, headers
 
+        # Serve admin dashboard
+        if request.args.get('admin') == 'true':
+            try:
+                import os
+                admin_path = os.path.join(os.path.dirname(__file__), 'admin', 'index.html')
+                with open(admin_path, 'r') as f:
+                    html_content = f.read()
+                return html_content, 200, {'Content-Type': 'text/html', 'Access-Control-Allow-Origin': '*'}
+            except Exception as e:
+                return f"Error loading admin dashboard: {e}", 500, headers
+
         return jsonify({
             "status": "healthy",
             "service": "outrigger-seo-audit",
             "scraper_api_configured": bool(SCRAPER_API_KEY),
             "firestore_connected": db is not None,
             "firestore_project": FIRESTORE_PROJECT_ID,
-            "config_endpoint": "Add ?config=true to see loaded rules from admin dashboard"
+            "config_endpoint": "Add ?config=true to see loaded rules from admin dashboard",
+            "admin_dashboard": "Add ?admin=true to access the admin dashboard"
         }), 200, headers
 
     if request.method == 'POST':
