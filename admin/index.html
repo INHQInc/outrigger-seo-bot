@@ -160,8 +160,6 @@
                 <button onclick="showTab('logs')" id="tab-logs" class="px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm">
                     Audit Logs
                 </button>
-                <!-- Hidden tab button for settings (accessed via gear only) -->
-                <button id="tab-settings" class="hidden"></button>
 
                 <!-- Right-aligned controls -->
                 <div class="ml-auto flex items-center gap-4">
@@ -733,23 +731,41 @@
         // Tab Navigation
         function showTab(tabName) {
             currentTab = tabName;
-            var tabs = ['seo', 'voice', 'brand', 'logs', 'settings'];
-            tabs.forEach(function(tab) {
+            // Visible tabs (settings has no tab button, accessed via gear)
+            var visibleTabs = ['seo', 'voice', 'brand', 'logs'];
+            var allPanels = ['seo', 'voice', 'brand', 'logs', 'settings'];
+
+            // Update tab button styles
+            visibleTabs.forEach(function(tab) {
                 var tabBtn = document.getElementById('tab-' + tab);
-                var panel = document.getElementById('panel-' + tab);
                 if (tab === tabName) {
                     tabBtn.className = 'px-5 py-2 font-medium transition-all tab-active rounded-lg text-sm';
-                    panel.classList.remove('hidden');
                 } else {
                     tabBtn.className = 'px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm';
-                    panel.classList.add('hidden');
                 }
             });
-            // Load logs when switching to that tab
+
+            // If settings is selected, deactivate all visible tabs
+            if (tabName === 'settings') {
+                visibleTabs.forEach(function(tab) {
+                    document.getElementById('tab-' + tab).className = 'px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm';
+                });
+            }
+
+            // Show/hide panels
+            allPanels.forEach(function(panel) {
+                var panelEl = document.getElementById('panel-' + panel);
+                if (panel === tabName) {
+                    panelEl.classList.remove('hidden');
+                } else {
+                    panelEl.classList.add('hidden');
+                }
+            });
+
+            // Load data when switching to specific tabs
             if (tabName === 'logs') {
                 loadAuditLogs();
             }
-            // Load settings when switching to that tab
             if (tabName === 'settings') {
                 loadSettings();
             }
