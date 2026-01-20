@@ -632,6 +632,8 @@
             setTimeout(function() {
                 loadAllData();
                 loadLastRunTime();
+                // Show the initial tab from URL parameter
+                showTab(initialTab);
             }, 500);
         }
 
@@ -797,9 +799,13 @@
         let currentTab = 'seo';
         let currentEditId = null;
         let currentCollection = null;
-        let currentSiteId = localStorage.getItem('selectedSite') || null;
         let sites = [];
         let editingSiteId = null;
+
+        // Get site and tab from URL parameters, fallback to localStorage
+        var urlParams = new URLSearchParams(window.location.search);
+        var currentSiteId = urlParams.get('site') || localStorage.getItem('selectedSite') || null;
+        var initialTab = urlParams.get('tab') || 'seo';
 
         // ============ SITE MANAGEMENT ============
 
@@ -868,11 +874,15 @@
         // Switch to a different site
         function switchSite() {
             var selector = document.getElementById('siteSelector');
-            currentSiteId = selector.value;
-            localStorage.setItem('selectedSite', currentSiteId);
-            console.log('Switched to site:', currentSiteId);
-            loadAllData();
-            loadLastRunTime();
+            var newSiteId = selector.value;
+
+            // Get current tab from URL or default to 'seo'
+            var urlParams = new URLSearchParams(window.location.search);
+            var currentTab = urlParams.get('tab') || 'seo';
+
+            // Reload page with new site and maintain current tab
+            var newUrl = window.location.pathname + '?site=' + encodeURIComponent(newSiteId) + '&tab=' + encodeURIComponent(currentTab);
+            window.location.href = newUrl;
         }
 
         // Open modal to add a new site
@@ -993,6 +1003,15 @@
             // Visible tabs (settings has no tab button, accessed via gear)
             var visibleTabs = ['seo', 'voice', 'brand', 'logs'];
             var allPanels = ['seo', 'voice', 'brand', 'logs', 'settings'];
+
+            // Update URL with current tab (without reloading)
+            var urlParams = new URLSearchParams(window.location.search);
+            urlParams.set('tab', tabName);
+            if (currentSiteId) {
+                urlParams.set('site', currentSiteId);
+            }
+            var newUrl = window.location.pathname + '?' + urlParams.toString();
+            window.history.replaceState({}, '', newUrl);
 
             // Update tab button styles
             visibleTabs.forEach(function(tab) {
