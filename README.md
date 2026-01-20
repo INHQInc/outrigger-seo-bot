@@ -756,14 +756,43 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 | Cloud Build Triggers | https://console.cloud.google.com/cloud-build/triggers?project=project-85d26db5-f70f-487e-b0e |
 | Cloud Run Console | https://console.cloud.google.com/run?project=project-85d26db5-f70f-487e-b0e |
 
+### Git Authentication for Claude
+
+To enable Claude to push directly to GitHub, an SSH key must be set up each session:
+
+1. **Generate SSH key** (Claude runs this):
+   ```bash
+   ssh-keygen -t ed25519 -C "claude@anthropic.com" -f ~/.ssh/id_ed25519 -N ""
+   ```
+
+2. **Add to GitHub**: The public key must be added to GitHub SSH keys:
+   - Go to: https://github.com/settings/keys
+   - Click "New SSH key"
+   - Title: `Claude AI Session`
+   - Paste the public key from `~/.ssh/id_ed25519.pub`
+
+3. **Configure git remote** (Claude runs this):
+   ```bash
+   cd /path/to/outrigger-seo-bot
+   git remote set-url origin git@github.com:INHQInc/outrigger-seo-bot.git
+   ```
+
+4. **Test connection**:
+   ```bash
+   ssh -T git@github.com
+   ```
+
+**Note**: SSH keys are session-specific. Each new Claude session requires a new key to be generated and added to GitHub. Old session keys can be removed from GitHub settings.
+
 ### Starting a New Claude Session
 
 When starting a new session with Claude:
 
 1. **Grant folder access**: Allow Claude to access the local git repository
 2. **Pull latest changes**: Run `git pull` locally before starting
-3. **Share context**: Reference this README for project context
-4. **Clean up git state**: If there's a stale rebase, run:
+3. **Set up SSH key**: Follow the "Git Authentication for Claude" section above
+4. **Share context**: Reference this README for project context
+5. **Clean up git state**: If there's a stale rebase, run:
    ```bash
    rm -rf .git/rebase-merge
    git rebase --abort
