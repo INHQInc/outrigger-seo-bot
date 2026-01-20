@@ -1183,8 +1183,9 @@
             }
 
             yesBtn.onclick = function() {
+                var callback = confirmCallback;  // Save reference before closing
                 closeConfirmModal();
-                if (confirmCallback) confirmCallback();
+                if (callback) callback();
             };
 
             var modal = document.getElementById('confirmModal');
