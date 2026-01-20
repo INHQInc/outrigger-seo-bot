@@ -512,6 +512,73 @@
         </div>
     </div>
 
+    <!-- Audit Progress Panel (shown during audit) -->
+    <div id="auditProgressPanel" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xl font-bold text-white">Audit in Progress</h3>
+                    <span id="progressStatus" class="px-3 py-1 bg-white/20 rounded-full text-sm text-white">
+                        Running...
+                    </span>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="px-6 py-4 border-b border-card">
+                <div class="flex justify-between text-sm mb-2">
+                    <span id="progressPhase" class="text-secondary">Initializing...</span>
+                    <span id="progressPercent" class="text-primary font-medium">0%</span>
+                </div>
+                <div class="w-full bg-dark rounded-full h-3 overflow-hidden">
+                    <div id="progressBar" class="bg-gradient-to-r from-purple-500 to-cyan-400 h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-4 gap-4 px-6 py-4 border-b border-card">
+                <div class="text-center">
+                    <div id="statPages" class="text-2xl font-bold text-primary">0/0</div>
+                    <div class="text-xs text-secondary">Pages</div>
+                </div>
+                <div class="text-center">
+                    <div id="statSeo" class="text-2xl font-bold text-yellow-400">0</div>
+                    <div class="text-xs text-secondary">SEO Issues</div>
+                </div>
+                <div class="text-center">
+                    <div id="statVoice" class="text-2xl font-bold text-purple-400">0</div>
+                    <div class="text-xs text-secondary">Voice Issues</div>
+                </div>
+                <div class="text-center">
+                    <div id="statBrand" class="text-2xl font-bold text-pink-400">0</div>
+                    <div class="text-xs text-secondary">Brand Issues</div>
+                </div>
+            </div>
+
+            <!-- Current Page -->
+            <div class="px-6 py-3 border-b border-card">
+                <div class="text-xs text-secondary mb-1">Currently auditing:</div>
+                <div id="currentPageUrl" class="text-sm text-primary truncate">-</div>
+            </div>
+
+            <!-- Recent Issues -->
+            <div class="px-6 py-4 max-h-48 overflow-y-auto">
+                <div class="text-xs text-secondary mb-2">Recent Issues Found:</div>
+                <div id="recentIssuesList" class="space-y-2">
+                    <div class="text-sm text-secondary italic">Waiting for issues...</div>
+                </div>
+            </div>
+
+            <!-- Footer (shown on complete) -->
+            <div id="progressFooter" class="hidden px-6 py-4 bg-card border-t border-card">
+                <button onclick="closeProgressPanel()" class="w-full btn-primary text-white py-3 rounded-lg font-medium">
+                    View Results
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Site Modal for Adding/Editing Sites -->
     <div id="siteModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
         <div class="card rounded-xl shadow-2xl max-w-lg w-full mx-4">
@@ -680,8 +747,114 @@
             return 'Just now';
         }
 
+        // ============ AUDIT PROGRESS PANEL ============
+        var progressUnsubscribe = null;
+
+        function showProgressPanel() {
+            var panel = document.getElementById('auditProgressPanel');
+            panel.classList.remove('hidden');
+            panel.classList.add('flex');
+            document.getElementById('progressFooter').classList.add('hidden');
+
+            // Reset UI to initial state
+            document.getElementById('progressStatus').textContent = 'Running...';
+            document.getElementById('progressStatus').className = 'px-3 py-1 bg-white/20 rounded-full text-sm text-white';
+            document.getElementById('progressPhase').textContent = 'Initializing...';
+            document.getElementById('progressPercent').textContent = '0%';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('statPages').textContent = '0/0';
+            document.getElementById('statSeo').textContent = '0';
+            document.getElementById('statVoice').textContent = '0';
+            document.getElementById('statBrand').textContent = '0';
+            document.getElementById('currentPageUrl').textContent = '-';
+            document.getElementById('recentIssuesList').innerHTML = '<div class="text-sm text-secondary italic">Waiting for issues...</div>';
+        }
+
+        function closeProgressPanel() {
+            var panel = document.getElementById('auditProgressPanel');
+            panel.classList.add('hidden');
+            panel.classList.remove('flex');
+
+            // Unsubscribe from progress updates
+            if (progressUnsubscribe) {
+                progressUnsubscribe();
+                progressUnsubscribe = null;
+            }
+
+            // Reload audit logs to show new results
+            loadAuditLogs();
+            loadLastRunTime();
+
+            // Switch to logs tab
+            showTab('logs');
+        }
+
+        function subscribeToProgress(siteId) {
+            var progressRef = db.collection('sites').doc(siteId).collection('auditProgress').doc('current');
+
+            progressUnsubscribe = progressRef.onSnapshot(function(doc) {
+                if (!doc.exists) return;
+                var data = doc.data();
+                updateProgressUI(data);
+            }, function(error) {
+                console.error('Progress subscription error:', error);
+            });
+        }
+
+        function updateProgressUI(data) {
+            // Update status badge
+            var statusEl = document.getElementById('progressStatus');
+            if (data.status === 'completed') {
+                statusEl.textContent = 'Complete!';
+                statusEl.className = 'px-3 py-1 bg-green-500/30 rounded-full text-sm text-green-300';
+                document.getElementById('progressFooter').classList.remove('hidden');
+            } else if (data.status === 'error') {
+                statusEl.textContent = 'Error';
+                statusEl.className = 'px-3 py-1 bg-red-500/30 rounded-full text-sm text-red-300';
+                document.getElementById('progressFooter').classList.remove('hidden');
+            } else {
+                statusEl.textContent = 'Running...';
+                statusEl.className = 'px-3 py-1 bg-white/20 rounded-full text-sm text-white';
+            }
+
+            // Update phase text
+            document.getElementById('progressPhase').textContent = data.phaseLabel || 'Processing...';
+
+            // Update progress bar
+            var percent = data.totalPages > 0 ? Math.round((data.currentPage / data.totalPages) * 100) : 0;
+            document.getElementById('progressPercent').textContent = percent + '%';
+            document.getElementById('progressBar').style.width = percent + '%';
+
+            // Update stats
+            document.getElementById('statPages').textContent = (data.currentPage || 0) + '/' + (data.totalPages || 0);
+            document.getElementById('statSeo').textContent = data.seoIssues || 0;
+            document.getElementById('statVoice').textContent = data.voiceIssues || 0;
+            document.getElementById('statBrand').textContent = data.brandIssues || 0;
+
+            // Update current page URL
+            document.getElementById('currentPageUrl').textContent = data.currentPageUrl || '-';
+
+            // Update recent issues
+            if (data.recentIssues && data.recentIssues.length > 0) {
+                var listEl = document.getElementById('recentIssuesList');
+                listEl.innerHTML = data.recentIssues.slice(-5).reverse().map(function(issue) {
+                    var typeColor = issue.type === 'seo' ? 'text-yellow-400' :
+                                  issue.type === 'voice' ? 'text-purple-400' : 'text-pink-400';
+                    return '<div class="flex items-center gap-2 text-sm">' +
+                        '<span class="' + typeColor + ' uppercase text-xs font-medium">' + issue.type + '</span>' +
+                        '<span class="text-primary truncate flex-1">' + issue.rule + '</span>' +
+                    '</div>';
+                }).join('');
+            }
+        }
+
         // Run audit now
         function runAuditNow() {
+            if (!currentSiteId) {
+                alert('Please select a site first');
+                return;
+            }
+
             var btn = document.getElementById('runAuditBtn');
             var originalContent = btn.innerHTML;
 
@@ -689,6 +862,10 @@
             btn.disabled = true;
             btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Running...';
             btn.classList.add('opacity-75');
+
+            // Show progress panel and subscribe to updates
+            showProgressPanel();
+            subscribeToProgress(currentSiteId);
 
             // Make POST request to trigger audit for current site
             fetch(API_URL, {
@@ -702,29 +879,18 @@
                 return response.json();
             })
             .then(function(data) {
-                console.log('Audit completed:', data);
-
-                // Show success message
-                if (data.status === 'success') {
-                    var results = data.results;
-                    alert('Audit completed!\n\n' +
-                          'Pages audited: ' + results.pages + '\n' +
-                          'Issues found: ' + results.issues + '\n' +
-                          'Tasks created: ' + results.tasks_created + '\n' +
-                          'Duplicates skipped: ' + results.duplicates_skipped);
-
-                    // Refresh last run time and logs
-                    loadLastRunTime();
-                    if (currentTab === 'logs') {
-                        loadAuditLogs();
-                    }
-                } else {
-                    alert('Audit completed with status: ' + data.status);
-                }
+                console.log('Audit response:', data);
+                // Progress panel will update via Firestore subscription
+                // The panel will show completion status and "View Results" button
             })
             .catch(function(error) {
                 console.error('Error running audit:', error);
-                alert('Error running audit: ' + error.message);
+                // Update progress panel to show error
+                updateProgressUI({
+                    status: 'error',
+                    phaseLabel: 'Error: ' + error.message,
+                    error: error.message
+                });
             })
             .finally(function() {
                 // Restore button

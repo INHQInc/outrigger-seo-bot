@@ -39,6 +39,23 @@ if ANTHROPIC_API_KEY:
         print(f"Warning: Could not initialize Anthropic client: {e}")
 
 
+def update_audit_progress(site_id, progress_data):
+    """
+    Update real-time audit progress in Firestore.
+
+    The frontend subscribes to /sites/{siteId}/auditProgress/current using onSnapshot
+    to receive instant progress updates during an audit.
+    """
+    if not db:
+        return
+    try:
+        progress_ref = db.collection('sites').document(site_id).collection('auditProgress').document('current')
+        progress_data['updatedAt'] = firestore.SERVER_TIMESTAMP
+        progress_ref.set(progress_data, merge=True)
+    except Exception as e:
+        print(f"Warning: Could not update audit progress: {e}")
+
+
 class SiteConfig:
     """
     Configuration for a single site in the multi-site system.
@@ -1855,6 +1872,26 @@ def hello_http(request):
 
             print(f"=== Starting audit for site: {site_id} ===")
 
+            # Initialize progress tracking
+            update_audit_progress(site_id, {
+                'status': 'running',
+                'phase': 'initializing',
+                'phaseLabel': 'Initializing audit...',
+                'totalPages': 0,
+                'currentPage': 0,
+                'currentPageUrl': '',
+                'issuesFound': 0,
+                'seoIssues': 0,
+                'voiceIssues': 0,
+                'brandIssues': 0,
+                'tasksCreated': 0,
+                'duplicatesSkipped': 0,
+                'recentIssues': [],
+                'startedAt': firestore.SERVER_TIMESTAMP,
+                'completedAt': None,
+                'error': None
+            })
+
             # Load site configuration
             site_config = SiteConfig.load(site_id)
             print(f"Site config: {site_config}")
@@ -1871,12 +1908,32 @@ def hello_http(request):
             monday = MondayClient(site_config.monday_board_id)
 
             if not monday.init():
+                update_audit_progress(site_id, {
+                    'status': 'error',
+                    'phase': 'error',
+                    'phaseLabel': 'Error: Monday API token not configured',
+                    'error': 'Monday API token not configured'
+                })
                 return jsonify({"error": "Monday API token not configured"}), 500, headers
 
             if not SCRAPER_API_KEY:
                 print("WARNING: SCRAPER_API_KEY not configured - may be blocked by Cloudflare")
 
+            # Update progress: fetching sitemap
+            update_audit_progress(site_id, {
+                'phase': 'fetching_sitemap',
+                'phaseLabel': 'Fetching sitemap...'
+            })
+
             urls = parser.get_urls(days=site_config.days_to_check)
+
+            # Update progress: got pages count
+            total_pages = len(urls)
+            update_audit_progress(site_id, {
+                'phase': 'auditing_pages',
+                'phaseLabel': f'Auditing pages (0/{total_pages})...',
+                'totalPages': total_pages
+            })
             results = {
                 'site_id': site_id,
                 'site_name': site_config.name,
@@ -1897,10 +1954,20 @@ def hello_http(request):
 
             # Collect all issues for storing in Firestore
             all_issues_list = []
+            recent_issues = []  # Track last 10 issues for progress panel
 
-            for u in urls:
+            for page_index, u in enumerate(urls):
+                page_url = u['url']
+
+                # Update progress: starting this page
+                update_audit_progress(site_id, {
+                    'currentPage': page_index + 1,
+                    'currentPageUrl': page_url,
+                    'phaseLabel': f'Auditing pages ({page_index + 1}/{total_pages})...'
+                })
+
                 # Pass site_config_manager to auditor so it only runs enabled checks
-                issues = auditor.audit(u['url'], config=site_config_manager)
+                issues = auditor.audit(page_url, config=site_config_manager)
                 results['issues'] += len(issues)
 
                 # Track issue types
@@ -1926,6 +1993,15 @@ def hello_http(request):
                     else:
                         task_status = 'failed'
 
+                    # Add to recent issues for progress panel (keep last 10)
+                    recent_issues.append({
+                        'type': issue_category,
+                        'rule': issue.get('rule_name', issue.get('title', 'Unknown')),
+                        'url': page_url
+                    })
+                    if len(recent_issues) > 10:
+                        recent_issues = recent_issues[-10:]
+
                     # Add issue to list for Firestore storage
                     all_issues_list.append({
                         'url': issue.get('url', ''),
@@ -1937,6 +2013,18 @@ def hello_http(request):
                         'rule_name': issue.get('rule_name', ''),
                         'monday_status': task_status
                     })
+
+                # Update progress with issue counts after each page
+                update_audit_progress(site_id, {
+                    'issuesFound': results['issues'],
+                    'seoIssues': results['seo_issues'],
+                    'voiceIssues': results['voice_issues'],
+                    'brandIssues': results['brand_issues'],
+                    'tasksCreated': results['tasks_created'],
+                    'duplicatesSkipped': results['duplicates_skipped'],
+                    'recentIssues': recent_issues
+                })
+
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
 
             # Log audit run to Firestore (site-specific subcollection)
@@ -1962,10 +2050,31 @@ def hello_http(request):
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
+            # Update progress: complete
+            update_audit_progress(site_id, {
+                'status': 'completed',
+                'phase': 'complete',
+                'phaseLabel': 'Audit complete!',
+                'completedAt': firestore.SERVER_TIMESTAMP
+            })
+
             return jsonify({"status": "success", "results": results}), 200, headers
         except Exception as e:
             print(f"Error in main handler: {e}")
             import traceback
             traceback.print_exc()
+
+            # Update progress: error (try to get site_id if available)
+            try:
+                if 'site_id' in dir():
+                    update_audit_progress(site_id, {
+                        'status': 'error',
+                        'phase': 'error',
+                        'phaseLabel': f'Error: {str(e)[:100]}',
+                        'error': str(e)
+                    })
+            except:
+                pass
+
             return jsonify({"error": str(e)}), 500, headers
     return jsonify({"error": "Method not allowed"}), 405, headers
