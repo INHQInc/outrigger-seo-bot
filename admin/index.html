@@ -616,8 +616,14 @@
                 });
         }
 
+        // Store audit logs for CSV download
+        var auditLogsCache = {};
+
         // Create audit log card HTML (matching the design from screenshot)
         function createLogCard(id, log) {
+            // Cache the log for CSV download
+            auditLogsCache[id] = log;
+
             var timestamp = log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'Unknown';
             var pagesAudited = log.pagesAudited || 0;
             var totalIssues = log.totalIssues || 0;
@@ -676,7 +682,7 @@
                         '<span class="text-primary text-sm ml-auto">' + duplicatesSkipped + '</span>' +
                     '</div>' +
                 '</div>' +
-                '<div class="space-y-2">' +
+                '<div class="space-y-2 mb-4">' +
                     '<div>' +
                         '<div class="flex justify-between text-xs mb-1">' +
                             '<span class="text-green-400">Tasks Created</span>' +
@@ -687,7 +693,55 @@
                         '</div>' +
                     '</div>' +
                 '</div>' +
+                '<button onclick="downloadLogCSV(\'' + id + '\')" class="w-full btn-cyan py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition">' +
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                        '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>' +
+                    '</svg>' +
+                    'Download CSV' +
+                '</button>' +
             '</div>';
+        }
+
+        // Download audit log as CSV
+        function downloadLogCSV(logId) {
+            var log = auditLogsCache[logId];
+            if (!log) {
+                alert('Log data not found');
+                return;
+            }
+
+            var timestamp = log.timestamp ? new Date(log.timestamp.toDate()) : new Date();
+            var dateStr = timestamp.toISOString().split('T')[0];
+
+            // Create CSV content
+            var csvContent = 'Metric,Value\n';
+            csvContent += 'Audit Date,' + timestamp.toLocaleString() + '\n';
+            csvContent += 'Pages Audited,' + (log.pagesAudited || 0) + '\n';
+            csvContent += 'Total Issues,' + (log.totalIssues || 0) + '\n';
+            csvContent += 'Tasks Created,' + (log.tasksCreated || 0) + '\n';
+            csvContent += 'Duplicates Skipped,' + (log.duplicatesSkipped || 0) + '\n';
+            csvContent += 'SEO/GEO Issues,' + (log.seoIssues || 0) + '\n';
+            csvContent += 'Voice/Tone Issues,' + (log.voiceIssues || 0) + '\n';
+            csvContent += 'Brand Issues,' + (log.brandIssues || 0) + '\n';
+
+            // Add rules used if available
+            if (log.rulesUsed) {
+                csvContent += '\nRules Used,Count\n';
+                csvContent += 'SEO Rules,' + (log.rulesUsed.seo || 0) + '\n';
+                csvContent += 'Voice Rules,' + (log.rulesUsed.voice || 0) + '\n';
+                csvContent += 'Brand Rules,' + (log.rulesUsed.brand || 0) + '\n';
+            }
+
+            // Create and trigger download
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            var url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'audit-log-' + dateStr + '.csv');
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // Create rule card HTML
