@@ -16,6 +16,7 @@ A comprehensive, LLM-powered SEO and GEO (Generative Engine Optimization) audit 
 10. [Known Issues & Solutions](#known-issues--solutions)
 11. [Troubleshooting](#troubleshooting)
 12. [API Reference](#api-reference)
+13. [Development Workflow with Claude AI](#development-workflow-with-claude-ai)
 
 ---
 
@@ -696,6 +697,85 @@ For issues or questions:
 2. Review Cloud Run logs
 3. Test with debug endpoints
 4. Check Firestore rules in admin dashboard
+
+---
+
+## Development Workflow with Claude AI
+
+This project is developed collaboratively with Claude AI (Anthropic). This section documents the workflow for future Claude sessions.
+
+### How Claude Connects to This Project
+
+Claude has access to:
+
+1. **Local File System**: Via the Cowork directory mount
+   - User grants folder access to the cloned repository
+   - Claude can read, edit, and write files directly
+   - Path format: `/sessions/[session-id]/mnt/outrigger-seo-bot/`
+
+2. **Git CLI**: Available in the session environment
+   - `git` commands can be run via Bash tool
+   - Can commit changes locally
+   - Push requires user to run `git push` locally (due to auth)
+
+3. **Browser Automation**: Via Claude in Chrome extension
+   - Can navigate to Google Cloud Console
+   - Can trigger Cloud Builds manually
+   - Can access GitHub, Monday.com, Firestore console
+   - Approved domains: `console.cloud.google.com`, `shell.cloud.google.com`, `github.com`, `www.outrigger.com`, `monday.com`
+
+### Standard Development Workflow
+
+After every code change, Claude must:
+
+1. **Make the code changes** in the local repository
+2. **Commit changes to git** with a clear, descriptive commit message
+3. **Update documentation** (this README) to reflect any changes
+4. **Inform user to push** - User runs `git push` locally
+5. **Trigger Cloud Build** - Either automatically via push, or manually via GCP Console
+
+### Commit Message Format
+
+```
+<type>: <short description>
+
+<optional detailed description>
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
+
+### Key URLs
+
+| Resource | URL |
+|----------|-----|
+| GitHub Repository | https://github.com/INHQInc/outrigger-seo-bot |
+| Admin Dashboard | https://storage.googleapis.com/outrigger-audit-admin/index.html |
+| Cloud Run Service | https://outrigger-seo-audit-22338575803.us-central1.run.app |
+| Cloud Build Triggers | https://console.cloud.google.com/cloud-build/triggers?project=project-85d26db5-f70f-487e-b0e |
+| Cloud Run Console | https://console.cloud.google.com/run?project=project-85d26db5-f70f-487e-b0e |
+
+### Starting a New Claude Session
+
+When starting a new session with Claude:
+
+1. **Grant folder access**: Allow Claude to access the local git repository
+2. **Pull latest changes**: Run `git pull` locally before starting
+3. **Share context**: Reference this README for project context
+4. **Clean up git state**: If there's a stale rebase, run:
+   ```bash
+   rm -rf .git/rebase-merge
+   git rebase --abort
+   ```
+
+### File Permissions Note
+
+The mounted directory may have permission restrictions that prevent Claude from:
+- Deleting files (use `mcp__cowork__allow_cowork_file_delete` if needed)
+- Modifying `.git/` internal files directly
+
+For these operations, the user should run commands locally.
 
 ---
 
