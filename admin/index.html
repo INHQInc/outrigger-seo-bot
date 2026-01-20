@@ -734,22 +734,26 @@
             </div>
 
             <!-- Stats Grid -->
-            <div class="grid grid-cols-4 gap-4 px-6 py-4 border-b border-card">
+            <div class="grid grid-cols-5 gap-3 px-6 py-4 border-b border-card">
                 <div class="text-center">
                     <div id="statPages" class="text-2xl font-bold text-primary">0/0</div>
                     <div class="text-xs text-secondary">Pages</div>
                 </div>
                 <div class="text-center">
+                    <div id="statGeoScore" class="text-2xl font-bold text-cyan-400">--</div>
+                    <div class="text-xs text-secondary">GEO Score</div>
+                </div>
+                <div class="text-center">
                     <div id="statSeo" class="text-2xl font-bold text-yellow-400">0</div>
-                    <div class="text-xs text-secondary">SEO Issues</div>
+                    <div class="text-xs text-secondary">SEO</div>
                 </div>
                 <div class="text-center">
                     <div id="statVoice" class="text-2xl font-bold text-purple-400">0</div>
-                    <div class="text-xs text-secondary">Voice Issues</div>
+                    <div class="text-xs text-secondary">Voice</div>
                 </div>
                 <div class="text-center">
                     <div id="statBrand" class="text-2xl font-bold text-pink-400">0</div>
-                    <div class="text-xs text-secondary">Brand Issues</div>
+                    <div class="text-xs text-secondary">Brand</div>
                 </div>
             </div>
 
@@ -1088,6 +1092,24 @@
             document.getElementById('statSeo').textContent = data.seoIssues || 0;
             document.getElementById('statVoice').textContent = data.voiceIssues || 0;
             document.getElementById('statBrand').textContent = data.brandIssues || 0;
+
+            // Update GEO score
+            var geoScore = data.avgGeoScore || data.finalGeoScore || 0;
+            var geoEl = document.getElementById('statGeoScore');
+            if (geoScore > 0) {
+                geoEl.textContent = Math.round(geoScore);
+                // Color based on score
+                if (geoScore >= 80) {
+                    geoEl.className = 'text-2xl font-bold text-green-400';
+                } else if (geoScore >= 60) {
+                    geoEl.className = 'text-2xl font-bold text-yellow-400';
+                } else {
+                    geoEl.className = 'text-2xl font-bold text-red-400';
+                }
+            } else {
+                geoEl.textContent = '--';
+                geoEl.className = 'text-2xl font-bold text-cyan-400';
+            }
 
             // Update current page URL
             document.getElementById('currentPageUrl').textContent = data.currentPageUrl || '-';
@@ -1765,6 +1787,13 @@
             if (auditTypes.voice) auditTypeBadges += '<span class="px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs">Voice</span>';
             if (auditTypes.brand) auditTypeBadges += '<span class="px-2 py-0.5 bg-orange-500/20 text-orange-400 rounded text-xs">Brand</span>';
 
+            // GEO Score
+            var geoScore = log.geoScore || {};
+            var avgGeoScore = geoScore.average || 0;
+            var geoGrade = geoScore.grade || '--';
+            var geoScoreColor = avgGeoScore >= 80 ? 'text-green-400' : avgGeoScore >= 60 ? 'text-yellow-400' : 'text-red-400';
+            if (avgGeoScore === 0) geoScoreColor = 'text-gray-400';
+
             return '<div class="card rounded-xl p-5">' +
                 '<div class="flex justify-between items-start mb-4">' +
                     '<div>' +
@@ -1773,8 +1802,11 @@
                         '<div class="flex gap-1 mt-1">' + auditTypeBadges + '</div>' +
                     '</div>' +
                     '<div class="text-right">' +
-                        '<span class="text-2xl font-bold text-accent">' + completionPct + '%</span>' +
-                        '<p class="text-secondary text-xs">Complete</p>' +
+                        '<div class="flex items-baseline gap-1 justify-end">' +
+                            '<span class="text-3xl font-bold ' + geoScoreColor + '">' + (avgGeoScore > 0 ? Math.round(avgGeoScore) : '--') + '</span>' +
+                            '<span class="text-sm text-secondary">/100</span>' +
+                        '</div>' +
+                        '<p class="text-secondary text-xs">GEO Score</p>' +
                     '</div>' +
                 '</div>' +
                 '<div class="space-y-2 mb-4">' +

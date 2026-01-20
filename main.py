@@ -974,6 +974,255 @@ class SitemapParser:
                 {'url': 'https://www.outrigger.com/hotels-resorts/mauritius'}
             ]
 
+
+class GEOScorer:
+    """
+    Calculates a GEO/LLM Readiness Score (1-100) for a page.
+
+    Measures how well a page is optimized for AI assistants, generative search,
+    and large language models to understand and recommend.
+
+    Score Breakdown:
+    - Structured Data (35 points): JSON-LD schema presence and quality
+    - Content Signals (25 points): Clear, extractable information
+    - Technical Foundation (25 points): Meta tags, canonicals, OG tags
+    - Voice/AI Readiness (15 points): Speakable schema, FAQ content
+    """
+
+    def calculate_score(self, soup, url, schemas=None):
+        """
+        Calculate the GEO/LLM readiness score for a page.
+
+        Returns:
+            dict: {
+                'total_score': int (1-100),
+                'breakdown': {
+                    'structured_data': {'score': int, 'max': 35, 'details': []},
+                    'content_signals': {'score': int, 'max': 25, 'details': []},
+                    'technical_foundation': {'score': int, 'max': 25, 'details': []},
+                    'voice_readiness': {'score': int, 'max': 15, 'details': []}
+                },
+                'grade': str (A, B, C, D, F)
+            }
+        """
+        breakdown = {
+            'structured_data': {'score': 0, 'max': 35, 'details': []},
+            'content_signals': {'score': 0, 'max': 25, 'details': []},
+            'technical_foundation': {'score': 0, 'max': 25, 'details': []},
+            'voice_readiness': {'score': 0, 'max': 15, 'details': []}
+        }
+
+        # ============ STRUCTURED DATA (35 points) ============
+        schema_types = set()
+        if schemas:
+            for schema in schemas:
+                if isinstance(schema, dict):
+                    schema_type = schema.get('@type', '')
+                    if isinstance(schema_type, list):
+                        schema_types.update(schema_type)
+                    else:
+                        schema_types.add(schema_type)
+
+        # Has any JSON-LD schema (10 points)
+        if schemas and len(schemas) > 0:
+            breakdown['structured_data']['score'] += 10
+            breakdown['structured_data']['details'].append('Has JSON-LD schema (+10)')
+        else:
+            breakdown['structured_data']['details'].append('Missing JSON-LD schema (0)')
+
+        # Has business/entity schema - Hotel, LocalBusiness, Organization (10 points)
+        business_schemas = {'Hotel', 'LodgingBusiness', 'LocalBusiness', 'Organization', 'Corporation', 'Resort'}
+        if schema_types & business_schemas:
+            breakdown['structured_data']['score'] += 10
+            breakdown['structured_data']['details'].append('Has business entity schema (+10)')
+        else:
+            breakdown['structured_data']['details'].append('Missing business entity schema (0)')
+
+        # Has rich schema - FAQ, Review, Product, Event (8 points)
+        rich_schemas = {'FAQPage', 'FAQ', 'Review', 'AggregateRating', 'Product', 'Event', 'Offer'}
+        if schema_types & rich_schemas:
+            breakdown['structured_data']['score'] += 8
+            breakdown['structured_data']['details'].append('Has rich content schema (+8)')
+
+        # Has breadcrumb schema (4 points)
+        if 'BreadcrumbList' in schema_types:
+            breakdown['structured_data']['score'] += 4
+            breakdown['structured_data']['details'].append('Has breadcrumb schema (+4)')
+
+        # Schema completeness - check for key properties (3 points)
+        if schemas:
+            has_name = any(s.get('name') for s in schemas if isinstance(s, dict))
+            has_desc = any(s.get('description') for s in schemas if isinstance(s, dict))
+            has_address = any(s.get('address') for s in schemas if isinstance(s, dict))
+            completeness = sum([has_name, has_desc, has_address])
+            if completeness >= 2:
+                breakdown['structured_data']['score'] += 3
+                breakdown['structured_data']['details'].append('Schema has key properties (+3)')
+
+        # ============ CONTENT SIGNALS (25 points) ============
+
+        # Has substantial content - word count (10 points)
+        text_content = soup.get_text(separator=' ', strip=True)
+        word_count = len(text_content.split())
+        if word_count >= 500:
+            breakdown['content_signals']['score'] += 10
+            breakdown['content_signals']['details'].append(f'Good content length: {word_count} words (+10)')
+        elif word_count >= 300:
+            breakdown['content_signals']['score'] += 6
+            breakdown['content_signals']['details'].append(f'Moderate content: {word_count} words (+6)')
+        elif word_count >= 150:
+            breakdown['content_signals']['score'] += 3
+            breakdown['content_signals']['details'].append(f'Light content: {word_count} words (+3)')
+        else:
+            breakdown['content_signals']['details'].append(f'Thin content: {word_count} words (0)')
+
+        # Has proper heading structure (5 points)
+        h1_tags = soup.find_all('h1')
+        h2_tags = soup.find_all('h2')
+        if len(h1_tags) == 1 and len(h2_tags) >= 1:
+            breakdown['content_signals']['score'] += 5
+            breakdown['content_signals']['details'].append('Good heading structure (+5)')
+        elif len(h1_tags) == 1:
+            breakdown['content_signals']['score'] += 3
+            breakdown['content_signals']['details'].append('Has H1, missing H2s (+3)')
+
+        # Has lists or structured content (5 points)
+        lists = soup.find_all(['ul', 'ol'])
+        tables = soup.find_all('table')
+        if len(lists) >= 2 or len(tables) >= 1:
+            breakdown['content_signals']['score'] += 5
+            breakdown['content_signals']['details'].append('Has structured content (lists/tables) (+5)')
+        elif len(lists) >= 1:
+            breakdown['content_signals']['score'] += 2
+            breakdown['content_signals']['details'].append('Has some lists (+2)')
+
+        # Has FAQ-style content (5 points)
+        faq_indicators = soup.find_all(['details', 'summary'])
+        question_words = text_content.lower().count('?')
+        if 'FAQPage' in schema_types or len(faq_indicators) > 0:
+            breakdown['content_signals']['score'] += 5
+            breakdown['content_signals']['details'].append('Has FAQ content (+5)')
+        elif question_words >= 3:
+            breakdown['content_signals']['score'] += 2
+            breakdown['content_signals']['details'].append('Has Q&A style content (+2)')
+
+        # ============ TECHNICAL FOUNDATION (25 points) ============
+
+        # Has proper title tag (6 points)
+        title_tag = soup.find('title')
+        if title_tag and len(title_tag.text.strip()) >= 30:
+            breakdown['technical_foundation']['score'] += 6
+            breakdown['technical_foundation']['details'].append('Good title tag (+6)')
+        elif title_tag and title_tag.text.strip():
+            breakdown['technical_foundation']['score'] += 3
+            breakdown['technical_foundation']['details'].append('Has title but short (+3)')
+        else:
+            breakdown['technical_foundation']['details'].append('Missing/empty title (0)')
+
+        # Has meta description (6 points)
+        meta_desc = soup.find('meta', attrs={'name': 'description'})
+        if meta_desc and len(meta_desc.get('content', '').strip()) >= 120:
+            breakdown['technical_foundation']['score'] += 6
+            breakdown['technical_foundation']['details'].append('Good meta description (+6)')
+        elif meta_desc and meta_desc.get('content', '').strip():
+            breakdown['technical_foundation']['score'] += 3
+            breakdown['technical_foundation']['details'].append('Has meta description but short (+3)')
+        else:
+            breakdown['technical_foundation']['details'].append('Missing meta description (0)')
+
+        # Has canonical URL (4 points)
+        canonical = soup.find('link', attrs={'rel': 'canonical'})
+        if canonical and canonical.get('href'):
+            breakdown['technical_foundation']['score'] += 4
+            breakdown['technical_foundation']['details'].append('Has canonical URL (+4)')
+
+        # Has Open Graph tags (5 points)
+        og_title = soup.find('meta', attrs={'property': 'og:title'})
+        og_desc = soup.find('meta', attrs={'property': 'og:description'})
+        og_image = soup.find('meta', attrs={'property': 'og:image'})
+        og_count = sum([1 for og in [og_title, og_desc, og_image] if og])
+        if og_count >= 3:
+            breakdown['technical_foundation']['score'] += 5
+            breakdown['technical_foundation']['details'].append('Full Open Graph tags (+5)')
+        elif og_count >= 1:
+            breakdown['technical_foundation']['score'] += 2
+            breakdown['technical_foundation']['details'].append(f'Partial Open Graph ({og_count}/3) (+2)')
+
+        # Has language declared (2 points)
+        html_tag = soup.find('html')
+        if html_tag and html_tag.get('lang'):
+            breakdown['technical_foundation']['score'] += 2
+            breakdown['technical_foundation']['details'].append('Has lang attribute (+2)')
+
+        # Has proper robots meta (2 points)
+        robots = soup.find('meta', attrs={'name': 'robots'})
+        if robots:
+            content = robots.get('content', '').lower()
+            if 'noindex' not in content:
+                breakdown['technical_foundation']['score'] += 2
+                breakdown['technical_foundation']['details'].append('Indexable robots meta (+2)')
+        else:
+            # No robots meta means indexable by default
+            breakdown['technical_foundation']['score'] += 2
+            breakdown['technical_foundation']['details'].append('Indexable (no noindex) (+2)')
+
+        # ============ VOICE/AI READINESS (15 points) ============
+
+        # Has Speakable schema (6 points)
+        if 'Speakable' in schema_types:
+            breakdown['voice_readiness']['score'] += 6
+            breakdown['voice_readiness']['details'].append('Has Speakable schema (+6)')
+
+        # Has short, digestible paragraphs (4 points)
+        paragraphs = soup.find_all('p')
+        if paragraphs:
+            avg_para_length = sum(len(p.get_text().split()) for p in paragraphs) / len(paragraphs)
+            if avg_para_length <= 50:
+                breakdown['voice_readiness']['score'] += 4
+                breakdown['voice_readiness']['details'].append('Digestible paragraphs (+4)')
+            elif avg_para_length <= 80:
+                breakdown['voice_readiness']['score'] += 2
+                breakdown['voice_readiness']['details'].append('Moderate paragraph length (+2)')
+
+        # Has clear contact/location info (3 points)
+        has_phone = bool(soup.find('a', href=lambda h: h and 'tel:' in h))
+        has_email = bool(soup.find('a', href=lambda h: h and 'mailto:' in h))
+        has_address_tag = bool(soup.find('address'))
+        if has_phone or has_email or has_address_tag:
+            breakdown['voice_readiness']['score'] += 3
+            breakdown['voice_readiness']['details'].append('Has contact info (+3)')
+
+        # Mobile-friendly indicators (2 points)
+        viewport = soup.find('meta', attrs={'name': 'viewport'})
+        if viewport:
+            breakdown['voice_readiness']['score'] += 2
+            breakdown['voice_readiness']['details'].append('Mobile viewport set (+2)')
+
+        # Calculate total score
+        total_score = sum(cat['score'] for cat in breakdown.values())
+
+        # Ensure score is between 1-100
+        total_score = max(1, min(100, total_score))
+
+        # Calculate grade
+        if total_score >= 90:
+            grade = 'A'
+        elif total_score >= 80:
+            grade = 'B'
+        elif total_score >= 70:
+            grade = 'C'
+        elif total_score >= 60:
+            grade = 'D'
+        else:
+            grade = 'F'
+
+        return {
+            'total_score': total_score,
+            'breakdown': breakdown,
+            'grade': grade
+        }
+
+
 class SEOAuditor:
     def audit(self, url, config=None, audit_types=None):
         """
@@ -1298,6 +1547,62 @@ class SEOAuditor:
             import traceback
             traceback.print_exc()
         return issues
+
+    def audit_with_score(self, url, config=None, audit_types=None):
+        """
+        Audit a URL and also calculate the GEO/LLM readiness score.
+
+        Returns:
+            tuple: (issues list, geo_score dict)
+        """
+        issues = []
+        geo_score = {'total_score': 0, 'grade': 'F', 'breakdown': {}}
+
+        # Default audit_types to all enabled
+        if audit_types is None:
+            audit_types = {'seo': True, 'voice': True, 'brand': True}
+
+        run_seo = audit_types.get('seo', True)
+
+        try:
+            resp = fetch_with_scraper_api(url)
+            soup = BeautifulSoup(resp.text, 'html.parser')
+
+            # Check if we got a real page (not Cloudflare challenge)
+            title_tag = soup.find('title')
+            if title_tag and 'Just a moment' in title_tag.text:
+                print(f"Warning: Got Cloudflare challenge page for {url}")
+                return issues, geo_score
+
+            # Extract schemas for scoring
+            schemas = []
+            script_tags = soup.find_all('script', type='application/ld+json')
+            for script in script_tags:
+                try:
+                    import json
+                    schema_data = json.loads(script.string)
+                    if isinstance(schema_data, list):
+                        schemas.extend(schema_data)
+                    else:
+                        schemas.append(schema_data)
+                except:
+                    pass
+
+            # Calculate GEO score
+            scorer = GEOScorer()
+            geo_score = scorer.calculate_score(soup, url, schemas)
+            print(f"  GEO Score: {geo_score['total_score']} ({geo_score['grade']})")
+
+            # Now run the normal audit
+            issues = self.audit(url, config=config, audit_types=audit_types)
+
+        except Exception as e:
+            print(f"Error in audit_with_score for {url}: {e}")
+            import traceback
+            traceback.print_exc()
+
+        return issues, geo_score
+
 
 class MondayClient:
     def __init__(self, board_id=None):
@@ -2000,6 +2305,7 @@ def hello_http(request):
             # Collect all issues for storing in Firestore
             all_issues_list = []
             recent_issues = []  # Track last 10 issues for progress panel
+            page_scores = []  # Track GEO scores for each page
 
             for page_index, u in enumerate(urls):
                 page_url = u['url']
@@ -2013,8 +2319,17 @@ def hello_http(request):
 
                 # Pass site_config_manager to auditor so it only runs enabled checks
                 # Also pass audit_types to control which audit categories run
-                issues = auditor.audit(page_url, config=site_config_manager, audit_types=audit_types)
+                # Use audit_with_score to also get GEO score
+                issues, geo_score = auditor.audit_with_score(page_url, config=site_config_manager, audit_types=audit_types)
                 results['issues'] += len(issues)
+
+                # Track GEO score for this page
+                page_scores.append({
+                    'url': page_url,
+                    'score': geo_score['total_score'],
+                    'grade': geo_score['grade'],
+                    'breakdown': geo_score['breakdown']
+                })
 
                 # Track issue types
                 for issue in issues:
@@ -2060,7 +2375,10 @@ def hello_http(request):
                         'monday_status': task_status
                     })
 
-                # Update progress with issue counts after each page
+                # Calculate average GEO score so far
+                avg_geo_score = sum(p['score'] for p in page_scores) / len(page_scores) if page_scores else 0
+
+                # Update progress with issue counts and GEO score after each page
                 update_audit_progress(site_id, {
                     'issuesFound': results['issues'],
                     'seoIssues': results['seo_issues'],
@@ -2068,10 +2386,29 @@ def hello_http(request):
                     'brandIssues': results['brand_issues'],
                     'tasksCreated': results['tasks_created'],
                     'duplicatesSkipped': results['duplicates_skipped'],
-                    'recentIssues': recent_issues
+                    'recentIssues': recent_issues,
+                    'currentPageGeoScore': geo_score['total_score'],
+                    'avgGeoScore': round(avg_geo_score, 1)
                 })
 
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
+
+            # Calculate final GEO score stats
+            avg_geo_score = sum(p['score'] for p in page_scores) / len(page_scores) if page_scores else 0
+            min_geo_score = min(p['score'] for p in page_scores) if page_scores else 0
+            max_geo_score = max(p['score'] for p in page_scores) if page_scores else 0
+
+            # Determine overall grade based on average
+            if avg_geo_score >= 90:
+                overall_grade = 'A'
+            elif avg_geo_score >= 80:
+                overall_grade = 'B'
+            elif avg_geo_score >= 70:
+                overall_grade = 'C'
+            elif avg_geo_score >= 60:
+                overall_grade = 'D'
+            else:
+                overall_grade = 'F'
 
             # Log audit run to Firestore (site-specific subcollection)
             try:
@@ -2089,11 +2426,19 @@ def hello_http(request):
                         'brandIssues': results['brand_issues'],
                         'rulesUsed': results['rules_used'],
                         'auditTypes': audit_types,  # Store which audit types were run
+                        'geoScore': {
+                            'average': round(avg_geo_score, 1),
+                            'min': min_geo_score,
+                            'max': max_geo_score,
+                            'grade': overall_grade
+                        },
+                        'pageScores': page_scores,  # Store individual page scores
                         'issues': all_issues_list  # Store all individual issues
                     }
                     # Store in site-specific subcollection
                     db.collection('sites').document(site_id).collection('auditLogs').add(audit_log)
                     print(f"Audit log saved to sites/{site_id}/auditLogs with {len(all_issues_list)} individual issues")
+                    print(f"  GEO Score: avg={avg_geo_score:.1f}, min={min_geo_score}, max={max_geo_score}, grade={overall_grade}")
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
@@ -2102,7 +2447,9 @@ def hello_http(request):
                 'status': 'completed',
                 'phase': 'complete',
                 'phaseLabel': 'Audit complete!',
-                'completedAt': firestore.SERVER_TIMESTAMP
+                'completedAt': firestore.SERVER_TIMESTAMP,
+                'finalGeoScore': round(avg_geo_score, 1),
+                'geoGrade': overall_grade
             })
 
             return jsonify({"status": "success", "results": results}), 200, headers
