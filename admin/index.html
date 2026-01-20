@@ -1446,8 +1446,8 @@
             openModal('Add SEO/GEO Rule', 'seoRules');
             document.getElementById('extraFields').innerHTML =
                 '<div class="mb-4">' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type <span class="text-gray-400 font-normal">(identifier)</span></label>' +
-                    '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Check Type <span class="text-secondary/60 font-normal">(identifier)</span></label>' +
+                    '<select id="formCheckType" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="title">Title Tag</option>' +
                         '<option value="meta">Meta Description</option>' +
                         '<option value="h1">H1 Heading</option>' +
@@ -1462,8 +1462,8 @@
                     '</select>' +
                 '</div>' +
                 '<div class="mb-4">' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">Severity</label>' +
-                    '<select id="formSeverity" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
+                    '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="Critical">Critical</option>' +
                         '<option value="High">High</option>' +
                         '<option value="Medium" selected>Medium</option>' +
@@ -1471,9 +1471,9 @@
                     '</select>' +
                 '</div>' +
                 '<div class="mb-4">' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">LLM Audit Prompt <span class="text-gray-400 font-normal">(optional - enables AI-powered checking)</span></label>' +
-                    '<textarea id="formPrompt" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent font-mono text-sm" placeholder="Describe what the AI should check for. Example:\n\nCheck if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag\n2. The title is less than 30 characters\n3. The title is generic like &quot;Home&quot;"></textarea>' +
-                    '<p class="text-xs text-gray-500 mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically. Leave empty to use built-in hardcoded checks.</p>' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-secondary/60 font-normal">(optional)</span></label>' +
+                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" placeholder="Describe what the AI should check for. Example:\n\nCheck if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag\n2. The title is less than 30 characters\n3. The title is generic like &quot;Home&quot;"></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
                 '</div>';
         }
 
@@ -1481,8 +1481,8 @@
             openModal('Add Voice Guideline', 'voiceRules');
             document.getElementById('extraFields').innerHTML =
                 '<div>' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">Category</label>' +
-                    '<select id="formCategory" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Category</label>' +
+                    '<select id="formCategory" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="tone">Tone of Voice</option>' +
                         '<option value="language">Language Style</option>' +
                         '<option value="audience">Target Audience</option>' +
@@ -1495,8 +1495,8 @@
             openModal('Add Brand Standard', 'brandStandards');
             document.getElementById('extraFields').innerHTML =
                 '<div>' +
-                    '<label class="block text-sm font-medium text-gray-700 mb-1">Standard Type</label>' +
-                    '<select id="formStandardType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Standard Type</label>' +
+                    '<select id="formStandardType" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="visual">Visual Identity</option>' +
                         '<option value="terminology">Terminology</option>' +
                         '<option value="compliance">Compliance</option>' +
@@ -1524,8 +1524,8 @@
                         if (type === 'seo') {
                             document.getElementById('extraFields').innerHTML =
                                 '<div class="mb-4">' +
-                                    '<label class="block text-sm font-medium text-gray-700 mb-1">Check Type</label>' +
-                                    '<select id="formCheckType" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">Check Type</label>' +
+                                    '<select id="formCheckType" class="w-full input-dark border rounded-lg px-3 py-2">' +
                                         '<option value="title"' + (data.checkType === 'title' ? ' selected' : '') + '>Title Tag</option>' +
                                         '<option value="meta"' + (data.checkType === 'meta' ? ' selected' : '') + '>Meta Description</option>' +
                                         '<option value="h1"' + (data.checkType === 'h1' ? ' selected' : '') + '>H1 Heading</option>' +
@@ -1540,8 +1540,8 @@
                                     '</select>' +
                                 '</div>' +
                                 '<div class="mb-4">' +
-                                    '<label class="block text-sm font-medium text-gray-700 mb-1">Severity</label>' +
-                                    '<select id="formSeverity" class="w-full border border-gray-300 rounded-lg px-3 py-2">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
+                                    '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
                                         '<option value="Critical"' + (data.severity === 'Critical' ? ' selected' : '') + '>Critical</option>' +
                                         '<option value="High"' + (data.severity === 'High' ? ' selected' : '') + '>High</option>' +
                                         '<option value="Medium"' + (data.severity === 'Medium' || !data.severity ? ' selected' : '') + '>Medium</option>' +
@@ -1549,9 +1549,9 @@
                                     '</select>' +
                                 '</div>' +
                                 '<div class="mb-4">' +
-                                    '<label class="block text-sm font-medium text-gray-700 mb-1">LLM Audit Prompt <span class="text-gray-400 font-normal">(optional)</span></label>' +
-                                    '<textarea id="formPrompt" rows="6" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent font-mono text-sm">' + escapeHtml(data.prompt || '') + '</textarea>' +
-                                    '<p class="text-xs text-gray-500 mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-secondary/60 font-normal">(optional)</span></label>' +
+                                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm">' + escapeHtml(data.prompt || '') + '</textarea>' +
+                                    '<p class="text-xs text-secondary mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
                                 '</div>';
                         } else {
                             document.getElementById('extraFields').innerHTML = '';
