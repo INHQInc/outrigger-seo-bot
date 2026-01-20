@@ -1781,8 +1781,13 @@
             // Update Firestore connection status
             updateFirestoreStatus();
 
-            // Load saved settings from Firestore
-            db.collection('settings').doc('config').get()
+            // Load saved settings from site-specific config
+            if (!currentSiteId) {
+                console.log('No site selected, cannot load settings');
+                return;
+            }
+
+            db.collection('sites').doc(currentSiteId).collection('config').doc('settings').get()
                 .then(function(doc) {
                     if (doc.exists) {
                         var settings = doc.data();
@@ -1792,6 +1797,14 @@
                         if (settings.aiModel) document.getElementById('configAiModel').value = settings.aiModel;
                         if (settings.rulesPerBatch) document.getElementById('configRulesPerBatch').value = settings.rulesPerBatch;
                         if (settings.enableLLM !== undefined) document.getElementById('configEnableLLM').checked = settings.enableLLM;
+                    } else {
+                        // Clear form if no settings exist for this site
+                        document.getElementById('configSitemapUrl').value = '';
+                        document.getElementById('configDaysToCheck').value = '7';
+                        document.getElementById('configMaxPages').value = '10';
+                        document.getElementById('configAiModel').value = 'claude-sonnet-4-20250514';
+                        document.getElementById('configRulesPerBatch').value = '5';
+                        document.getElementById('configEnableLLM').checked = true;
                     }
                 })
                 .catch(function(error) {
@@ -1811,8 +1824,13 @@
                 });
         }
 
-        // Save settings to Firestore
+        // Save settings to Firestore (site-specific)
         function saveSettings() {
+            if (!currentSiteId) {
+                alert('Please select a site first');
+                return;
+            }
+
             var settings = {
                 sitemapUrl: document.getElementById('configSitemapUrl').value,
                 daysToCheck: parseInt(document.getElementById('configDaysToCheck').value) || 7,
@@ -1823,9 +1841,9 @@
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            db.collection('settings').doc('config').set(settings, { merge: true })
+            db.collection('sites').doc(currentSiteId).collection('config').doc('settings').set(settings, { merge: true })
                 .then(function() {
-                    alert('Settings saved successfully!');
+                    alert('Settings saved successfully for ' + currentSiteId + '!');
                 })
                 .catch(function(error) {
                     console.error('Error saving settings:', error);
