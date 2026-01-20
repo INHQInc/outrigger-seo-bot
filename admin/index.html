@@ -144,6 +144,24 @@
         </div>
     </header>
 
+    <!-- Site Selector Bar -->
+    <div class="bg-card border-b border-card">
+        <div class="max-w-7xl mx-auto px-4 py-2">
+            <div class="flex items-center gap-3">
+                <label class="text-secondary text-sm">Site:</label>
+                <select id="siteSelector" onchange="switchSite()" class="input-dark border rounded-lg px-3 py-1.5 text-sm min-w-[200px]">
+                    <option value="">Loading sites...</option>
+                </select>
+                <button onclick="openAddSiteModal()" class="btn-primary px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    Add Site
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Navigation Tabs -->
     <nav class="bg-card border-b border-card">
         <div class="max-w-7xl mx-auto px-4 py-3">
@@ -494,6 +512,62 @@
         </div>
     </div>
 
+    <!-- Site Modal for Adding/Editing Sites -->
+    <div id="siteModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-xl shadow-2xl max-w-lg w-full mx-4">
+            <div class="p-6">
+                <h3 id="siteModalTitle" class="text-xl font-bold text-primary mb-4">Add Site</h3>
+                <form id="siteModalForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Site Name</label>
+                        <input type="text" id="siteName" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="e.g., Outrigger Hotels" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Site ID (URL-safe, no spaces)</label>
+                        <input type="text" id="siteId" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="e.g., outrigger" pattern="[a-z0-9-]+" required>
+                        <p class="text-xs text-secondary mt-1">Lowercase letters, numbers, and hyphens only</p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Domain</label>
+                        <input type="text" id="siteDomain" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="e.g., outrigger.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Sitemap URL</label>
+                        <input type="url" id="siteSitemapUrl" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="https://www.example.com/sitemap.xml" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Monday.com Board ID</label>
+                        <input type="text" id="siteMondayBoardId" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="e.g., 18395774522">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-1">Days to Check</label>
+                            <input type="number" id="siteDaysToCheck" class="w-full input-dark border rounded-lg px-3 py-2" value="7" min="1" max="90">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-1">Max Pages</label>
+                            <input type="number" id="siteMaxPages" class="w-full input-dark border rounded-lg px-3 py-2" value="10" min="1" max="100">
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="siteEnableLLM" class="w-4 h-4 rounded bg-dark border-card accent-purple-500" checked>
+                            <label for="siteEnableLLM" class="text-sm text-secondary">Enable LLM Audits</label>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="siteEnabled" class="w-4 h-4 rounded bg-dark border-card accent-purple-500" checked>
+                            <label for="siteEnabled" class="text-sm text-secondary">Site Enabled</label>
+                        </div>
+                    </div>
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg flex-1 font-medium">Save Site</button>
+                        <button type="button" onclick="closeSiteModal()" class="bg-card border border-card text-secondary hover:text-primary px-6 py-2 rounded-lg transition">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============ AUTHENTICATION ============
         const AUTH_COOKIE_NAME = 'outrigger_auth';
@@ -552,16 +626,21 @@
             document.getElementById('loginScreen').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             document.getElementById('userEmail').textContent = email;
-            loadAllData();
-            loadLastRunTime();
+            // Load sites first, then data will load when site is selected
+            loadSites();
+            // Small delay to ensure site selector has loaded
+            setTimeout(function() {
+                loadAllData();
+                loadLastRunTime();
+            }, 500);
         }
 
         // Cloud Run API URL
         const API_URL = 'https://outrigger-seo-audit-22338575803.us-central1.run.app';
 
-        // Load last run time from Firestore
+        // Load last run time from Firestore (site-specific)
         function loadLastRunTime() {
-            db.collection('auditLogs').orderBy('timestamp', 'desc').limit(1).get()
+            getSiteCollection('auditLogs').orderBy('timestamp', 'desc').limit(1).get()
                 .then(function(snapshot) {
                     if (snapshot.empty) {
                         document.getElementById('lastRunTime').textContent = 'Never';
@@ -609,12 +688,13 @@
             btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Running...';
             btn.classList.add('opacity-75');
 
-            // Make POST request to trigger audit
+            // Make POST request to trigger audit for current site
             fetch(API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({ site_id: currentSiteId })
             })
             .then(function(response) {
                 return response.json();
@@ -717,6 +797,180 @@
         let currentTab = 'seo';
         let currentEditId = null;
         let currentCollection = null;
+        let currentSiteId = localStorage.getItem('selectedSite') || null;
+        let sites = [];
+        let editingSiteId = null;
+
+        // ============ SITE MANAGEMENT ============
+
+        // Load all sites for dropdown
+        function loadSites() {
+            var selector = document.getElementById('siteSelector');
+            selector.innerHTML = '<option value="">Loading...</option>';
+
+            db.collection('sites').get()
+                .then(function(snapshot) {
+                    sites = [];
+                    var optionsHtml = '';
+
+                    if (snapshot.empty) {
+                        optionsHtml = '<option value="">No sites configured</option>';
+                    } else {
+                        snapshot.forEach(function(doc) {
+                            var siteId = doc.id;
+                            // Get the config subcollection for this site
+                            db.collection('sites').doc(siteId).collection('config').doc('settings').get()
+                                .then(function(configDoc) {
+                                    if (configDoc.exists) {
+                                        var config = configDoc.to_dict ? configDoc.to_dict() : configDoc.data();
+                                        sites.push({ id: siteId, ...config });
+                                        updateSiteSelector();
+                                    }
+                                });
+                        });
+                        // Initial update with site IDs while configs load
+                        snapshot.forEach(function(doc) {
+                            optionsHtml += '<option value="' + doc.id + '">' + doc.id + '</option>';
+                        });
+                    }
+
+                    selector.innerHTML = optionsHtml;
+
+                    // Select saved site or first available
+                    if (currentSiteId && selector.querySelector('option[value="' + currentSiteId + '"]')) {
+                        selector.value = currentSiteId;
+                    } else if (snapshot.size > 0) {
+                        currentSiteId = snapshot.docs[0].id;
+                        selector.value = currentSiteId;
+                        localStorage.setItem('selectedSite', currentSiteId);
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error loading sites:', error);
+                    selector.innerHTML = '<option value="">Error loading sites</option>';
+                });
+        }
+
+        // Update site selector with full names
+        function updateSiteSelector() {
+            var selector = document.getElementById('siteSelector');
+            var optionsHtml = '';
+            sites.forEach(function(site) {
+                var selected = site.id === currentSiteId ? ' selected' : '';
+                var displayName = site.name || site.id;
+                optionsHtml += '<option value="' + site.id + '"' + selected + '>' + displayName + '</option>';
+            });
+            if (optionsHtml) {
+                selector.innerHTML = optionsHtml;
+            }
+        }
+
+        // Switch to a different site
+        function switchSite() {
+            var selector = document.getElementById('siteSelector');
+            currentSiteId = selector.value;
+            localStorage.setItem('selectedSite', currentSiteId);
+            console.log('Switched to site:', currentSiteId);
+            loadAllData();
+            loadLastRunTime();
+        }
+
+        // Open modal to add a new site
+        function openAddSiteModal() {
+            editingSiteId = null;
+            document.getElementById('siteModalTitle').textContent = 'Add New Site';
+            document.getElementById('siteId').value = '';
+            document.getElementById('siteId').disabled = false;
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteDomain').value = '';
+            document.getElementById('siteSitemapUrl').value = '';
+            document.getElementById('siteMondayBoardId').value = '';
+            document.getElementById('siteDaysToCheck').value = '7';
+            document.getElementById('siteMaxPages').value = '10';
+            document.getElementById('siteEnableLLM').checked = true;
+            document.getElementById('siteEnabled').checked = true;
+            document.getElementById('siteModal').classList.remove('hidden');
+            document.getElementById('siteModal').classList.add('flex');
+        }
+
+        // Open modal to edit existing site
+        function openEditSiteModal(siteId) {
+            editingSiteId = siteId;
+            document.getElementById('siteModalTitle').textContent = 'Edit Site';
+            document.getElementById('siteId').value = siteId;
+            document.getElementById('siteId').disabled = true;
+
+            // Load site config
+            db.collection('sites').doc(siteId).collection('config').doc('settings').get()
+                .then(function(doc) {
+                    if (doc.exists) {
+                        var config = doc.data();
+                        document.getElementById('siteName').value = config.name || '';
+                        document.getElementById('siteDomain').value = config.domain || '';
+                        document.getElementById('siteSitemapUrl').value = config.sitemapUrl || '';
+                        document.getElementById('siteMondayBoardId').value = config.mondayBoardId || '';
+                        document.getElementById('siteDaysToCheck').value = config.daysToCheck || 7;
+                        document.getElementById('siteMaxPages').value = config.maxPages || 10;
+                        document.getElementById('siteEnableLLM').checked = config.enableLLM !== false;
+                        document.getElementById('siteEnabled').checked = config.enabled !== false;
+                    }
+                    document.getElementById('siteModal').classList.remove('hidden');
+                    document.getElementById('siteModal').classList.add('flex');
+                });
+        }
+
+        // Close site modal
+        function closeSiteModal() {
+            document.getElementById('siteModal').classList.add('hidden');
+            document.getElementById('siteModal').classList.remove('flex');
+            editingSiteId = null;
+        }
+
+        // Save site configuration
+        function saveSite(e) {
+            e.preventDefault();
+            var siteId = editingSiteId || document.getElementById('siteId').value.toLowerCase().replace(/[^a-z0-9-]/g, '-');
+            var config = {
+                name: document.getElementById('siteName').value,
+                domain: document.getElementById('siteDomain').value,
+                sitemapUrl: document.getElementById('siteSitemapUrl').value,
+                mondayBoardId: document.getElementById('siteMondayBoardId').value,
+                daysToCheck: parseInt(document.getElementById('siteDaysToCheck').value) || 7,
+                maxPages: parseInt(document.getElementById('siteMaxPages').value) || 10,
+                enableLLM: document.getElementById('siteEnableLLM').checked,
+                enabled: document.getElementById('siteEnabled').checked,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (!editingSiteId) {
+                config.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            db.collection('sites').doc(siteId).collection('config').doc('settings').set(config, { merge: true })
+                .then(function() {
+                    closeSiteModal();
+                    loadSites();
+                    if (!editingSiteId) {
+                        // Switch to the new site
+                        currentSiteId = siteId;
+                        localStorage.setItem('selectedSite', siteId);
+                    }
+                    loadAllData();
+                    alert('Site saved successfully!');
+                })
+                .catch(function(error) {
+                    alert('Error saving site: ' + error.message);
+                });
+        }
+
+        // Get collection reference for current site
+        function getSiteCollection(collectionName) {
+            if (!currentSiteId) {
+                console.warn('No site selected, using legacy collection');
+                return db.collection(collectionName);
+            }
+            return db.collection('sites').doc(currentSiteId).collection(collectionName);
+        }
 
         // Update connection status (header indicator)
         function updateConnectionStatus(connected) {
@@ -771,16 +1025,16 @@
             }
         }
 
-        // Load SEO Rules
+        // Load SEO Rules (site-specific)
         function loadSeoRules() {
             var container = document.getElementById('seoRulesList');
             container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading rules...</p>';
 
-            db.collection('seoRules').orderBy('name').get()
+            getSiteCollection('seoRules').orderBy('name').get()
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No SEO rules configured. Click "Add Rule" to create one.</p>';
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No SEO rules configured for this site. Click "Add Rule" to create one.</p>';
                         return;
                     }
                     var html = '';
@@ -797,16 +1051,16 @@
                 });
         }
 
-        // Load Voice Rules
+        // Load Voice Rules (site-specific)
         function loadVoiceRules() {
             var container = document.getElementById('voiceRulesList');
             container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading guidelines...</p>';
 
-            db.collection('voiceRules').orderBy('name').get()
+            getSiteCollection('voiceRules').orderBy('name').get()
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No voice guidelines configured. Click "Add Guideline" to create one.</p>';
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No voice guidelines configured for this site. Click "Add Guideline" to create one.</p>';
                         return;
                     }
                     var html = '';
@@ -823,16 +1077,16 @@
                 });
         }
 
-        // Load Brand Standards
+        // Load Brand Standards (site-specific)
         function loadBrandStandards() {
             var container = document.getElementById('brandStandardsList');
             container.innerHTML = '<p class="text-gray-500 text-center py-8">Loading standards...</p>';
 
-            db.collection('brandStandards').orderBy('name').get()
+            getSiteCollection('brandStandards').orderBy('name').get()
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No brand standards configured. Click "Add Standard" to create one.</p>';
+                        container.innerHTML = '<p class="text-gray-500 text-center py-8">No brand standards configured for this site. Click "Add Standard" to create one.</p>';
                         return;
                     }
                     var html = '';
@@ -894,14 +1148,14 @@
             return { startDate: startDate, endDate: endDate };
         }
 
-        // Load Audit Logs
+        // Load Audit Logs (site-specific)
         function loadAuditLogs() {
             var container = document.getElementById('auditLogsList');
             container.innerHTML = '<p class="text-secondary text-center py-8">Loading audit logs...</p>';
 
             var dateRange = getDateRange();
 
-            db.collection('auditLogs')
+            getSiteCollection('auditLogs')
                 .where('timestamp', '>=', dateRange.startDate)
                 .where('timestamp', '<=', dateRange.endDate)
                 .orderBy('timestamp', 'desc')
@@ -910,7 +1164,7 @@
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs found for this date range.</p>';
+                        container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs found for this site in the selected date range.</p>';
                         return;
                     }
                     var html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
@@ -1227,13 +1481,13 @@
                 '</div>';
         }
 
-        // Edit rule
+        // Edit rule (site-specific)
         function editRule(type, id) {
             var collectionName = type === 'seo' ? 'seoRules' : (type === 'voice' ? 'voiceRules' : 'brandStandards');
             currentCollection = collectionName;
             currentEditId = id;
 
-            db.collection(collectionName).doc(id).get()
+            getSiteCollection(collectionName).doc(id).get()
                 .then(function(doc) {
                     if (doc.exists) {
                         var data = doc.data();
@@ -1289,13 +1543,13 @@
                 });
         }
 
-        // Delete rule
+        // Delete rule (site-specific)
         function deleteRule(type, id) {
             if (!confirm('Are you sure you want to delete this item?')) return;
 
             var collectionName = type === 'seo' ? 'seoRules' : (type === 'voice' ? 'voiceRules' : 'brandStandards');
 
-            db.collection(collectionName).doc(id).delete()
+            getSiteCollection(collectionName).doc(id).delete()
                 .then(function() {
                     loadAllData();
                 })
@@ -1333,10 +1587,10 @@
 
             var savePromise;
             if (currentEditId) {
-                savePromise = db.collection(currentCollection).doc(currentEditId).update(data);
+                savePromise = getSiteCollection(currentCollection).doc(currentEditId).update(data);
             } else {
                 data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-                savePromise = db.collection(currentCollection).add(data);
+                savePromise = getSiteCollection(currentCollection).add(data);
             }
 
             savePromise
@@ -1349,6 +1603,9 @@
                     alert('Error saving: ' + error.message);
                 });
         });
+
+        // Site modal form submission
+        document.getElementById('siteModalForm').addEventListener('submit', saveSite);
 
         // Load all data
         function loadAllData() {
