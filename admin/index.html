@@ -2052,9 +2052,23 @@
 
         // Delete single audit log
         function deleteAuditLog(logId) {
+            if (!currentSiteId) {
+                showToast('Please select a site first', 'warning');
+                return;
+            }
+            if (!logId) {
+                showToast('Invalid log ID', 'error');
+                return;
+            }
+
             showConfirm('Delete Log', 'Are you sure you want to delete this audit log?', function() {
-                getSiteCollection('auditLogs').doc(logId).delete()
+                console.log('Deleting log:', logId, 'from site:', currentSiteId);
+
+                var docRef = db.collection('sites').doc(currentSiteId).collection('auditLogs').doc(logId);
+
+                docRef.delete()
                     .then(function() {
+                        console.log('Log deleted successfully');
                         showToast('Audit log deleted', 'success');
                         delete auditLogsCache[logId];
                         loadAuditLogs();
