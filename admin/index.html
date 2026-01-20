@@ -702,6 +702,29 @@
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2"></div>
+
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div id="confirmModalHeader" class="bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4">
+                <h3 id="confirmModalTitle" class="text-lg font-bold text-white">Confirm Action</h3>
+            </div>
+            <div class="p-6">
+                <p id="confirmModalMessage" class="text-primary mb-6">Are you sure?</p>
+                <div class="flex gap-3">
+                    <button id="confirmModalYes" class="flex-1 btn-primary text-white py-3 rounded-lg font-medium">
+                        Confirm
+                    </button>
+                    <button onclick="closeConfirmModal()" class="flex-1 px-6 py-3 bg-card border border-card text-secondary hover:text-primary rounded-lg transition font-medium">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Audit Progress Panel (shown during audit) -->
     <div id="auditProgressPanel" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
         <div class="card rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
@@ -1000,6 +1023,97 @@
         // Cloud Run API URL
         const API_URL = 'https://outrigger-seo-audit-22338575803.us-central1.run.app';
 
+        // ============ TOAST NOTIFICATIONS ============
+        function showToast(message, type) {
+            type = type || 'info';
+            var container = document.getElementById('toastContainer');
+
+            var toast = document.createElement('div');
+            toast.className = 'toast-notification transform translate-x-full opacity-0 transition-all duration-300';
+
+            var bgColor, icon;
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-500/90';
+                    icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>';
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-500/90';
+                    icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-500/90';
+                    icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>';
+                    break;
+                default:
+                    bgColor = 'bg-cyan-500/90';
+                    icon = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>';
+            }
+
+            toast.innerHTML = '<div class="' + bgColor + ' backdrop-blur-sm text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px]">' +
+                '<svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">' + icon + '</svg>' +
+                '<span class="flex-1">' + message + '</span>' +
+                '<button onclick="this.parentElement.parentElement.remove()" class="text-white/70 hover:text-white">' +
+                    '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                '</button>' +
+            '</div>';
+
+            container.appendChild(toast);
+
+            // Animate in
+            setTimeout(function() {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+
+            // Auto remove after 4 seconds
+            setTimeout(function() {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(function() {
+                    if (toast.parentElement) toast.remove();
+                }, 300);
+            }, 4000);
+        }
+
+        // ============ CONFIRM MODAL ============
+        var confirmCallback = null;
+
+        function showConfirm(title, message, onConfirm, type) {
+            type = type || 'default';
+            confirmCallback = onConfirm;
+
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+
+            var header = document.getElementById('confirmModalHeader');
+            var yesBtn = document.getElementById('confirmModalYes');
+
+            if (type === 'danger') {
+                header.className = 'bg-gradient-to-r from-red-600 to-red-500 px-6 py-4';
+                yesBtn.className = 'flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-medium transition';
+                yesBtn.textContent = 'Delete';
+            } else {
+                header.className = 'bg-gradient-to-r from-purple-600 to-cyan-500 px-6 py-4';
+                yesBtn.className = 'flex-1 btn-primary text-white py-3 rounded-lg font-medium';
+                yesBtn.textContent = 'Confirm';
+            }
+
+            yesBtn.onclick = function() {
+                closeConfirmModal();
+                if (confirmCallback) confirmCallback();
+            };
+
+            var modal = document.getElementById('confirmModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeConfirmModal() {
+            var modal = document.getElementById('confirmModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            confirmCallback = null;
+        }
+
         // Load last run time from Firestore (site-specific)
         function loadLastRunTime() {
             getSiteCollection('auditLogs').orderBy('timestamp', 'desc').limit(1).get()
@@ -1164,7 +1278,7 @@
 
         function openRunAuditModal() {
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
             // Reset to sitemap mode
@@ -1216,7 +1330,7 @@
 
             // Ensure at least one is selected
             if (!auditTypes.seo && !auditTypes.voice && !auditTypes.brand) {
-                alert('Please select at least one audit type');
+                showToast('Please select at least one audit type', 'warning');
                 return;
             }
 
@@ -1225,12 +1339,12 @@
             if (currentAuditSource === 'url') {
                 singleUrl = document.getElementById('auditSingleUrl').value.trim();
                 if (!singleUrl) {
-                    alert('Please enter a URL to audit');
+                    showToast('Please enter a URL to audit', 'warning');
                     return;
                 }
                 // Basic URL validation
                 if (!singleUrl.startsWith('http://') && !singleUrl.startsWith('https://')) {
-                    alert('Please enter a valid URL starting with http:// or https://');
+                    showToast('Please enter a valid URL starting with http:// or https://', 'warning');
                     return;
                 }
             }
@@ -1245,7 +1359,7 @@
         // Run audit now
         function runAuditNow(auditTypes, singleUrl) {
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
 
@@ -1545,10 +1659,10 @@
                         localStorage.setItem('selectedSite', siteId);
                     }
                     loadAllData();
-                    alert('Site saved successfully!');
+                    showToast('Site saved successfully!', 'success');
                 })
                 .catch(function(error) {
-                    alert('Error saving site: ' + error.message);
+                    showToast('Error saving site: ' + error.message, 'error');
                 });
         }
 
@@ -1790,14 +1904,16 @@
         // Clear Audit Logs (marks as hidden, doesn't delete)
         function clearAuditLogs() {
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
 
-            if (!confirm('Are you sure you want to clear all visible audit logs for this site?\n\nThis will hide them from the display but not delete them permanently.')) {
-                return;
-            }
+            showConfirm('Clear Audit Logs', 'This will hide all visible logs from the display (they can be restored later). Continue?', function() {
+                performClearAuditLogs();
+            });
+        }
 
+        function performClearAuditLogs() {
             var dateRange = getDateRange();
             var container = document.getElementById('auditLogsList');
             container.innerHTML = '<p class="text-secondary text-center py-8">Clearing logs...</p>';
@@ -1808,7 +1924,7 @@
                 .get()
                 .then(function(snapshot) {
                     if (snapshot.empty) {
-                        alert('No logs to clear.');
+                        showToast('No logs to clear', 'info');
                         loadAuditLogs();
                         return;
                     }
@@ -1825,25 +1941,41 @@
                     });
 
                     if (count === 0) {
-                        alert('No visible logs to clear.');
+                        showToast('No visible logs to clear', 'info');
                         loadAuditLogs();
                         return;
                     }
 
                     return batch.commit().then(function() {
-                        alert(count + ' log(s) have been cleared.');
+                        showToast(count + ' log(s) have been cleared', 'success');
                         loadAuditLogs();
                     });
                 })
                 .catch(function(error) {
                     console.error('Error clearing logs:', error);
-                    alert('Error clearing logs: ' + error.message);
+                    showToast('Error clearing logs: ' + error.message, 'error');
                     loadAuditLogs();
                 });
         }
 
         // Store audit logs for CSV download
         var auditLogsCache = {};
+
+        // Delete single audit log
+        function deleteAuditLog(logId) {
+            showConfirm('Delete Log', 'Are you sure you want to delete this audit log?', function() {
+                getSiteCollection('auditLogs').doc(logId).delete()
+                    .then(function() {
+                        showToast('Audit log deleted', 'success');
+                        delete auditLogsCache[logId];
+                        loadAuditLogs();
+                    })
+                    .catch(function(error) {
+                        console.error('Error deleting log:', error);
+                        showToast('Error deleting log: ' + error.message, 'error');
+                    });
+            }, 'danger');
+        }
 
         // Create audit log card HTML (matching the design from screenshot)
         function createLogCard(id, log) {
@@ -1878,14 +2010,17 @@
             var geoScoreColor = avgGeoScore >= 80 ? 'text-green-400' : avgGeoScore >= 60 ? 'text-yellow-400' : 'text-red-400';
             if (avgGeoScore === 0) geoScoreColor = 'text-gray-400';
 
-            return '<div class="card rounded-xl p-5">' +
+            return '<div class="card rounded-xl p-5 relative group">' +
+                '<button onclick="deleteAuditLog(\'' + id + '\')" class="absolute top-3 right-3 text-secondary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity" title="Delete this log">' +
+                    '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>' +
+                '</button>' +
                 '<div class="flex justify-between items-start mb-4">' +
                     '<div>' +
                         '<h3 class="font-bold text-primary text-lg">Audit Run</h3>' +
                         '<p class="text-secondary text-sm">' + timestamp + '</p>' +
                         '<div class="flex gap-1 mt-1">' + auditTypeBadges + '</div>' +
                     '</div>' +
-                    '<div class="text-right">' +
+                    '<div class="text-right mr-6">' +
                         '<div class="flex items-baseline gap-1 justify-end">' +
                             '<span class="text-3xl font-bold ' + geoScoreColor + '">' + (avgGeoScore > 0 ? Math.round(avgGeoScore) : '--') + '</span>' +
                             '<span class="text-sm text-secondary">/100</span>' +
@@ -1958,7 +2093,7 @@
         function downloadLogCSV(logId) {
             var log = auditLogsCache[logId];
             if (!log) {
-                alert('Log data not found');
+                showToast('Log data not found', 'error');
                 return;
             }
 
@@ -2218,7 +2353,7 @@
                 })
                 .catch(function(error) {
                     console.error('Error loading rule:', error);
-                    alert('Error loading rule for editing');
+                    showToast('Error loading rule for editing', 'error');
                 });
         }
 
@@ -2234,7 +2369,7 @@
                 })
                 .catch(function(error) {
                     console.error('Error deleting:', error);
-                    alert('Error deleting item');
+                    showToast('Error deleting item', 'error');
                 });
         }
 
@@ -2279,7 +2414,7 @@
                 })
                 .catch(function(error) {
                     console.error('Error saving:', error);
-                    alert('Error saving: ' + error.message);
+                    showToast('Error saving: ' + error.message, 'error');
                 });
         });
 
@@ -2411,7 +2546,7 @@
 
             // Check if site is selected
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
 
@@ -2450,7 +2585,7 @@
                 }
             }
 
-            alert('Added ' + added + ' new rules/standards. Refreshing...');
+            showToast('Added ' + added + ' new rules/standards', 'success');
             loadAllData();
         }
 
@@ -2698,7 +2833,7 @@
         // Save settings to Firestore (site-specific)
         function saveSettings() {
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
 
@@ -2741,67 +2876,57 @@
         function testSitemapUrl() {
             var url = document.getElementById('configSitemapUrl').value;
             if (!url) {
-                alert('Please enter a sitemap URL');
+                showToast('Please enter a sitemap URL', 'warning');
                 return;
             }
 
             // Open sitemap in new tab for manual verification
             window.open(url, '_blank');
-            alert('Sitemap opened in new tab. Verify it contains valid XML with <url> entries.');
+            showToast('Sitemap opened in new tab', 'info');
         }
 
         // Confirm clear logs
         function confirmClearLogs() {
-            if (!confirm('Are you sure you want to delete ALL audit logs? This cannot be undone.')) return;
-            if (!confirm('This will permanently delete all audit history. Type "DELETE" to confirm.')) return;
-
-            // Get all audit logs and delete them
-            db.collection('auditLogs').get()
-                .then(function(snapshot) {
-                    var batch = db.batch();
-                    snapshot.forEach(function(doc) {
-                        batch.delete(doc.ref);
+            showConfirm('Delete All Logs', 'This will permanently delete ALL audit logs. This cannot be undone!', function() {
+                // Get all audit logs and delete them
+                getSiteCollection('auditLogs').get()
+                    .then(function(snapshot) {
+                        var batch = db.batch();
+                        snapshot.forEach(function(doc) {
+                            batch.delete(doc.ref);
+                        });
+                        return batch.commit();
+                    })
+                    .then(function() {
+                        showToast('All audit logs have been deleted', 'success');
+                        loadAuditLogs();
+                    })
+                    .catch(function(error) {
+                        console.error('Error deleting logs:', error);
+                        showToast('Error deleting logs: ' + error.message, 'error');
                     });
-                    return batch.commit();
-                })
-                .then(function() {
-                    alert('All audit logs have been deleted.');
-                    loadAuditLogs();
-                })
-                .catch(function(error) {
-                    console.error('Error deleting logs:', error);
-                    alert('Error deleting logs: ' + error.message);
-                });
+            }, 'danger');
         }
 
         // Confirm reset rules
         function confirmResetRules() {
-            if (!confirm('Are you sure you want to reset ALL rules to defaults? Your custom rules will be lost.')) return;
-            if (!confirm('This will replace all SEO, voice, and brand rules. Continue?')) return;
-
-            seedDefaultRules();
+            showConfirm('Reset All Rules', 'This will replace all SEO, voice, and brand rules with defaults. Your custom rules will be lost.', function() {
+                seedDefaultRules();
+            }, 'danger');
         }
 
         // Confirm delete site
         function confirmDeleteSite() {
             if (!currentSiteId) {
-                alert('Please select a site first');
+                showToast('Please select a site first', 'warning');
                 return;
             }
 
             var siteName = document.getElementById('siteSelector').options[document.getElementById('siteSelector').selectedIndex].text;
 
-            if (!confirm('Are you sure you want to DELETE the site "' + siteName + '"?\n\nThis will permanently remove:\n- All audit logs\n- All rules and settings\n- The site configuration\n\nThis action CANNOT be undone!')) {
-                return;
-            }
-
-            var confirmText = prompt('To confirm deletion, type the site name exactly: ' + siteName);
-            if (confirmText !== siteName) {
-                alert('Site name did not match. Deletion cancelled.');
-                return;
-            }
-
-            deleteSite(currentSiteId, siteName);
+            showConfirm('Delete Site', 'This will permanently delete "' + siteName + '" and all its data (logs, rules, settings). This cannot be undone!', function() {
+                deleteSite(currentSiteId, siteName);
+            }, 'danger');
         }
 
         // Delete site and all its data
@@ -2841,7 +2966,7 @@
                 })
                 .then(function() {
                     document.body.removeChild(statusEl);
-                    alert('Site "' + siteName + '" has been permanently deleted.');
+                    showToast('Site "' + siteName + '" has been permanently deleted', 'success');
 
                     // Reset to no site selected and reload sites list
                     currentSiteId = null;
@@ -2851,7 +2976,7 @@
                 .catch(function(error) {
                     document.body.removeChild(statusEl);
                     console.error('Error deleting site:', error);
-                    alert('Error deleting site: ' + error.message);
+                    showToast('Error deleting site: ' + error.message, 'error');
                 });
         }
 
