@@ -725,6 +725,95 @@
         </div>
     </div>
 
+    <!-- GEO Score Detail Modal -->
+    <div id="geoScoreModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50 overflow-y-auto py-8">
+        <div class="card rounded-2xl shadow-2xl w-full max-w-3xl mx-4 overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-cyan-600 to-teal-500 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold text-white">GEO/LLM Readiness Score</h3>
+                        <p id="geoScoreModalDate" class="text-white/70 text-sm">Audit from...</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="text-right">
+                            <div class="flex items-baseline gap-1">
+                                <span id="geoScoreModalAvg" class="text-4xl font-bold text-white">--</span>
+                                <span class="text-white/70">/100</span>
+                            </div>
+                            <span id="geoScoreModalGrade" class="text-sm text-white/80">Grade: --</span>
+                        </div>
+                        <button onclick="closeGeoScoreModal()" class="text-white/70 hover:text-white transition" title="Close">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Score Range Summary -->
+            <div class="px-6 py-4 border-b border-card bg-dark/50">
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div id="geoScoreMin" class="text-2xl font-bold text-red-400">--</div>
+                        <div class="text-xs text-secondary">Lowest</div>
+                    </div>
+                    <div>
+                        <div id="geoScoreAvgCenter" class="text-2xl font-bold text-cyan-400">--</div>
+                        <div class="text-xs text-secondary">Average</div>
+                    </div>
+                    <div>
+                        <div id="geoScoreMax" class="text-2xl font-bold text-green-400">--</div>
+                        <div class="text-xs text-secondary">Highest</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Per-Page Scores -->
+            <div class="px-6 py-4 max-h-[400px] overflow-y-auto">
+                <h4 class="text-sm font-medium text-secondary mb-3">Page Scores</h4>
+                <div id="geoScorePagesList" class="space-y-2">
+                    <p class="text-secondary text-center py-4">No page scores available</p>
+                </div>
+            </div>
+
+            <!-- Score Breakdown Legend -->
+            <div class="px-6 py-4 border-t border-card bg-dark/30">
+                <h4 class="text-sm font-medium text-secondary mb-3">Score Categories</h4>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-purple-500"></div>
+                        <span class="text-secondary">Structured Data</span>
+                        <span class="text-primary ml-auto">35 pts</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-blue-500"></div>
+                        <span class="text-secondary">Content Signals</span>
+                        <span class="text-primary ml-auto">25 pts</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-green-500"></div>
+                        <span class="text-secondary">Technical</span>
+                        <span class="text-primary ml-auto">25 pts</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-3 h-3 rounded bg-orange-500"></div>
+                        <span class="text-secondary">Voice/AI Ready</span>
+                        <span class="text-primary ml-auto">15 pts</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-card">
+                <button onclick="closeGeoScoreModal()" class="w-full btn-primary text-white py-3 rounded-lg font-medium">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Audit Progress Panel (shown during audit) -->
     <div id="auditProgressPanel" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
         <div class="card rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden">
@@ -1977,6 +2066,106 @@
             }, 'danger');
         }
 
+        // ============ GEO SCORE MODAL ============
+        function openGeoScoreModal(logId) {
+            var log = auditLogsCache[logId];
+            if (!log) {
+                showToast('Log data not found', 'error');
+                return;
+            }
+
+            var geoScore = log.geoScore || {};
+            var pageScores = log.pageScores || [];
+            var timestamp = log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'Unknown';
+
+            // Update header info
+            document.getElementById('geoScoreModalDate').textContent = 'Audit from ' + timestamp;
+            document.getElementById('geoScoreModalAvg').textContent = geoScore.average ? Math.round(geoScore.average) : '--';
+            document.getElementById('geoScoreModalGrade').textContent = 'Grade: ' + (geoScore.grade || '--');
+
+            // Update score range
+            document.getElementById('geoScoreMin').textContent = geoScore.min || '--';
+            document.getElementById('geoScoreAvgCenter').textContent = geoScore.average ? Math.round(geoScore.average) : '--';
+            document.getElementById('geoScoreMax').textContent = geoScore.max || '--';
+
+            // Color the average score
+            var avgEl = document.getElementById('geoScoreModalAvg');
+            var avg = geoScore.average || 0;
+            if (avg >= 80) avgEl.className = 'text-4xl font-bold text-green-300';
+            else if (avg >= 60) avgEl.className = 'text-4xl font-bold text-yellow-300';
+            else avgEl.className = 'text-4xl font-bold text-red-300';
+
+            // Build page scores list
+            var listEl = document.getElementById('geoScorePagesList');
+            if (pageScores.length === 0) {
+                listEl.innerHTML = '<p class="text-secondary text-center py-4">No page scores available for this audit</p>';
+            } else {
+                // Sort by score descending
+                var sorted = pageScores.slice().sort(function(a, b) { return b.score - a.score; });
+                listEl.innerHTML = sorted.map(function(page) {
+                    var scoreColor = page.score >= 80 ? 'text-green-400' : page.score >= 60 ? 'text-yellow-400' : 'text-red-400';
+                    var barColor = page.score >= 80 ? 'bg-green-500' : page.score >= 60 ? 'bg-yellow-500' : 'bg-red-500';
+                    var breakdown = page.breakdown || {};
+
+                    // Build mini breakdown bars
+                    var structuredScore = breakdown.structured_data ? breakdown.structured_data.score : 0;
+                    var contentScore = breakdown.content_signals ? breakdown.content_signals.score : 0;
+                    var technicalScore = breakdown.technical_foundation ? breakdown.technical_foundation.score : 0;
+                    var voiceScore = breakdown.voice_readiness ? breakdown.voice_readiness.score : 0;
+
+                    return '<div class="p-3 bg-dark rounded-lg border border-card hover:border-cyan-500/30 transition cursor-pointer" onclick="togglePageBreakdown(this)">' +
+                        '<div class="flex items-center gap-3">' +
+                            '<div class="flex-1 min-w-0">' +
+                                '<div class="text-sm text-primary truncate" title="' + page.url + '">' + page.url.replace(/^https?:\/\/[^\/]+/, '') + '</div>' +
+                                '<div class="flex gap-1 mt-1">' +
+                                    '<div class="h-1.5 rounded bg-purple-500" style="width: ' + (structuredScore / 35 * 40) + 'px" title="Structured: ' + structuredScore + '/35"></div>' +
+                                    '<div class="h-1.5 rounded bg-blue-500" style="width: ' + (contentScore / 25 * 40) + 'px" title="Content: ' + contentScore + '/25"></div>' +
+                                    '<div class="h-1.5 rounded bg-green-500" style="width: ' + (technicalScore / 25 * 40) + 'px" title="Technical: ' + technicalScore + '/25"></div>' +
+                                    '<div class="h-1.5 rounded bg-orange-500" style="width: ' + (voiceScore / 15 * 40) + 'px" title="Voice: ' + voiceScore + '/15"></div>' +
+                                '</div>' +
+                            '</div>' +
+                            '<div class="text-right">' +
+                                '<span class="text-xl font-bold ' + scoreColor + '">' + page.score + '</span>' +
+                                '<span class="text-xs text-secondary ml-1">' + page.grade + '</span>' +
+                            '</div>' +
+                            '<svg class="w-4 h-4 text-secondary transition-transform breakdown-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>' +
+                            '</svg>' +
+                        '</div>' +
+                        '<div class="breakdown-details hidden mt-3 pt-3 border-t border-card text-xs space-y-2">' +
+                            '<div class="flex justify-between"><span class="text-purple-400">Structured Data</span><span class="text-primary">' + structuredScore + '/35</span></div>' +
+                            '<div class="flex justify-between"><span class="text-blue-400">Content Signals</span><span class="text-primary">' + contentScore + '/25</span></div>' +
+                            '<div class="flex justify-between"><span class="text-green-400">Technical Foundation</span><span class="text-primary">' + technicalScore + '/25</span></div>' +
+                            '<div class="flex justify-between"><span class="text-orange-400">Voice/AI Readiness</span><span class="text-primary">' + voiceScore + '/15</span></div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('');
+            }
+
+            // Show modal
+            var modal = document.getElementById('geoScoreModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function togglePageBreakdown(el) {
+            var details = el.querySelector('.breakdown-details');
+            var arrow = el.querySelector('.breakdown-arrow');
+            if (details.classList.contains('hidden')) {
+                details.classList.remove('hidden');
+                arrow.classList.add('rotate-180');
+            } else {
+                details.classList.add('hidden');
+                arrow.classList.remove('rotate-180');
+            }
+        }
+
+        function closeGeoScoreModal() {
+            var modal = document.getElementById('geoScoreModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
         // Create audit log card HTML (matching the design from screenshot)
         function createLogCard(id, log) {
             // Cache the log for CSV download
@@ -2020,12 +2209,12 @@
                         '<p class="text-secondary text-sm">' + timestamp + '</p>' +
                         '<div class="flex gap-1 mt-1">' + auditTypeBadges + '</div>' +
                     '</div>' +
-                    '<div class="text-right mr-6">' +
+                    '<div class="text-right mr-6 cursor-pointer hover:opacity-80 transition" onclick="openGeoScoreModal(\'' + id + '\')" title="Click to view GEO score details">' +
                         '<div class="flex items-baseline gap-1 justify-end">' +
                             '<span class="text-3xl font-bold ' + geoScoreColor + '">' + (avgGeoScore > 0 ? Math.round(avgGeoScore) : '--') + '</span>' +
                             '<span class="text-sm text-secondary">/100</span>' +
                         '</div>' +
-                        '<p class="text-secondary text-xs">GEO Score</p>' +
+                        '<p class="text-secondary text-xs flex items-center gap-1 justify-end">GEO Score <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg></p>' +
                     '</div>' +
                 '</div>' +
                 '<div class="space-y-2 mb-4">' +
