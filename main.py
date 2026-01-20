@@ -1782,6 +1782,9 @@ def hello_http(request):
                 }
             }
 
+            # Collect all issues for storing in Firestore
+            all_issues_list = []
+
             for u in urls:
                 # Pass config_manager to auditor so it only runs enabled checks
                 issues = auditor.audit(u['url'], config=config_manager)
@@ -1790,21 +1793,40 @@ def hello_http(request):
                 # Track issue types
                 for issue in issues:
                     issue_type = issue.get('type', '')
+                    issue_category = 'seo'
                     if issue_type.startswith('llm_voice') or 'voice' in issue_type.lower():
                         results['voice_issues'] += 1
+                        issue_category = 'voice'
                     elif issue_type.startswith('llm_brand') or 'brand' in issue_type.lower():
                         results['brand_issues'] += 1
+                        issue_category = 'brand'
                     else:
                         results['seo_issues'] += 1
 
                     result = monday.create_task(issue)
+                    task_status = 'created'
                     if result == "duplicate":
                         results['duplicates_skipped'] += 1
+                        task_status = 'duplicate'
                     elif result:
                         results['tasks_created'] += 1
+                    else:
+                        task_status = 'failed'
+
+                    # Add issue to list for Firestore storage
+                    all_issues_list.append({
+                        'url': issue.get('url', ''),
+                        'title': issue.get('title', ''),
+                        'type': issue_type,
+                        'category': issue_category,
+                        'severity': issue.get('severity', 'Medium'),
+                        'description': issue.get('description', ''),
+                        'rule_name': issue.get('rule_name', ''),
+                        'monday_status': task_status
+                    })
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
 
-            # Log audit run to Firestore
+            # Log audit run to Firestore (including all individual issues)
             try:
                 if db:
                     audit_log = {
@@ -1816,10 +1838,11 @@ def hello_http(request):
                         'seoIssues': results['seo_issues'],
                         'voiceIssues': results['voice_issues'],
                         'brandIssues': results['brand_issues'],
-                        'rulesUsed': results['rules_used']
+                        'rulesUsed': results['rules_used'],
+                        'issues': all_issues_list  # Store all individual issues
                     }
                     db.collection('auditLogs').add(audit_log)
-                    print("Audit log saved to Firestore")
+                    print(f"Audit log saved to Firestore with {len(all_issues_list)} individual issues")
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 

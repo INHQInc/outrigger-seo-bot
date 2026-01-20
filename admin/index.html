@@ -47,6 +47,27 @@
         .input-dark { background-color: var(--bg-dark); border-color: var(--border-color); color: var(--text-primary); }
         .input-dark:focus { border-color: var(--accent-purple); outline: none; box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3); }
         .input-dark::placeholder { color: var(--text-secondary); }
+        /* Dark theme date picker styling */
+        input[type="date"].input-dark {
+            color-scheme: dark;
+            appearance: none;
+            -webkit-appearance: none;
+            min-width: 140px;
+        }
+        input[type="date"].input-dark::-webkit-calendar-picker-indicator {
+            opacity: 0;
+            position: absolute;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        input[type="date"].input-dark::-webkit-datetime-edit {
+            color: var(--text-primary);
+        }
+        input[type="date"].input-dark::-webkit-datetime-edit-fields-wrapper {
+            padding: 0;
+        }
         /* Grid background effect */
         .grid-bg {
             background-image:
@@ -229,9 +250,19 @@
                         </div>
                         <!-- Custom Date Range (hidden by default) -->
                         <div id="customDateRange" class="hidden flex items-center gap-2">
-                            <input type="date" id="dateFrom" class="input-dark border rounded-lg px-3 py-2 text-sm" onchange="loadAuditLogs()">
+                            <div class="relative">
+                                <input type="date" id="dateFrom" class="input-dark border rounded-lg px-3 py-2 text-sm pr-8 cursor-pointer" onchange="loadAuditLogs()">
+                                <svg class="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
                             <span class="text-secondary">to</span>
-                            <input type="date" id="dateTo" class="input-dark border rounded-lg px-3 py-2 text-sm" onchange="loadAuditLogs()">
+                            <div class="relative">
+                                <input type="date" id="dateTo" class="input-dark border rounded-lg px-3 py-2 text-sm pr-8 cursor-pointer" onchange="loadAuditLogs()">
+                                <svg class="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 text-secondary pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
                         </div>
                         <button onclick="loadAuditLogs()" class="btn-cyan px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -765,6 +796,14 @@
                         '</div>' +
                     '</div>' +
                 '</div>' +
+                (log.issues && log.issues.length > 0 ?
+                    '<div class="text-xs text-secondary mb-3 flex items-center gap-1">' +
+                        '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
+                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>' +
+                        '</svg>' +
+                        log.issues.length + ' issue records stored' +
+                    '</div>'
+                : '<div class="text-xs text-secondary mb-3 opacity-50">No issue records (older audit)</div>') +
                 '<button onclick="downloadLogCSV(\'' + id + '\')" class="w-full btn-cyan py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition">' +
                     '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">' +
                         '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>' +
@@ -785,8 +824,9 @@
             var timestamp = log.timestamp ? new Date(log.timestamp.toDate()) : new Date();
             var dateStr = timestamp.toISOString().split('T')[0];
 
-            // Create CSV content
-            var csvContent = 'Metric,Value\n';
+            // Create CSV content - Summary Section
+            var csvContent = '=== AUDIT SUMMARY ===\n';
+            csvContent += 'Metric,Value\n';
             csvContent += 'Audit Date,' + timestamp.toLocaleString() + '\n';
             csvContent += 'Pages Audited,' + (log.pagesAudited || 0) + '\n';
             csvContent += 'Total Issues,' + (log.totalIssues || 0) + '\n';
@@ -798,10 +838,38 @@
 
             // Add rules used if available
             if (log.rulesUsed) {
-                csvContent += '\nRules Used,Count\n';
+                csvContent += '\n=== RULES USED ===\n';
+                csvContent += 'Rule Type,Count\n';
                 csvContent += 'SEO Rules,' + (log.rulesUsed.seo || 0) + '\n';
                 csvContent += 'Voice Rules,' + (log.rulesUsed.voice || 0) + '\n';
                 csvContent += 'Brand Rules,' + (log.rulesUsed.brand || 0) + '\n';
+            }
+
+            // Add individual issues if available
+            if (log.issues && log.issues.length > 0) {
+                csvContent += '\n=== ALL ISSUES LOGGED TO MONDAY.COM ===\n';
+                csvContent += 'URL,Issue Title,Category,Severity,Type,Monday Status,Rule Name,Description\n';
+
+                log.issues.forEach(function(issue) {
+                    // Escape fields that might contain commas or quotes
+                    var escapeField = function(field) {
+                        if (!field) return '';
+                        var str = String(field);
+                        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                            return '"' + str.replace(/"/g, '""') + '"';
+                        }
+                        return str;
+                    };
+
+                    csvContent += escapeField(issue.url) + ',';
+                    csvContent += escapeField(issue.title) + ',';
+                    csvContent += escapeField(issue.category) + ',';
+                    csvContent += escapeField(issue.severity) + ',';
+                    csvContent += escapeField(issue.type) + ',';
+                    csvContent += escapeField(issue.monday_status) + ',';
+                    csvContent += escapeField(issue.rule_name) + ',';
+                    csvContent += escapeField(issue.description) + '\n';
+                });
             }
 
             // Create and trigger download
