@@ -214,12 +214,32 @@
             <div class="card rounded-xl p-6 mb-6">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-xl font-bold text-primary">Audit Run History</h2>
-                    <button onclick="loadAuditLogs()" class="btn-cyan px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                        </svg>
-                        Refresh
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <!-- Date Range Filter -->
+                        <div class="flex items-center gap-2">
+                            <select id="dateRangeFilter" onchange="handleDateRangeChange()" class="input-dark border rounded-lg px-3 py-2 text-sm">
+                                <option value="30">Last 30 days</option>
+                                <option value="60">Last 60 days</option>
+                                <option value="90">Last 90 days</option>
+                                <option value="180">Last 6 months</option>
+                                <option value="365">Last 12 months</option>
+                                <option value="ytd">Year to date</option>
+                                <option value="custom">Custom range</option>
+                            </select>
+                        </div>
+                        <!-- Custom Date Range (hidden by default) -->
+                        <div id="customDateRange" class="hidden flex items-center gap-2">
+                            <input type="date" id="dateFrom" class="input-dark border rounded-lg px-3 py-2 text-sm" onchange="loadAuditLogs()">
+                            <span class="text-secondary">to</span>
+                            <input type="date" id="dateTo" class="input-dark border rounded-lg px-3 py-2 text-sm" onchange="loadAuditLogs()">
+                        </div>
+                        <button onclick="loadAuditLogs()" class="btn-cyan px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
                 </div>
                 <div id="auditLogsList" class="space-y-4">
                     <p class="text-secondary text-center py-8">Loading audit logs...</p>
@@ -590,16 +610,68 @@
                 });
         }
 
+        // Handle date range filter change
+        function handleDateRangeChange() {
+            var filterValue = document.getElementById('dateRangeFilter').value;
+            var customRangeEl = document.getElementById('customDateRange');
+
+            if (filterValue === 'custom') {
+                customRangeEl.classList.remove('hidden');
+                // Set default custom dates (last 30 days)
+                var today = new Date();
+                var thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(today.getDate() - 30);
+                document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+                document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+            } else {
+                customRangeEl.classList.add('hidden');
+            }
+            loadAuditLogs();
+        }
+
+        // Get date range based on filter selection
+        function getDateRange() {
+            var filterValue = document.getElementById('dateRangeFilter').value;
+            var endDate = new Date();
+            var startDate = new Date();
+
+            if (filterValue === 'custom') {
+                var fromInput = document.getElementById('dateFrom').value;
+                var toInput = document.getElementById('dateTo').value;
+                if (fromInput && toInput) {
+                    startDate = new Date(fromInput);
+                    endDate = new Date(toInput);
+                    endDate.setHours(23, 59, 59, 999); // End of day
+                } else {
+                    startDate.setDate(endDate.getDate() - 30);
+                }
+            } else if (filterValue === 'ytd') {
+                startDate = new Date(endDate.getFullYear(), 0, 1); // January 1st
+            } else {
+                var days = parseInt(filterValue);
+                startDate.setDate(endDate.getDate() - days);
+            }
+
+            return { startDate: startDate, endDate: endDate };
+        }
+
         // Load Audit Logs
         function loadAuditLogs() {
             var container = document.getElementById('auditLogsList');
             container.innerHTML = '<p class="text-secondary text-center py-8">Loading audit logs...</p>';
 
-            db.collection('auditLogs').orderBy('timestamp', 'desc').limit(20).get()
+            var dateRange = getDateRange();
+
+            db.collection('auditLogs')
+                .where('timestamp', '>=', dateRange.startDate)
+                .where('timestamp', '<=', dateRange.endDate)
+                .orderBy('timestamp', 'desc')
+                .limit(100)
+                .get()
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
                     if (snapshot.empty) {
-                        container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs yet. Run an audit to see results here.</p>';
+                        container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs found for this date range.</p>';
                         return;
                     }
                     var html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
