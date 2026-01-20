@@ -946,7 +946,12 @@
                 config.createdAt = firebase.firestore.FieldValue.serverTimestamp();
             }
 
-            db.collection('sites').doc(siteId).collection('config').doc('settings').set(config, { merge: true })
+            // First, ensure the parent document exists (required for Firestore queries)
+            db.collection('sites').doc(siteId).set({ id: siteId }, { merge: true })
+                .then(function() {
+                    // Then save the config in the subcollection
+                    return db.collection('sites').doc(siteId).collection('config').doc('settings').set(config, { merge: true });
+                })
                 .then(function() {
                     closeSiteModal();
                     loadSites();
