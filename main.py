@@ -975,12 +975,18 @@ class SitemapParser:
             ]
 
 class SEOAuditor:
-    def audit(self, url, config=None):
+    def audit(self, url, config=None, audit_types=None):
         """
         Audit a URL for SEO issues.
 
         IMPORTANT: Only runs checks that are explicitly enabled in the Firestore config.
         If no config is provided or no rules are enabled, no checks will run.
+
+        Args:
+            url: The URL to audit
+            config: ConfigManager instance with loaded rules
+            audit_types: Dict specifying which audit categories to run:
+                         {'seo': True/False, 'voice': True/False, 'brand': True/False}
 
         Config checkTypes supported:
         - title: Title tag checks (missing_title, short_title)
@@ -997,6 +1003,14 @@ class SEOAuditor:
         """
         issues = []
 
+        # Default audit_types to all enabled
+        if audit_types is None:
+            audit_types = {'seo': True, 'voice': True, 'brand': True}
+
+        run_seo = audit_types.get('seo', True)
+        run_voice = audit_types.get('voice', True)
+        run_brand = audit_types.get('brand', True)
+
         # If no config provided, no checks run
         if not config:
             print(f"No config provided for {url} - skipping all checks")
@@ -1005,6 +1019,7 @@ class SEOAuditor:
         try:
             resp = fetch_with_scraper_api(url)
             print(f"Auditing {url} - Status: {resp.status_code}")
+            print(f"  Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
 
             soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -1019,10 +1034,10 @@ class SEOAuditor:
             seo_issue_count = 0
 
             # ============ TIER 1: CRITICAL CHECKS ============
-            # Only run if enabled in config
+            # Only run if enabled in config AND seo audit type is selected
 
             # Title tag (Critical) - checkType: 'title'
-            if config.is_check_enabled('title') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('title') and seo_issue_count < MAX_SEO_ISSUES:
                 if not title_tag or not title_tag.text.strip():
                     issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
                     seo_issue_count += 1
@@ -1031,7 +1046,7 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # Meta description (Critical) - checkType: 'meta'
-            if config.is_check_enabled('meta') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('meta') and seo_issue_count < MAX_SEO_ISSUES:
                 meta_desc = soup.find('meta', attrs={'name': 'description'})
                 if not meta_desc or not meta_desc.get('content', '').strip():
                     issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
@@ -1041,7 +1056,7 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # H1 tag (Critical) - checkType: 'h1'
-            if config.is_check_enabled('h1') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('h1') and seo_issue_count < MAX_SEO_ISSUES:
                 h1_tags = soup.find_all('h1')
                 if not h1_tags:
                     issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
@@ -1051,7 +1066,7 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # Canonical tag (Critical) - checkType: 'canonical'
-            if config.is_check_enabled('canonical') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('canonical') and seo_issue_count < MAX_SEO_ISSUES:
                 canonical = soup.find('link', attrs={'rel': 'canonical'})
                 if not canonical or not canonical.get('href'):
                     issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
@@ -1063,12 +1078,12 @@ class SEOAuditor:
 
             # ============ SCHEMA/STRUCTURED DATA CHECKS ============
             # checkType: 'schema'
-            # Skip if we already have enough SEO issues
+            # Skip if we already have enough SEO issues or SEO not enabled
             schemas = []
             schema_types = set()
             if seo_issue_count >= MAX_SEO_ISSUES:
                 pass  # Skip schema checks
-            if config.is_check_enabled('schema') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('schema') and seo_issue_count < MAX_SEO_ISSUES:
                 # Find all JSON-LD scripts
                 schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
                 for script in schema_scripts:
@@ -1138,7 +1153,7 @@ class SEOAuditor:
             # ============ TIER 2: HIGH PRIORITY (GEO/LLM) ============
 
             # Schema-related checks (part of 'schema' checkType)
-            if config.is_check_enabled('schema') and schemas:
+            if run_seo and config.is_check_enabled('schema') and schemas:
                 # Organization schema - Important for brand identity
                 if not any(t in schema_types for t in ['Organization', 'Corporation', 'Hotel', 'Resort']):
                     issues.append({'type': 'missing_organization_schema', 'title': 'Missing Organization schema', 'severity': 'High', 'url': url})
@@ -1157,7 +1172,7 @@ class SEOAuditor:
                     issues.append({'type': 'missing_faq_schema', 'title': 'FAQ content without FAQPage schema', 'severity': 'High', 'url': url})
 
             # Thin content check - checkType: 'content'
-            if config.is_check_enabled('content'):
+            if run_seo and config.is_check_enabled('content'):
                 # Get text content (excluding scripts, styles, etc.)
                 soup_content = BeautifulSoup(resp.text, 'html.parser')  # Fresh parse
                 for tag in soup_content(['script', 'style', 'nav', 'header', 'footer', 'aside']):
@@ -1168,14 +1183,14 @@ class SEOAuditor:
                     issues.append({'type': 'thin_content', 'title': f'Thin content ({word_count} words)', 'severity': 'High', 'url': url})
 
             # Geo meta tags - checkType: 'geo'
-            if config.is_check_enabled('geo'):
+            if run_seo and config.is_check_enabled('geo'):
                 geo_region = soup.find('meta', attrs={'name': 'geo.region'})
                 geo_placename = soup.find('meta', attrs={'name': 'geo.placename'})
                 if not geo_region and not geo_placename:
                     issues.append({'type': 'missing_geo_tags', 'title': 'Missing geo meta tags', 'severity': 'High', 'url': url})
 
             # Open Graph checks - checkType: 'og'
-            if config.is_check_enabled('og'):
+            if run_seo and config.is_check_enabled('og'):
                 og_image = soup.find('meta', attrs={'property': 'og:image'})
                 if not og_image or not og_image.get('content'):
                     issues.append({'type': 'missing_og_image', 'title': 'Missing Open Graph image', 'severity': 'High', 'url': url})
@@ -1191,7 +1206,7 @@ class SEOAuditor:
             # ============ TIER 3: MEDIUM PRIORITY ============
 
             # Image alt tags - checkType: 'alt'
-            if config.is_check_enabled('alt'):
+            if run_seo and config.is_check_enabled('alt'):
                 # Re-parse since we may have decomposed some tags above
                 soup_fresh = BeautifulSoup(resp.text, 'html.parser')
                 images = soup_fresh.find_all('img')
@@ -1221,11 +1236,11 @@ class SEOAuditor:
                     })
 
             # Breadcrumb schema - part of 'schema' checkType
-            if config.is_check_enabled('schema') and schemas and 'BreadcrumbList' not in schema_types:
+            if run_seo and config.is_check_enabled('schema') and schemas and 'BreadcrumbList' not in schema_types:
                 issues.append({'type': 'missing_breadcrumb_schema', 'title': 'Missing BreadcrumbList schema', 'severity': 'Medium', 'url': url})
 
             # Robots meta tag - checkType: 'robots'
-            if config.is_check_enabled('robots'):
+            if run_seo and config.is_check_enabled('robots'):
                 soup_robots = BeautifulSoup(resp.text, 'html.parser')
                 robots = soup_robots.find('meta', attrs={'name': 'robots'})
                 if not robots:
@@ -1234,7 +1249,7 @@ class SEOAuditor:
             # ============ GEO/LLM SPECIFIC CHECKS ============
             # These are also part of 'schema' checkType
 
-            if config.is_check_enabled('schema') and schemas:
+            if run_seo and config.is_check_enabled('schema') and schemas:
                 # Speakable schema for voice assistants - checkType: 'speakable' (or part of schema)
                 is_hotel_page = '/hotel' in url.lower() or '/resort' in url.lower() or '/room' in url.lower()
                 if 'Speakable' not in schema_types:
@@ -1254,15 +1269,17 @@ class SEOAuditor:
 
             # ============ LLM-BASED RULES ============
             # Run voice/tone and brand rules using Claude
-            # Limit to first 2 voice rules + first 2 brand rules to conserve API usage
+            # Limit to first 1 voice rule + first 1 brand rule to conserve API usage
 
-            if llm_auditor.client and config.has_llm_rules():
-                # Limit to 1 voice rule for testing
-                voice_rules = config.get_voice_llm_rules()[:1]
-                llm_rules = voice_rules
+            if llm_auditor.client and config.has_llm_rules() and (run_voice or run_brand):
+                # Get rules based on selected audit types
+                voice_rules = config.get_voice_llm_rules()[:1] if run_voice else []
+                brand_rules = config.get_brand_llm_rules()[:1] if run_brand else []
+                llm_rules = voice_rules + brand_rules
 
                 print(f"Running {len(llm_rules)} LLM-based rules for {url}")
-                print(f"  - Voice rules: {len(voice_rules)}")
+                print(f"  - Voice rules: {len(voice_rules)} (run_voice={run_voice})")
+                print(f"  - Brand rules: {len(brand_rules)} (run_brand={run_brand})")
 
                 if llm_rules:
                     llm_issues = llm_auditor.batch_audit(resp.text, url, llm_rules)
@@ -1270,6 +1287,8 @@ class SEOAuditor:
                     print(f"LLM audit found {len(llm_issues)} additional issues")
             elif not llm_auditor.client:
                 print("LLM auditing skipped - no Anthropic client available")
+            elif not (run_voice or run_brand):
+                print("LLM auditing skipped - voice and brand audit types not selected")
             else:
                 print("LLM auditing skipped - no LLM rules configured in Firestore")
 
@@ -1882,7 +1901,14 @@ def hello_http(request):
             request_json = request.get_json(silent=True) or {}
             site_id = request_json.get('site_id', DEFAULT_SITE_ID)
 
+            # Get audit type selections (default to all enabled)
+            audit_types = request_json.get('audit_types', {'seo': True, 'voice': True, 'brand': True})
+            run_seo = audit_types.get('seo', True)
+            run_voice = audit_types.get('voice', True)
+            run_brand = audit_types.get('brand', True)
+
             print(f"=== Starting audit for site: {site_id} ===")
+            print(f"Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
 
             # Initialize progress tracking
             update_audit_progress(site_id, {
@@ -1899,6 +1925,7 @@ def hello_http(request):
                 'tasksCreated': 0,
                 'duplicatesSkipped': 0,
                 'recentIssues': [],
+                'auditTypes': audit_types,
                 'startedAt': firestore.SERVER_TIMESTAMP,
                 'completedAt': None,
                 'error': None
@@ -1957,10 +1984,11 @@ def hello_http(request):
                 'voice_issues': 0,
                 'brand_issues': 0,
                 'config_loaded': config_loaded,
+                'audit_types': audit_types,
                 'rules_used': {
-                    'seo': len(site_config_manager.seo_rules),
-                    'voice': len(site_config_manager.voice_rules),
-                    'brand': len(site_config_manager.brand_standards)
+                    'seo': len(site_config_manager.seo_rules) if run_seo else 0,
+                    'voice': len(site_config_manager.voice_rules) if run_voice else 0,
+                    'brand': len(site_config_manager.brand_standards) if run_brand else 0
                 }
             }
 
@@ -1979,7 +2007,8 @@ def hello_http(request):
                 })
 
                 # Pass site_config_manager to auditor so it only runs enabled checks
-                issues = auditor.audit(page_url, config=site_config_manager)
+                # Also pass audit_types to control which audit categories run
+                issues = auditor.audit(page_url, config=site_config_manager, audit_types=audit_types)
                 results['issues'] += len(issues)
 
                 # Track issue types
@@ -2054,6 +2083,7 @@ def hello_http(request):
                         'voiceIssues': results['voice_issues'],
                         'brandIssues': results['brand_issues'],
                         'rulesUsed': results['rules_used'],
+                        'auditTypes': audit_types,  # Store which audit types were run
                         'issues': all_issues_list  # Store all individual issues
                     }
                     # Store in site-specific subcollection
