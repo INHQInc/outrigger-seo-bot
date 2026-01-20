@@ -408,6 +408,181 @@
                 </div>
             </div>
 
+            <!-- Scheduler Settings Card -->
+            <div class="card rounded-xl p-6 mb-6">
+                <h2 class="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    Audit Schedule
+                </h2>
+                <div class="space-y-4">
+                    <!-- Schedule Enable Toggle -->
+                    <div class="flex items-center gap-3 p-3 bg-dark rounded-lg">
+                        <input type="checkbox" id="scheduleEnabled" class="w-5 h-5 rounded bg-dark border-card accent-cyan-500" onchange="toggleScheduleOptions()">
+                        <div class="flex-1">
+                            <label for="scheduleEnabled" class="text-primary font-medium cursor-pointer">Enable Scheduled Audits</label>
+                            <p class="text-xs text-secondary">Automatically run audits on a recurring schedule</p>
+                        </div>
+                        <span id="scheduleStatusBadge" class="px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Disabled</span>
+                    </div>
+
+                    <!-- Schedule Options (hidden until enabled) -->
+                    <div id="scheduleOptions" class="hidden space-y-4 pt-2">
+                        <!-- Frequency Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Frequency</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
+                                    <input type="radio" name="scheduleFrequency" value="daily" class="sr-only" onchange="updateScheduleUI()">
+                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="text-primary text-sm">Daily</span>
+                                </label>
+                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
+                                    <input type="radio" name="scheduleFrequency" value="weekly" class="sr-only" checked onchange="updateScheduleUI()">
+                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    <span class="text-primary text-sm">Weekly</span>
+                                </label>
+                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
+                                    <input type="radio" name="scheduleFrequency" value="monthly" class="sr-only" onchange="updateScheduleUI()">
+                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                    <span class="text-primary text-sm">Monthly</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Day of Week (for weekly) -->
+                        <div id="weeklyDaySelect">
+                            <label class="block text-sm font-medium text-secondary mb-2">Day of Week</label>
+                            <select id="scheduleDayOfWeek" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
+                                <option value="0">Sunday</option>
+                                <option value="1" selected>Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+
+                        <!-- Day of Month (for monthly) -->
+                        <div id="monthlyDaySelect" class="hidden">
+                            <label class="block text-sm font-medium text-secondary mb-2">Day of Month</label>
+                            <select id="scheduleDayOfMonth" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
+                                <option value="1">1st</option>
+                                <option value="7">7th</option>
+                                <option value="14">14th</option>
+                                <option value="15" selected>15th</option>
+                                <option value="21">21st</option>
+                                <option value="28">28th</option>
+                                <option value="last">Last day</option>
+                            </select>
+                        </div>
+
+                        <!-- Time of Day -->
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Time (24-hour)</label>
+                            <div class="flex gap-2 items-center">
+                                <select id="scheduleHour" class="input-dark border rounded-lg px-4 py-2" onchange="updateScheduleSummary()">
+                                    <option value="0">00:00</option>
+                                    <option value="1">01:00</option>
+                                    <option value="2">02:00</option>
+                                    <option value="3">03:00</option>
+                                    <option value="4">04:00</option>
+                                    <option value="5">05:00</option>
+                                    <option value="6" selected>06:00</option>
+                                    <option value="7">07:00</option>
+                                    <option value="8">08:00</option>
+                                    <option value="9">09:00</option>
+                                    <option value="10">10:00</option>
+                                    <option value="11">11:00</option>
+                                    <option value="12">12:00</option>
+                                    <option value="13">13:00</option>
+                                    <option value="14">14:00</option>
+                                    <option value="15">15:00</option>
+                                    <option value="16">16:00</option>
+                                    <option value="17">17:00</option>
+                                    <option value="18">18:00</option>
+                                    <option value="19">19:00</option>
+                                    <option value="20">20:00</option>
+                                    <option value="21">21:00</option>
+                                    <option value="22">22:00</option>
+                                    <option value="23">23:00</option>
+                                </select>
+                                <span class="text-secondary text-sm">UTC</span>
+                            </div>
+                            <p class="text-xs text-secondary mt-1">Audit will run at this time in UTC timezone</p>
+                        </div>
+
+                        <!-- Date Range -->
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Date Range</label>
+                            <div class="flex items-center gap-3 mb-2">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="scheduleDateRange" value="always" class="w-4 h-4 accent-cyan-500" checked onchange="toggleDateRangeInputs()">
+                                    <span class="text-primary text-sm">Run indefinitely</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name="scheduleDateRange" value="range" class="w-4 h-4 accent-cyan-500" onchange="toggleDateRangeInputs()">
+                                    <span class="text-primary text-sm">Set date range</span>
+                                </label>
+                            </div>
+                            <div id="dateRangeInputs" class="hidden grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs text-secondary mb-1">Start Date</label>
+                                    <input type="date" id="scheduleStartDate" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-secondary mb-1">End Date</label>
+                                    <input type="date" id="scheduleEndDate" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Audit Types for Schedule -->
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-2">Audit Types</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-purple-500/50 cursor-pointer transition">
+                                    <input type="checkbox" id="scheduleSeo" class="w-4 h-4 accent-purple-500" checked>
+                                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                    <span class="text-primary text-sm">SEO/GEO</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-green-500/50 cursor-pointer transition">
+                                    <input type="checkbox" id="scheduleVoice" class="w-4 h-4 accent-green-500" checked>
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span class="text-primary text-sm">Voice</span>
+                                </label>
+                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-orange-500/50 cursor-pointer transition">
+                                    <input type="checkbox" id="scheduleBrand" class="w-4 h-4 accent-orange-500" checked>
+                                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                    <span class="text-primary text-sm">Brand</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Schedule Summary -->
+                        <div class="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+                            <div class="flex items-start gap-3">
+                                <svg class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <div>
+                                    <p class="text-cyan-300 text-sm font-medium">Schedule Summary</p>
+                                    <p id="scheduleSummary" class="text-cyan-200/80 text-sm mt-1">Audits will run every Monday at 06:00 UTC</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- LLM Settings Card -->
             <div class="card rounded-xl p-6 mb-6">
                 <h2 class="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -2171,6 +2346,8 @@
                         if (settings.aiModel) document.getElementById('configAiModel').value = settings.aiModel;
                         if (settings.rulesPerBatch) document.getElementById('configRulesPerBatch').value = settings.rulesPerBatch;
                         if (settings.enableLLM !== undefined) document.getElementById('configEnableLLM').checked = settings.enableLLM;
+                        // Load schedule configuration
+                        loadScheduleConfig(settings.schedule);
                     } else {
                         // Clear form if no settings exist for this site
                         document.getElementById('configSitemapUrl').value = '';
@@ -2179,10 +2356,13 @@
                         document.getElementById('configAiModel').value = 'claude-sonnet-4-20250514';
                         document.getElementById('configRulesPerBatch').value = '5';
                         document.getElementById('configEnableLLM').checked = true;
+                        // Reset schedule to disabled
+                        loadScheduleConfig(null);
                     }
                 })
                 .catch(function(error) {
                     console.log('No saved settings found, using defaults');
+                    loadScheduleConfig(null);
                 });
         }
 
@@ -2198,12 +2378,200 @@
                 });
         }
 
+        // ============ SCHEDULER FUNCTIONS ============
+
+        // Toggle schedule options visibility
+        function toggleScheduleOptions() {
+            var enabled = document.getElementById('scheduleEnabled').checked;
+            var options = document.getElementById('scheduleOptions');
+            var badge = document.getElementById('scheduleStatusBadge');
+
+            if (enabled) {
+                options.classList.remove('hidden');
+                badge.textContent = 'Active';
+                badge.className = 'px-2 py-1 text-xs rounded-full bg-cyan-500/20 text-cyan-400';
+            } else {
+                options.classList.add('hidden');
+                badge.textContent = 'Disabled';
+                badge.className = 'px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400';
+            }
+            updateScheduleSummary();
+        }
+
+        // Update schedule UI when frequency changes
+        function updateScheduleUI() {
+            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
+            var weeklySelect = document.getElementById('weeklyDaySelect');
+            var monthlySelect = document.getElementById('monthlyDaySelect');
+
+            if (frequency === 'daily') {
+                weeklySelect.classList.add('hidden');
+                monthlySelect.classList.add('hidden');
+            } else if (frequency === 'weekly') {
+                weeklySelect.classList.remove('hidden');
+                monthlySelect.classList.add('hidden');
+            } else if (frequency === 'monthly') {
+                weeklySelect.classList.add('hidden');
+                monthlySelect.classList.remove('hidden');
+            }
+            updateScheduleSummary();
+        }
+
+        // Toggle date range inputs
+        function toggleDateRangeInputs() {
+            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
+            var inputs = document.getElementById('dateRangeInputs');
+
+            if (rangeMode === 'range') {
+                inputs.classList.remove('hidden');
+                // Set default dates if empty
+                var startInput = document.getElementById('scheduleStartDate');
+                var endInput = document.getElementById('scheduleEndDate');
+                if (!startInput.value) {
+                    var today = new Date();
+                    startInput.value = today.toISOString().split('T')[0];
+                }
+                if (!endInput.value) {
+                    var threeMonths = new Date();
+                    threeMonths.setMonth(threeMonths.getMonth() + 3);
+                    endInput.value = threeMonths.toISOString().split('T')[0];
+                }
+            } else {
+                inputs.classList.add('hidden');
+            }
+            updateScheduleSummary();
+        }
+
+        // Update schedule summary text
+        function updateScheduleSummary() {
+            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
+            var hour = document.getElementById('scheduleHour').value;
+            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
+
+            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var summary = 'Audits will run ';
+
+            if (frequency === 'daily') {
+                summary += 'every day';
+            } else if (frequency === 'weekly') {
+                var dayOfWeek = document.getElementById('scheduleDayOfWeek').value;
+                summary += 'every ' + dayNames[parseInt(dayOfWeek)];
+            } else if (frequency === 'monthly') {
+                var dayOfMonth = document.getElementById('scheduleDayOfMonth').value;
+                if (dayOfMonth === 'last') {
+                    summary += 'on the last day of each month';
+                } else {
+                    var suffix = 'th';
+                    if (dayOfMonth === '1' || dayOfMonth === '21') suffix = 'st';
+                    else if (dayOfMonth === '2') suffix = 'nd';
+                    else if (dayOfMonth === '3') suffix = 'rd';
+                    summary += 'on the ' + dayOfMonth + suffix + ' of each month';
+                }
+            }
+
+            summary += ' at ' + hour.padStart(2, '0') + ':00 UTC';
+
+            if (rangeMode === 'range') {
+                var startDate = document.getElementById('scheduleStartDate').value;
+                var endDate = document.getElementById('scheduleEndDate').value;
+                if (startDate && endDate) {
+                    summary += ' (from ' + startDate + ' to ' + endDate + ')';
+                }
+            }
+
+            document.getElementById('scheduleSummary').textContent = summary;
+        }
+
+        // Get schedule configuration from UI
+        function getScheduleConfig() {
+            var enabled = document.getElementById('scheduleEnabled').checked;
+            if (!enabled) {
+                return { enabled: false };
+            }
+
+            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
+            var hour = parseInt(document.getElementById('scheduleHour').value);
+            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
+
+            var config = {
+                enabled: true,
+                frequency: frequency,
+                hour: hour,
+                auditTypes: {
+                    seo: document.getElementById('scheduleSeo').checked,
+                    voice: document.getElementById('scheduleVoice').checked,
+                    brand: document.getElementById('scheduleBrand').checked
+                }
+            };
+
+            if (frequency === 'weekly') {
+                config.dayOfWeek = parseInt(document.getElementById('scheduleDayOfWeek').value);
+            } else if (frequency === 'monthly') {
+                config.dayOfMonth = document.getElementById('scheduleDayOfMonth').value;
+            }
+
+            if (rangeMode === 'range') {
+                config.startDate = document.getElementById('scheduleStartDate').value;
+                config.endDate = document.getElementById('scheduleEndDate').value;
+            }
+
+            return config;
+        }
+
+        // Load schedule configuration into UI
+        function loadScheduleConfig(schedule) {
+            if (!schedule) {
+                document.getElementById('scheduleEnabled').checked = false;
+                toggleScheduleOptions();
+                return;
+            }
+
+            document.getElementById('scheduleEnabled').checked = schedule.enabled || false;
+
+            if (schedule.frequency) {
+                var freqRadio = document.querySelector('input[name="scheduleFrequency"][value="' + schedule.frequency + '"]');
+                if (freqRadio) freqRadio.checked = true;
+            }
+
+            if (schedule.dayOfWeek !== undefined) {
+                document.getElementById('scheduleDayOfWeek').value = schedule.dayOfWeek;
+            }
+
+            if (schedule.dayOfMonth) {
+                document.getElementById('scheduleDayOfMonth').value = schedule.dayOfMonth;
+            }
+
+            if (schedule.hour !== undefined) {
+                document.getElementById('scheduleHour').value = schedule.hour;
+            }
+
+            if (schedule.startDate && schedule.endDate) {
+                document.querySelector('input[name="scheduleDateRange"][value="range"]').checked = true;
+                document.getElementById('scheduleStartDate').value = schedule.startDate;
+                document.getElementById('scheduleEndDate').value = schedule.endDate;
+            } else {
+                document.querySelector('input[name="scheduleDateRange"][value="always"]').checked = true;
+            }
+
+            if (schedule.auditTypes) {
+                document.getElementById('scheduleSeo').checked = schedule.auditTypes.seo !== false;
+                document.getElementById('scheduleVoice').checked = schedule.auditTypes.voice !== false;
+                document.getElementById('scheduleBrand').checked = schedule.auditTypes.brand !== false;
+            }
+
+            toggleScheduleOptions();
+            updateScheduleUI();
+            toggleDateRangeInputs();
+        }
+
         // Save settings to Firestore (site-specific)
         function saveSettings() {
             if (!currentSiteId) {
                 alert('Please select a site first');
                 return;
             }
+
+            var scheduleConfig = getScheduleConfig();
 
             var settings = {
                 sitemapUrl: document.getElementById('configSitemapUrl').value,
@@ -2212,17 +2580,30 @@
                 aiModel: document.getElementById('configAiModel').value,
                 rulesPerBatch: parseInt(document.getElementById('configRulesPerBatch').value) || 5,
                 enableLLM: document.getElementById('configEnableLLM').checked,
+                schedule: scheduleConfig,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             db.collection('sites').doc(currentSiteId).collection('config').doc('settings').set(settings, { merge: true })
                 .then(function() {
-                    alert('Settings saved successfully for ' + currentSiteId + '!');
+                    showToast('Settings saved successfully!', 'success');
+                    // If schedule is enabled, sync with Cloud Scheduler
+                    if (scheduleConfig.enabled) {
+                        syncCloudScheduler(currentSiteId, scheduleConfig);
+                    }
                 })
                 .catch(function(error) {
                     console.error('Error saving settings:', error);
-                    alert('Error saving settings: ' + error.message);
+                    showToast('Error saving settings: ' + error.message, 'error');
                 });
+        }
+
+        // Sync schedule configuration with Google Cloud Scheduler
+        function syncCloudScheduler(siteId, scheduleConfig) {
+            // This will call a Cloud Function to update Google Cloud Scheduler
+            // For now, we'll store the config and a Cloud Function can read it
+            console.log('Schedule config saved for site:', siteId, scheduleConfig);
+            showToast('Schedule configuration saved. Cloud Scheduler will be updated.', 'info');
         }
 
         // Test sitemap URL
