@@ -1163,6 +1163,7 @@
         var confirmCallback = null;
 
         function showConfirm(title, message, onConfirm, type) {
+            console.log('showConfirm called:', title);
             type = type || 'default';
             confirmCallback = onConfirm;
 
@@ -1182,15 +1183,24 @@
                 yesBtn.textContent = 'Confirm';
             }
 
-            yesBtn.onclick = function() {
-                var callback = confirmCallback;  // Save reference before closing
+            // Clone and replace button to remove any old event listeners
+            var newBtn = yesBtn.cloneNode(true);
+            yesBtn.parentNode.replaceChild(newBtn, yesBtn);
+
+            newBtn.addEventListener('click', function() {
+                console.log('Yes button clicked, callback:', confirmCallback ? 'exists' : 'null');
+                var callback = confirmCallback;
                 closeConfirmModal();
-                if (callback) callback();
-            };
+                if (callback) {
+                    console.log('Executing callback');
+                    callback();
+                }
+            });
 
             var modal = document.getElementById('confirmModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+            console.log('Modal should be visible now');
         }
 
         function closeConfirmModal() {
