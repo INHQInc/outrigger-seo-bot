@@ -649,6 +649,15 @@
                             Reset Rules
                         </button>
                     </div>
+                    <div class="flex items-center justify-between p-4 bg-dark rounded-lg border border-red-500/40">
+                        <div>
+                            <p class="text-red-400 font-medium">Delete This Site</p>
+                            <p class="text-secondary text-sm">Permanently remove this site and all its data (logs, rules, settings)</p>
+                        </div>
+                        <button onclick="confirmDeleteSite()" class="px-4 py-2 rounded-lg bg-red-500/20 border border-red-500 text-red-400 hover:bg-red-500/30 transition text-sm font-medium">
+                            Delete Site
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -2649,6 +2658,79 @@
             if (!confirm('This will replace all SEO, voice, and brand rules. Continue?')) return;
 
             seedDefaultRules();
+        }
+
+        // Confirm delete site
+        function confirmDeleteSite() {
+            if (!currentSiteId) {
+                alert('Please select a site first');
+                return;
+            }
+
+            var siteName = document.getElementById('siteSelector').options[document.getElementById('siteSelector').selectedIndex].text;
+
+            if (!confirm('Are you sure you want to DELETE the site "' + siteName + '"?\n\nThis will permanently remove:\n- All audit logs\n- All rules and settings\n- The site configuration\n\nThis action CANNOT be undone!')) {
+                return;
+            }
+
+            var confirmText = prompt('To confirm deletion, type the site name exactly: ' + siteName);
+            if (confirmText !== siteName) {
+                alert('Site name did not match. Deletion cancelled.');
+                return;
+            }
+
+            deleteSite(currentSiteId, siteName);
+        }
+
+        // Delete site and all its data
+        function deleteSite(siteId, siteName) {
+            var statusEl = document.createElement('div');
+            statusEl.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50';
+            statusEl.innerHTML = '<div class="card rounded-xl p-8 text-center"><div class="animate-spin w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full mx-auto mb-4"></div><p class="text-primary">Deleting site data...</p><p id="deleteStatus" class="text-secondary text-sm mt-2">Preparing...</p></div>';
+            document.body.appendChild(statusEl);
+
+            var updateStatus = function(msg) {
+                document.getElementById('deleteStatus').textContent = msg;
+            };
+
+            var siteRef = db.collection('sites').document(siteId);
+
+            // Delete subcollections: auditLogs, auditProgress, config, seoRules, voiceRules, brandStandards
+            var subcollections = ['auditLogs', 'auditProgress', 'config', 'seoRules', 'voiceRules', 'brandStandards'];
+            var deletePromises = [];
+
+            subcollections.forEach(function(subcollection) {
+                var promise = db.collection('sites').doc(siteId).collection(subcollection).get()
+                    .then(function(snapshot) {
+                        updateStatus('Deleting ' + subcollection + ' (' + snapshot.size + ' documents)...');
+                        var batch = db.batch();
+                        snapshot.forEach(function(doc) {
+                            batch.delete(doc.ref);
+                        });
+                        return batch.commit();
+                    });
+                deletePromises.push(promise);
+            });
+
+            Promise.all(deletePromises)
+                .then(function() {
+                    updateStatus('Deleting site document...');
+                    return db.collection('sites').doc(siteId).delete();
+                })
+                .then(function() {
+                    document.body.removeChild(statusEl);
+                    alert('Site "' + siteName + '" has been permanently deleted.');
+
+                    // Reset to no site selected and reload sites list
+                    currentSiteId = null;
+                    loadSites();
+                    showTab('dashboard');
+                })
+                .catch(function(error) {
+                    document.body.removeChild(statusEl);
+                    console.error('Error deleting site:', error);
+                    alert('Error deleting site: ' + error.message);
+                });
         }
 
         // Note: Initialization is handled by the authentication code at the top of this script
