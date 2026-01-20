@@ -2320,7 +2320,6 @@ def hello_http(request):
             # Collect all issues for storing in Firestore
             all_issues_list = []
             recent_issues = []  # Track last 10 issues for progress panel
-            page_scores = []  # Track GEO scores for each page
 
             for page_index, u in enumerate(urls):
                 page_url = u['url']
@@ -2334,17 +2333,8 @@ def hello_http(request):
 
                 # Pass site_config_manager to auditor so it only runs enabled checks
                 # Also pass audit_types to control which audit categories run
-                # Use audit_with_score to also get GEO score
-                issues, geo_score = auditor.audit_with_score(page_url, config=site_config_manager, audit_types=audit_types)
+                issues = auditor.audit(page_url, config=site_config_manager, audit_types=audit_types)
                 results['issues'] += len(issues)
-
-                # Track GEO score for this page
-                page_scores.append({
-                    'url': page_url,
-                    'score': geo_score['total_score'],
-                    'grade': geo_score['grade'],
-                    'breakdown': geo_score['breakdown']
-                })
 
                 # Track issue types
                 for issue in issues:
@@ -2390,10 +2380,7 @@ def hello_http(request):
                         'monday_status': task_status
                     })
 
-                # Calculate average GEO score so far
-                avg_geo_score = sum(p['score'] for p in page_scores) / len(page_scores) if page_scores else 0
-
-                # Update progress with issue counts and GEO score after each page
+                # Update progress with issue counts after each page
                 update_audit_progress(site_id, {
                     'issuesFound': results['issues'],
                     'seoIssues': results['seo_issues'],
@@ -2401,29 +2388,10 @@ def hello_http(request):
                     'brandIssues': results['brand_issues'],
                     'tasksCreated': results['tasks_created'],
                     'duplicatesSkipped': results['duplicates_skipped'],
-                    'recentIssues': recent_issues,
-                    'currentPageGeoScore': geo_score['total_score'],
-                    'avgGeoScore': round(avg_geo_score, 1)
+                    'recentIssues': recent_issues
                 })
 
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
-
-            # Calculate final GEO score stats
-            avg_geo_score = sum(p['score'] for p in page_scores) / len(page_scores) if page_scores else 0
-            min_geo_score = min(p['score'] for p in page_scores) if page_scores else 0
-            max_geo_score = max(p['score'] for p in page_scores) if page_scores else 0
-
-            # Determine overall grade based on average
-            if avg_geo_score >= 90:
-                overall_grade = 'A'
-            elif avg_geo_score >= 80:
-                overall_grade = 'B'
-            elif avg_geo_score >= 70:
-                overall_grade = 'C'
-            elif avg_geo_score >= 60:
-                overall_grade = 'D'
-            else:
-                overall_grade = 'F'
 
             # Log audit run to Firestore (site-specific subcollection)
             try:
@@ -2441,19 +2409,11 @@ def hello_http(request):
                         'brandIssues': results['brand_issues'],
                         'rulesUsed': results['rules_used'],
                         'auditTypes': audit_types,  # Store which audit types were run
-                        'geoScore': {
-                            'average': round(avg_geo_score, 1),
-                            'min': min_geo_score,
-                            'max': max_geo_score,
-                            'grade': overall_grade
-                        },
-                        'pageScores': page_scores,  # Store individual page scores
                         'issues': all_issues_list  # Store all individual issues
                     }
                     # Store in site-specific subcollection
                     db.collection('sites').document(site_id).collection('auditLogs').add(audit_log)
                     print(f"Audit log saved to sites/{site_id}/auditLogs with {len(all_issues_list)} individual issues")
-                    print(f"  GEO Score: avg={avg_geo_score:.1f}, min={min_geo_score}, max={max_geo_score}, grade={overall_grade}")
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
@@ -2462,9 +2422,7 @@ def hello_http(request):
                 'status': 'completed',
                 'phase': 'complete',
                 'phaseLabel': 'Audit complete!',
-                'completedAt': firestore.SERVER_TIMESTAMP,
-                'finalGeoScore': round(avg_geo_score, 1),
-                'geoGrade': overall_grade
+                'completedAt': firestore.SERVER_TIMESTAMP
             })
 
             return jsonify({"status": "success", "results": results}), 200, headers
