@@ -11,9 +11,12 @@ from flask import jsonify
 from google.cloud import firestore
 import anthropic
 
-SITEMAP_URL = 'https://www.outrigger.com/sitemap.xml'
-DAYS_TO_CHECK = 7
-MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
+# Legacy defaults (used for backward compatibility if no site specified)
+DEFAULT_SITEMAP_URL = 'https://www.outrigger.com/sitemap.xml'
+DEFAULT_DAYS_TO_CHECK = 7
+DEFAULT_MONDAY_BOARD_ID = os.environ.get('MONDAY_BOARD_ID', '18395774522')
+DEFAULT_SITE_ID = 'outrigger'
+
 SCRAPER_API_KEY = os.environ.get('SCRAPER_API_KEY', '')
 FIRESTORE_PROJECT_ID = os.environ.get('FIRESTORE_PROJECT_ID', 'project-85d26db5-f70f-487e-b0e')
 ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', '')
@@ -34,6 +37,70 @@ if ANTHROPIC_API_KEY:
         print("Anthropic client initialized successfully")
     except Exception as e:
         print(f"Warning: Could not initialize Anthropic client: {e}")
+
+
+class SiteConfig:
+    """
+    Configuration for a single site in the multi-site system.
+
+    Loads site-specific settings from Firestore at /sites/{siteId}/config/settings
+    """
+
+    def __init__(self, site_id, data):
+        self.site_id = site_id
+        self.name = data.get('name', site_id)
+        self.domain = data.get('domain', '')
+        self.sitemap_url = data.get('sitemapUrl', DEFAULT_SITEMAP_URL)
+        self.monday_board_id = data.get('mondayBoardId', DEFAULT_MONDAY_BOARD_ID)
+        self.days_to_check = data.get('daysToCheck', DEFAULT_DAYS_TO_CHECK)
+        self.max_pages = data.get('maxPages', 10)
+        self.enable_llm = data.get('enableLLM', True)
+        self.enabled = data.get('enabled', True)
+
+    @classmethod
+    def load(cls, site_id):
+        """Load site config from Firestore"""
+        if not db:
+            print(f"SiteConfig: Firestore not available, using defaults for {site_id}")
+            return cls(site_id, {})
+
+        try:
+            config_doc = db.collection('sites').document(site_id).collection('config').document('settings').get()
+            if config_doc.exists:
+                print(f"SiteConfig: Loaded config for site '{site_id}'")
+                return cls(site_id, config_doc.to_dict())
+            else:
+                print(f"SiteConfig: No config found for site '{site_id}', using defaults")
+                return cls(site_id, {})
+        except Exception as e:
+            print(f"SiteConfig: Error loading config for {site_id}: {e}")
+            return cls(site_id, {})
+
+    @classmethod
+    def load_all_enabled(cls):
+        """Load all enabled sites from Firestore"""
+        if not db:
+            print("SiteConfig: Firestore not available")
+            return []
+
+        sites = []
+        try:
+            sites_ref = db.collection('sites').stream()
+            for site_doc in sites_ref:
+                site_id = site_doc.id
+                config_doc = db.collection('sites').document(site_id).collection('config').document('settings').get()
+                if config_doc.exists:
+                    config_data = config_doc.to_dict()
+                    if config_data.get('enabled', True):
+                        sites.append(cls(site_id, config_data))
+            print(f"SiteConfig: Loaded {len(sites)} enabled sites")
+        except Exception as e:
+            print(f"SiteConfig: Error loading sites: {e}")
+
+        return sites
+
+    def __repr__(self):
+        return f"SiteConfig(site_id='{self.site_id}', name='{self.name}', domain='{self.domain}')"
 
 
 class LLMAuditor:
@@ -224,9 +291,15 @@ llm_auditor = LLMAuditor()
 
 
 class ConfigManager:
-    """Manages configuration from Firestore"""
+    """
+    Manages configuration from Firestore for a specific site.
 
-    def __init__(self):
+    In multi-site mode, loads rules from /sites/{siteId}/seoRules, etc.
+    Falls back to legacy root collections if site-specific collections are empty.
+    """
+
+    def __init__(self, site_id=None):
+        self.site_id = site_id or DEFAULT_SITE_ID
         self.seo_rules = []
         self.voice_rules = []
         self.brand_standards = []
@@ -234,26 +307,50 @@ class ConfigManager:
         self._llm_rules = []  # Rules that have prompts for LLM evaluation
         self._legacy_rules = []  # Rules that use checkType for hardcoded checks
 
+    def _get_collection(self, collection_name):
+        """Get reference to a collection, using site-specific path if site_id is set"""
+        if self.site_id:
+            # Multi-site path: /sites/{siteId}/{collection}
+            return db.collection('sites').document(self.site_id).collection(collection_name)
+        else:
+            # Legacy path: /{collection}
+            return db.collection(collection_name)
+
+    def _load_collection_with_fallback(self, collection_name):
+        """Load from site-specific collection, fall back to legacy if empty"""
+        # Try site-specific first
+        site_collection = db.collection('sites').document(self.site_id).collection(collection_name)
+        docs = list(site_collection.stream())
+
+        if docs:
+            print(f"  Loaded {len(docs)} docs from sites/{self.site_id}/{collection_name}")
+            return docs
+
+        # Fall back to legacy collection
+        print(f"  No docs in sites/{self.site_id}/{collection_name}, trying legacy {collection_name}")
+        legacy_docs = list(db.collection(collection_name).stream())
+        if legacy_docs:
+            print(f"  Loaded {len(legacy_docs)} docs from legacy {collection_name}")
+        return legacy_docs
+
     def load_config(self):
-        """Load all configuration from Firestore"""
+        """Load all configuration from Firestore for this site"""
         if not db:
             print("Firestore not available, using default config")
             return False
 
         try:
-            # Load SEO Rules - get all docs and filter enabled ones in Python
-            # (avoids need for composite index)
-            print(f"Attempting to load from Firestore project: {FIRESTORE_PROJECT_ID}")
-            seo_collection = db.collection('seoRules')
-            print(f"Got collection reference: {seo_collection.id}")
-            seo_docs = seo_collection.stream()
+            print(f"ConfigManager: Loading config for site '{self.site_id}'")
+            print(f"Firestore project: {FIRESTORE_PROJECT_ID}")
+
+            # Load SEO Rules
+            seo_docs = self._load_collection_with_fallback('seoRules')
             all_seo = []
             for doc in seo_docs:
                 doc_data = doc.to_dict()
-                print(f"  Found SEO doc: {doc.id} -> {doc_data}")
                 all_seo.append({'id': doc.id, **doc_data})
             self.seo_rules = [r for r in all_seo if r.get('enabled', False)]
-            print(f"Loaded {len(self.seo_rules)} SEO rules from Firestore (from {len(all_seo)} total)")
+            print(f"Loaded {len(self.seo_rules)} SEO rules (from {len(all_seo)} total)")
 
             # Separate LLM-based rules (have 'prompt' field) from legacy rules (have 'checkType')
             self._llm_rules = [r for r in self.seo_rules if r.get('prompt')]
@@ -262,10 +359,10 @@ class ConfigManager:
             print(f"  - Legacy rules (checkType only): {len(self._legacy_rules)}")
 
             # Load Voice Rules
-            voice_docs = db.collection('voiceRules').stream()
+            voice_docs = self._load_collection_with_fallback('voiceRules')
             all_voice = [{'id': doc.id, **doc.to_dict()} for doc in voice_docs]
             self.voice_rules = [r for r in all_voice if r.get('enabled', False)]
-            print(f"Loaded {len(self.voice_rules)} voice rules from Firestore (from {len(all_voice)} total)")
+            print(f"Loaded {len(self.voice_rules)} voice rules (from {len(all_voice)} total)")
 
             # Add voice rules with prompts to LLM rules
             voice_llm_rules = [r for r in self.voice_rules if r.get('prompt')]
@@ -274,10 +371,10 @@ class ConfigManager:
                 print(f"  - Added {len(voice_llm_rules)} voice rules with LLM prompts")
 
             # Load Brand Standards
-            brand_docs = db.collection('brandStandards').stream()
+            brand_docs = self._load_collection_with_fallback('brandStandards')
             all_brand = [{'id': doc.id, **doc.to_dict()} for doc in brand_docs]
             self.brand_standards = [r for r in all_brand if r.get('enabled', False)]
-            print(f"Loaded {len(self.brand_standards)} brand standards from Firestore (from {len(all_brand)} total)")
+            print(f"Loaded {len(self.brand_standards)} brand standards (from {len(all_brand)} total)")
 
             # Add brand standards with prompts to LLM rules
             brand_llm_rules = [r for r in self.brand_standards if r.get('prompt')]
@@ -791,8 +888,9 @@ def fetch_with_scraper_api(url):
     return requests.get(api_url, timeout=60)
 
 class SitemapParser:
-    def __init__(self, sitemap_url=SITEMAP_URL):
-        self.sitemap_url = sitemap_url
+    def __init__(self, sitemap_url=None):
+        """Initialize with a sitemap URL. Required for multi-site support."""
+        self.sitemap_url = sitemap_url or DEFAULT_SITEMAP_URL
 
     def get_urls(self, days=7):
         try:
@@ -1166,9 +1264,10 @@ class SEOAuditor:
         return issues
 
 class MondayClient:
-    def __init__(self):
+    def __init__(self, board_id=None):
+        """Initialize with an optional board_id for multi-site support."""
         self.api_token = os.environ.get('MONDAY_API_TOKEN')
-        self.board_id = MONDAY_BOARD_ID
+        self.board_id = board_id or DEFAULT_MONDAY_BOARD_ID
         self.api_url = "https://api.monday.com/v2"
         self.columns = {}
         self.existing_issues = set()  # Track URL + issue_type combos
@@ -1750,14 +1849,26 @@ def hello_http(request):
 
     if request.method == 'POST':
         try:
-            # Load configuration from Firestore admin dashboard
-            config_loaded = config_manager.load_config()
-            print(f"Config loaded from Firestore: {config_loaded}")
-            print(f"SEO rules: {len(config_manager.seo_rules)}, Voice rules: {len(config_manager.voice_rules)}, Brand standards: {len(config_manager.brand_standards)}")
+            # Parse request body for site_id (multi-site support)
+            request_json = request.get_json(silent=True) or {}
+            site_id = request_json.get('site_id', DEFAULT_SITE_ID)
 
-            parser = SitemapParser()
+            print(f"=== Starting audit for site: {site_id} ===")
+
+            # Load site configuration
+            site_config = SiteConfig.load(site_id)
+            print(f"Site config: {site_config}")
+
+            # Load rules from Firestore for this specific site
+            site_config_manager = ConfigManager(site_id)
+            config_loaded = site_config_manager.load_config()
+            print(f"Config loaded from Firestore: {config_loaded}")
+            print(f"SEO rules: {len(site_config_manager.seo_rules)}, Voice rules: {len(site_config_manager.voice_rules)}, Brand standards: {len(site_config_manager.brand_standards)}")
+
+            # Initialize with site-specific settings
+            parser = SitemapParser(site_config.sitemap_url)
             auditor = SEOAuditor()
-            monday = MondayClient()
+            monday = MondayClient(site_config.monday_board_id)
 
             if not monday.init():
                 return jsonify({"error": "Monday API token not configured"}), 500, headers
@@ -1765,8 +1876,10 @@ def hello_http(request):
             if not SCRAPER_API_KEY:
                 print("WARNING: SCRAPER_API_KEY not configured - may be blocked by Cloudflare")
 
-            urls = parser.get_urls(days=DAYS_TO_CHECK)
+            urls = parser.get_urls(days=site_config.days_to_check)
             results = {
+                'site_id': site_id,
+                'site_name': site_config.name,
                 'pages': len(urls),
                 'issues': 0,
                 'tasks_created': 0,
@@ -1776,9 +1889,9 @@ def hello_http(request):
                 'brand_issues': 0,
                 'config_loaded': config_loaded,
                 'rules_used': {
-                    'seo': len(config_manager.seo_rules),
-                    'voice': len(config_manager.voice_rules),
-                    'brand': len(config_manager.brand_standards)
+                    'seo': len(site_config_manager.seo_rules),
+                    'voice': len(site_config_manager.voice_rules),
+                    'brand': len(site_config_manager.brand_standards)
                 }
             }
 
@@ -1786,8 +1899,8 @@ def hello_http(request):
             all_issues_list = []
 
             for u in urls:
-                # Pass config_manager to auditor so it only runs enabled checks
-                issues = auditor.audit(u['url'], config=config_manager)
+                # Pass site_config_manager to auditor so it only runs enabled checks
+                issues = auditor.audit(u['url'], config=site_config_manager)
                 results['issues'] += len(issues)
 
                 # Track issue types
@@ -1826,11 +1939,13 @@ def hello_http(request):
                     })
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
 
-            # Log audit run to Firestore (including all individual issues)
+            # Log audit run to Firestore (site-specific subcollection)
             try:
                 if db:
                     audit_log = {
                         'timestamp': firestore.SERVER_TIMESTAMP,
+                        'siteId': site_id,
+                        'siteName': site_config.name,
                         'pagesAudited': results['pages'],
                         'totalIssues': results['issues'],
                         'tasksCreated': results['tasks_created'],
@@ -1841,8 +1956,9 @@ def hello_http(request):
                         'rulesUsed': results['rules_used'],
                         'issues': all_issues_list  # Store all individual issues
                     }
-                    db.collection('auditLogs').add(audit_log)
-                    print(f"Audit log saved to Firestore with {len(all_issues_list)} individual issues")
+                    # Store in site-specific subcollection
+                    db.collection('sites').document(site_id).collection('auditLogs').add(audit_log)
+                    print(f"Audit log saved to sites/{site_id}/auditLogs with {len(all_issues_list)} individual issues")
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
