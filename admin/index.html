@@ -785,7 +785,38 @@
         <div class="card rounded-xl shadow-2xl max-w-md w-full mx-4">
             <div class="p-6">
                 <h3 class="text-xl font-bold text-primary mb-2">Run Audit</h3>
-                <p class="text-secondary text-sm mb-4">Select which audit types to run:</p>
+
+                <!-- Page Source Selection -->
+                <div class="mb-4">
+                    <p class="text-secondary text-sm mb-3">What would you like to audit?</p>
+                    <div class="flex gap-2">
+                        <button type="button" id="auditSourceSitemap" onclick="setAuditSource('sitemap')" class="flex-1 px-4 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition">
+                            Use Sitemap
+                        </button>
+                        <button type="button" id="auditSourceUrl" onclick="setAuditSource('url')" class="flex-1 px-4 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition">
+                            Single URL
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Single URL Input (hidden by default) -->
+                <div id="singleUrlInput" class="hidden mb-4">
+                    <label class="block text-sm font-medium text-secondary mb-2">Page URL to Audit</label>
+                    <input type="url" id="auditSingleUrl" class="w-full input-dark border rounded-lg px-4 py-3" placeholder="https://example.com/page-to-audit">
+                    <p class="text-xs text-secondary mt-1">Enter the full URL of the page you want to audit</p>
+                </div>
+
+                <!-- Sitemap Info (shown by default) -->
+                <div id="sitemapInfo" class="mb-4 p-3 bg-dark rounded-lg border border-card">
+                    <div class="flex items-center gap-2 text-sm">
+                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        <span class="text-secondary">Will audit pages from configured sitemap</span>
+                    </div>
+                </div>
+
+                <p class="text-secondary text-sm mb-3">Select audit types:</p>
 
                 <div class="space-y-3 mb-6">
                     <!-- SEO/GEO Checkbox -->
@@ -1129,11 +1160,17 @@
         }
 
         // ============ RUN AUDIT MODAL ============
+        var currentAuditSource = 'sitemap'; // 'sitemap' or 'url'
+
         function openRunAuditModal() {
             if (!currentSiteId) {
                 alert('Please select a site first');
                 return;
             }
+            // Reset to sitemap mode
+            setAuditSource('sitemap');
+            document.getElementById('auditSingleUrl').value = '';
+
             var modal = document.getElementById('runAuditModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -1143,6 +1180,30 @@
             var modal = document.getElementById('runAuditModal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        function setAuditSource(source) {
+            currentAuditSource = source;
+            var sitemapBtn = document.getElementById('auditSourceSitemap');
+            var urlBtn = document.getElementById('auditSourceUrl');
+            var sitemapInfo = document.getElementById('sitemapInfo');
+            var urlInput = document.getElementById('singleUrlInput');
+
+            if (source === 'sitemap') {
+                sitemapBtn.className = 'flex-1 px-4 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition';
+                urlBtn.className = 'flex-1 px-4 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition';
+                sitemapInfo.classList.remove('hidden');
+                urlInput.classList.add('hidden');
+            } else {
+                urlBtn.className = 'flex-1 px-4 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition';
+                sitemapBtn.className = 'flex-1 px-4 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition';
+                sitemapInfo.classList.add('hidden');
+                urlInput.classList.remove('hidden');
+                // Focus the input
+                setTimeout(function() {
+                    document.getElementById('auditSingleUrl').focus();
+                }, 100);
+            }
         }
 
         function startAuditWithOptions() {
@@ -1159,15 +1220,30 @@
                 return;
             }
 
+            // Get single URL if in URL mode
+            var singleUrl = null;
+            if (currentAuditSource === 'url') {
+                singleUrl = document.getElementById('auditSingleUrl').value.trim();
+                if (!singleUrl) {
+                    alert('Please enter a URL to audit');
+                    return;
+                }
+                // Basic URL validation
+                if (!singleUrl.startsWith('http://') && !singleUrl.startsWith('https://')) {
+                    alert('Please enter a valid URL starting with http:// or https://');
+                    return;
+                }
+            }
+
             // Close the modal
             closeRunAuditModal();
 
             // Run the audit with options
-            runAuditNow(auditTypes);
+            runAuditNow(auditTypes, singleUrl);
         }
 
         // Run audit now
-        function runAuditNow(auditTypes) {
+        function runAuditNow(auditTypes, singleUrl) {
             if (!currentSiteId) {
                 alert('Please select a site first');
                 return;
@@ -1188,16 +1264,24 @@
             showProgressPanel();
             subscribeToProgress(currentSiteId);
 
+            // Build request body
+            var requestBody = {
+                site_id: currentSiteId,
+                audit_types: auditTypes
+            };
+
+            // Add single URL if provided
+            if (singleUrl) {
+                requestBody.single_url = singleUrl;
+            }
+
             // Make POST request to trigger audit for current site with audit type options
             fetch(API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    site_id: currentSiteId,
-                    audit_types: auditTypes
-                })
+                body: JSON.stringify(requestBody)
             })
             .then(function(response) {
                 return response.json();

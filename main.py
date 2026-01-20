@@ -2212,8 +2212,13 @@ def hello_http(request):
             run_voice = audit_types.get('voice', True)
             run_brand = audit_types.get('brand', True)
 
+            # Check for single URL audit
+            single_url = request_json.get('single_url', None)
+
             print(f"=== Starting audit for site: {site_id} ===")
             print(f"Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
+            if single_url:
+                print(f"Single URL mode: {single_url}")
 
             # Initialize progress tracking
             update_audit_progress(site_id, {
@@ -2267,14 +2272,24 @@ def hello_http(request):
             if not SCRAPER_API_KEY:
                 print("WARNING: SCRAPER_API_KEY not configured - may be blocked by Cloudflare")
 
-            # Update progress: fetching sitemap
-            update_audit_progress(site_id, {
-                'phase': 'fetching_sitemap',
-                'phaseLabel': f'Fetching sitemap from {site_config.sitemap_url}...',
-                'sitemapUrl': site_config.sitemap_url
-            })
-
-            urls = parser.get_urls(days=site_config.days_to_check)
+            # Get URLs to audit - either single URL or from sitemap
+            if single_url:
+                # Single URL mode - just audit the one URL provided
+                update_audit_progress(site_id, {
+                    'phase': 'single_url_mode',
+                    'phaseLabel': f'Auditing single page: {single_url}',
+                    'sitemapUrl': None
+                })
+                urls = [{'url': single_url}]
+                print(f"Single URL mode - auditing: {single_url}")
+            else:
+                # Sitemap mode - fetch URLs from sitemap
+                update_audit_progress(site_id, {
+                    'phase': 'fetching_sitemap',
+                    'phaseLabel': f'Fetching sitemap from {site_config.sitemap_url}...',
+                    'sitemapUrl': site_config.sitemap_url
+                })
+                urls = parser.get_urls(days=site_config.days_to_check)
 
             # Update progress: got pages count
             total_pages = len(urls)
