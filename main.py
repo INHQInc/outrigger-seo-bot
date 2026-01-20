@@ -2388,10 +2388,17 @@ def hello_http(request):
                     'brandIssues': results['brand_issues'],
                     'tasksCreated': results['tasks_created'],
                     'duplicatesSkipped': results['duplicates_skipped'],
-                    'recentIssues': recent_issues
+                    'recentIssues': recent_issues,
+                    'phaseLabel': f'Auditing page {page_index + 1}/{total_pages} - {results["tasks_created"]} tasks created...'
                 })
 
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
+
+            # Update progress: saving results
+            update_audit_progress(site_id, {
+                'phase': 'saving',
+                'phaseLabel': f'Saving audit results ({results["issues"]} issues, {results["tasks_created"]} tasks)...'
+            })
 
             # Log audit run to Firestore (site-specific subcollection)
             try:
@@ -2414,6 +2421,11 @@ def hello_http(request):
                     # Store in site-specific subcollection
                     db.collection('sites').document(site_id).collection('auditLogs').add(audit_log)
                     print(f"Audit log saved to sites/{site_id}/auditLogs with {len(all_issues_list)} individual issues")
+
+                    # Update progress: log saved
+                    update_audit_progress(site_id, {
+                        'phaseLabel': 'Audit log saved to database...'
+                    })
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
@@ -2421,7 +2433,7 @@ def hello_http(request):
             update_audit_progress(site_id, {
                 'status': 'completed',
                 'phase': 'complete',
-                'phaseLabel': 'Audit complete!',
+                'phaseLabel': f'Audit complete! {results["pages"]} pages, {results["issues"]} issues, {results["tasks_created"]} tasks created.',
                 'completedAt': firestore.SERVER_TIMESTAMP
             })
 
