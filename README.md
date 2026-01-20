@@ -16,7 +16,8 @@ A comprehensive, LLM-powered SEO and GEO (Generative Engine Optimization) audit 
 10. [Known Issues & Solutions](#known-issues--solutions)
 11. [Troubleshooting](#troubleshooting)
 12. [API Reference](#api-reference)
-13. [Development Workflow with Claude AI](#development-workflow-with-claude-ai)
+13. [Multi-Site Support](#multi-site-support)
+14. [Development Workflow with Claude AI](#development-workflow-with-claude-ai)
 
 ---
 
@@ -697,6 +698,56 @@ For issues or questions:
 2. Review Cloud Run logs
 3. Test with debug endpoints
 4. Check Firestore rules in admin dashboard
+
+---
+
+## Multi-Site Support
+
+The system supports managing multiple websites from a single deployment. Each site has its own:
+- SEO/GEO rules
+- Voice & tone guidelines
+- Brand standards
+- Audit configuration (sitemap URL, days to check, max pages)
+- Monday.com board for task creation
+- Audit logs history
+
+### Firestore Structure
+
+```
+/sites/{siteId}/
+    ├── config/settings     # Site configuration
+    ├── seoRules/           # Site-specific SEO rules
+    ├── voiceRules/         # Site-specific voice rules
+    ├── brandStandards/     # Site-specific brand standards
+    └── auditLogs/          # Site-specific audit history
+```
+
+### Using the Admin Dashboard
+
+1. **Select a site** from the dropdown in the header
+2. All tabs (Rules, Voice, Brand, Logs) show data for the selected site
+3. **Add a new site** by clicking "+ Add Site" button
+4. **Run audit** for the current site using the "Run" button
+
+### Backend API
+
+POST requests to the Cloud Run endpoint accept a `site_id` parameter:
+
+```bash
+curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app \
+  -H "Content-Type: application/json" \
+  -d '{"site_id": "outrigger"}'
+```
+
+### Migration from Single-Site
+
+Run the migration script to move existing data to the multi-site structure:
+
+```bash
+python migrate_to_multisite.py
+```
+
+This creates the `/sites/outrigger/` structure and copies existing rules.
 
 ---
 
