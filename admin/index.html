@@ -2445,7 +2445,7 @@
         function addVoiceRule() {
             openModal('Add Voice Guideline', 'voiceRules');
             document.getElementById('extraFields').innerHTML =
-                '<div>' +
+                '<div class="mb-4">' +
                     '<label class="block text-sm font-medium text-secondary mb-1">Category</label>' +
                     '<select id="formCategory" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="tone">Tone of Voice</option>' +
@@ -2453,13 +2453,27 @@
                         '<option value="audience">Target Audience</option>' +
                         '<option value="messaging">Key Messaging</option>' +
                     '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
+                    '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                        '<option value="Critical">Critical</option>' +
+                        '<option value="High">High</option>' +
+                        '<option value="Medium" selected>Medium</option>' +
+                        '<option value="Low">Low</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="e.g., Check if the content uses a warm, welcoming tone that makes readers feel valued. Look for friendly language, personal pronouns, and inviting phrases."></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate the page content against this prompt. Be specific about what to check.</p>' +
                 '</div>';
         }
 
         function addBrandStandard() {
             openModal('Add Brand Standard', 'brandStandards');
             document.getElementById('extraFields').innerHTML =
-                '<div>' +
+                '<div class="mb-4">' +
                     '<label class="block text-sm font-medium text-secondary mb-1">Standard Type</label>' +
                     '<select id="formStandardType" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="visual">Visual Identity</option>' +
@@ -2467,6 +2481,20 @@
                         '<option value="compliance">Compliance</option>' +
                         '<option value="accessibility">Accessibility</option>' +
                     '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
+                    '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                        '<option value="Critical">Critical</option>' +
+                        '<option value="High">High</option>' +
+                        '<option value="Medium" selected>Medium</option>' +
+                        '<option value="Low">Low</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="e.g., Check if the page correctly uses the brand name \'Outrigger\' (not \'OutRigger\' or \'OUTRIGGER\'). Verify trademark symbols are used appropriately."></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate the page content against this prompt. Be specific about what to check.</p>' +
                 '</div>';
         }
 
@@ -2519,7 +2547,22 @@
                                     '<p class="text-xs text-secondary mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
                                 '</div>';
                         } else {
-                            document.getElementById('extraFields').innerHTML = '';
+                            // Voice & Brand rules - show severity and prompt fields for LLM evaluation
+                            document.getElementById('extraFields').innerHTML =
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
+                                    '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                                        '<option value="Critical"' + (data.severity === 'Critical' ? ' selected' : '') + '>Critical</option>' +
+                                        '<option value="High"' + (data.severity === 'High' ? ' selected' : '') + '>High</option>' +
+                                        '<option value="Medium"' + (data.severity === 'Medium' || !data.severity ? ' selected' : '') + '>Medium</option>' +
+                                        '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
+                                    '</select>' +
+                                '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
+                                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required>' + escapeHtml(data.prompt || '') + '</textarea>' +
+                                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate the page content against this prompt. Be specific about what to check.</p>' +
+                                '</div>';
                         }
 
                         document.getElementById('modal').classList.remove('hidden');
@@ -2704,17 +2747,73 @@
             ];
 
             const voiceRules = [
-                { name: 'Warm & Welcoming', category: 'tone', description: 'Content should convey genuine Hawaiian hospitality - warm, welcoming, and relaxed. Avoid corporate jargon.', enabled: true },
-                { name: 'Adventure & Discovery', category: 'tone', description: 'Inspire a sense of adventure and discovery. Highlight unique experiences and hidden gems.', enabled: true },
-                { name: 'Authentic Local Voice', category: 'language', description: 'Use authentic Hawaiian and local terms appropriately (aloha, mahalo, ohana). Include cultural context.', enabled: true },
-                { name: 'Sensory Language', category: 'language', description: 'Use vivid sensory language - describe sounds of waves, smell of plumeria, feel of warm sand.', enabled: true },
+                {
+                    name: 'Warm & Welcoming',
+                    category: 'tone',
+                    description: 'Content should convey genuine Hawaiian hospitality - warm, welcoming, and relaxed. Avoid corporate jargon.',
+                    prompt: 'Analyze the tone and voice of this page content. The rule FAILS if:\n1. The content feels cold, corporate, or impersonal\n2. There is excessive use of business jargon or formal language\n3. The writing lacks warmth or a welcoming feel\n\nLook for: friendly greetings, personal pronouns (you, your, we), inviting language, and genuine hospitality expressions. The content should make readers feel welcomed and valued.',
+                    severity: 'Medium',
+                    enabled: true
+                },
+                {
+                    name: 'Adventure & Discovery',
+                    category: 'tone',
+                    description: 'Inspire a sense of adventure and discovery. Highlight unique experiences and hidden gems.',
+                    prompt: 'Check if the content inspires adventure and discovery. The rule FAILS if:\n1. The content is purely transactional without any inspiring language\n2. There are no mentions of unique experiences, hidden gems, or discoveries\n3. The writing is bland and doesnt evoke excitement or curiosity\n\nLook for: action words, experiential language, mentions of unique offerings, and content that makes readers want to explore.',
+                    severity: 'Low',
+                    enabled: true
+                },
+                {
+                    name: 'Authentic Local Voice',
+                    category: 'language',
+                    description: 'Use authentic Hawaiian and local terms appropriately (aloha, mahalo, ohana). Include cultural context.',
+                    prompt: 'Check for authentic Hawaiian and local voice. The rule FAILS if:\n1. Hawaiian terms are used incorrectly or out of context\n2. Cultural references feel forced or inauthentic\n3. The content completely lacks any local flavor or cultural connection\n\nNote: Not every page needs Hawaiian terms - only flag if terms are misused or if a page about Hawaiian culture lacks authenticity.',
+                    severity: 'Low',
+                    enabled: false
+                },
+                {
+                    name: 'Sensory Language',
+                    category: 'language',
+                    description: 'Use vivid sensory language - describe sounds of waves, smell of plumeria, feel of warm sand.',
+                    prompt: 'Check for vivid sensory language. The rule FAILS if:\n1. Descriptive content about experiences lacks any sensory details\n2. Property or experience descriptions are purely factual without evoking senses\n\nLook for: visual imagery, sounds, smells, textures, and tastes. Content should help readers imagine being there.',
+                    severity: 'Low',
+                    enabled: false
+                },
             ];
 
             const brandStandards = [
-                { name: 'Brand Name Usage', standardType: 'terminology', description: 'Always use "Outrigger" not "OUTRIGGER" or "outrigger". Full name is "Outrigger Hotels & Resorts".', enabled: true },
-                { name: 'Property Names', standardType: 'terminology', description: 'Use official property names exactly as registered. Include location identifiers.', enabled: true },
-                { name: 'Color Palette', standardType: 'visual', description: 'Primary: Teal (#006272), Gold (#c4a35a), Sunset Orange (#e07c3e). Use consistently.', enabled: true },
-                { name: 'Image Standards', standardType: 'visual', description: 'Images should be high-resolution, authentic (not stock), and showcase real guest experiences.', enabled: true },
+                {
+                    name: 'Brand Name Usage',
+                    standardType: 'terminology',
+                    description: 'Always use "Outrigger" not "OUTRIGGER" or "outrigger". Full name is "Outrigger Hotels & Resorts".',
+                    prompt: 'Check brand name usage consistency. The rule FAILS if:\n1. "Outrigger" is written as "OUTRIGGER" (all caps) or "outrigger" (all lowercase)\n2. The brand is referred to incorrectly (e.g., "Outriggers" plural, or missing "Hotels & Resorts" where the full name is expected)\n\nCorrect usage: "Outrigger" or "Outrigger Hotels & Resorts"',
+                    severity: 'High',
+                    enabled: true
+                },
+                {
+                    name: 'Property Names',
+                    standardType: 'terminology',
+                    description: 'Use official property names exactly as registered. Include location identifiers.',
+                    prompt: 'Check that property names are used correctly. The rule FAILS if:\n1. Property names are abbreviated incorrectly\n2. Location identifiers are missing where needed\n3. Property names are misspelled\n\nNote: Only flag obvious errors in property naming.',
+                    severity: 'Medium',
+                    enabled: true
+                },
+                {
+                    name: 'Contact Information',
+                    standardType: 'compliance',
+                    description: 'Ensure contact pages have accurate phone numbers, email addresses, and physical addresses.',
+                    prompt: 'Check for presence of contact information. The rule FAILS if:\n1. A contact or location page is missing phone number, OR\n2. A contact or location page is missing physical address\n\nNote: Only apply to pages that should have contact info (contact pages, location pages, footer sections).',
+                    severity: 'High',
+                    enabled: true
+                },
+                {
+                    name: 'Call-to-Action Presence',
+                    standardType: 'compliance',
+                    description: 'Pages should have clear calls-to-action (Book Now, Learn More, Contact Us).',
+                    prompt: 'Check for clear calls-to-action. The rule FAILS if:\n1. A marketing or property page has no visible call-to-action\n2. CTAs are buried or unclear\n\nLook for: "Book Now", "Reserve", "Learn More", "Contact Us", "Get Started" buttons or links.',
+                    severity: 'Medium',
+                    enabled: false
+                },
             ];
 
             let added = 0;
