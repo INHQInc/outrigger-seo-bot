@@ -9,63 +9,88 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     <style>
         :root {
-            --teal: #006272;
-            --gold: #c4a35a;
-            --sunset: #e07c3e;
+            --bg-dark: #0d1117;
+            --bg-card: #161b22;
+            --bg-card-hover: #1c2128;
+            --border-color: #30363d;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent-purple: #a855f7;
+            --accent-purple-hover: #9333ea;
+            --accent-cyan: #22d3ee;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-pink: #ec4899;
         }
-        .bg-teal { background-color: var(--teal); }
-        .bg-gold { background-color: var(--gold); }
-        .bg-sunset { background-color: var(--sunset); }
-        .text-teal { color: var(--teal); }
-        .text-gold { color: var(--gold); }
-        .text-sunset { color: var(--sunset); }
-        .border-teal { border-color: var(--teal); }
-        .border-gold { border-color: var(--gold); }
-        .hover-teal:hover { background-color: var(--teal); color: white; }
-        .tab-active { background-color: white; color: var(--teal); border-bottom: 3px solid var(--gold); }
-        .tab-inactive { background-color: rgba(255,255,255,0.1); color: white; }
-        .btn-primary { background-color: var(--teal); }
-        .btn-primary:hover { background-color: #004d5a; }
-        .btn-gold { background-color: var(--gold); }
-        .btn-gold:hover { background-color: #a8893d; }
-        .btn-sunset { background-color: var(--sunset); }
-        .btn-sunset:hover { background-color: #c46a32; }
+        body { background-color: var(--bg-dark); color: var(--text-primary); }
+        .bg-dark { background-color: var(--bg-dark); }
+        .bg-card { background-color: var(--bg-card); }
+        .text-primary { color: var(--text-primary); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-accent { color: var(--accent-cyan); }
+        .border-card { border-color: var(--border-color); }
+        .tab-active { background-color: var(--accent-purple); color: white; }
+        .tab-inactive { background-color: transparent; color: var(--text-secondary); border: 1px solid var(--border-color); }
+        .tab-inactive:hover { background-color: var(--bg-card-hover); color: var(--text-primary); }
+        .btn-primary { background-color: var(--accent-purple); }
+        .btn-primary:hover { background-color: var(--accent-purple-hover); }
+        .btn-cyan { background-color: var(--accent-cyan); color: var(--bg-dark); }
+        .btn-cyan:hover { background-color: #06b6d4; }
+        .btn-green { background-color: var(--accent-green); color: var(--bg-dark); }
+        .btn-green:hover { background-color: #16a34a; }
+        .btn-orange { background-color: var(--accent-orange); color: white; }
+        .btn-orange:hover { background-color: #ea580c; }
+        .btn-pink { background-color: var(--accent-pink); color: white; }
+        .btn-pink:hover { background-color: #db2777; }
+        .card { background-color: var(--bg-card); border: 1px solid var(--border-color); }
+        .card:hover { background-color: var(--bg-card-hover); }
+        .input-dark { background-color: var(--bg-dark); border-color: var(--border-color); color: var(--text-primary); }
+        .input-dark:focus { border-color: var(--accent-purple); outline: none; box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.3); }
+        .input-dark::placeholder { color: var(--text-secondary); }
+        /* Grid background effect */
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(48, 54, 61, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(48, 54, 61, 0.3) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen">
+<body class="min-h-screen bg-dark grid-bg">
     <!-- Login Screen -->
-    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-700 to-teal-900">
-        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center">
+        <div class="card rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
             <div class="text-center mb-8">
-                <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none">
-                    <circle cx="50" cy="50" r="45" fill="#c4a35a"/>
-                    <path d="M30 70 L50 30 L70 70 Z" fill="#006272"/>
-                    <circle cx="50" cy="55" r="8" fill="white"/>
-                </svg>
-                <h1 class="text-2xl font-bold text-teal">Outrigger SEO Audit</h1>
-                <p class="text-gray-500 mt-1">Admin Dashboard</p>
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                    </svg>
+                </div>
+                <h1 class="text-2xl font-bold text-primary">SEO / GEO</h1>
+                <p class="text-accent text-lg font-medium">Optimizer</p>
+                <p class="text-secondary mt-2 text-sm">Admin Dashboard</p>
             </div>
 
             <form id="loginForm" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <label class="block text-sm font-medium text-secondary mb-1">Email</label>
                     <input type="email" id="loginEmail"
-                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                           class="w-full input-dark border rounded-lg px-4 py-3"
                            placeholder="your.name@outrigger.com" required>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <label class="block text-sm font-medium text-secondary mb-1">Password</label>
                     <input type="password" id="loginPassword"
-                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                           class="w-full input-dark border rounded-lg px-4 py-3"
                            placeholder="Enter password" required>
                 </div>
-                <div id="loginError" class="text-red-600 text-sm hidden"></div>
-                <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-medium hover:bg-opacity-90 transition">
+                <div id="loginError" class="text-red-400 text-sm hidden"></div>
+                <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-medium transition">
                     Sign In
                 </button>
             </form>
 
-            <p class="text-center text-gray-400 text-xs mt-6">
+            <p class="text-center text-secondary text-xs mt-6">
                 Access restricted to @outrigger.com accounts
             </p>
         </div>
@@ -74,31 +99,31 @@
     <!-- Main App (hidden until authenticated) -->
     <div id="mainApp" class="hidden">
     <!-- Header -->
-    <header class="bg-teal text-white shadow-lg">
+    <header class="bg-card border-b border-card">
         <div class="max-w-7xl mx-auto px-4 py-4">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <svg class="w-10 h-10" viewBox="0 0 100 100" fill="none">
-                        <circle cx="50" cy="50" r="45" fill="#c4a35a"/>
-                        <path d="M30 70 L50 30 L70 70 Z" fill="#006272"/>
-                        <circle cx="50" cy="55" r="8" fill="white"/>
-                    </svg>
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-cyan-400 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
                     <div>
-                        <h1 class="text-2xl font-bold">Outrigger SEO Audit Admin</h1>
-                        <p class="text-sm opacity-80">Configure audit rules and brand standards</p>
+                        <h1 class="text-xl font-bold text-primary">SEO / GEO <span class="text-accent">Optimizer</span></h1>
+                        <p class="text-sm text-secondary">Configure audit rules and brand standards</p>
                     </div>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button onclick="seedDefaultRules()" class="bg-gold text-white px-3 py-1 rounded text-sm hover:bg-opacity-80">
+                    <button onclick="seedDefaultRules()" class="btn-cyan px-3 py-1.5 rounded-lg text-sm font-medium transition">
                         Load Default Rules
                     </button>
-                    <div id="connectionStatus" class="flex items-center gap-2 text-sm">
+                    <div id="connectionStatus" class="flex items-center gap-2 text-sm text-secondary">
                         <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
                         <span>Connecting...</span>
                     </div>
-                    <div class="flex items-center gap-2 border-l border-white/30 pl-4">
-                        <span id="userEmail" class="text-sm opacity-80"></span>
-                        <button onclick="logout()" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm">
+                    <div class="flex items-center gap-2 border-l border-card pl-4">
+                        <span id="userEmail" class="text-sm text-secondary"></span>
+                        <button onclick="logout()" class="text-secondary hover:text-primary px-3 py-1 rounded text-sm transition">
                             Logout
                         </button>
                     </div>
@@ -108,17 +133,20 @@
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="bg-teal">
-        <div class="max-w-7xl mx-auto px-4">
-            <div class="flex gap-1">
-                <button onclick="showTab('seo')" id="tab-seo" class="px-6 py-3 font-medium transition-all tab-active rounded-t-lg">
+    <nav class="bg-card border-b border-card">
+        <div class="max-w-7xl mx-auto px-4 py-3">
+            <div class="flex gap-2">
+                <button onclick="showTab('seo')" id="tab-seo" class="px-5 py-2 font-medium transition-all tab-active rounded-lg text-sm">
                     SEO/GEO Rules
                 </button>
-                <button onclick="showTab('voice')" id="tab-voice" class="px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg">
+                <button onclick="showTab('voice')" id="tab-voice" class="px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm">
                     Voice &amp; Tone
                 </button>
-                <button onclick="showTab('brand')" id="tab-brand" class="px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg">
+                <button onclick="showTab('brand')" id="tab-brand" class="px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm">
                     Brand Standards
+                </button>
+                <button onclick="showTab('logs')" id="tab-logs" class="px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm">
+                    Audit Logs
                 </button>
             </div>
         </div>
@@ -128,45 +156,63 @@
     <main class="max-w-7xl mx-auto px-4 py-8">
         <!-- SEO/GEO Rules Tab -->
         <div id="panel-seo" class="tab-panel">
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="card rounded-xl p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-teal">SEO/GEO Check Rules</h2>
-                    <button onclick="addSeoRule()" class="btn-primary text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <h2 class="text-xl font-bold text-primary">SEO/GEO Check Rules</h2>
+                    <button onclick="addSeoRule()" class="btn-primary text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
                         <span>+</span> Add Rule
                     </button>
                 </div>
-                <div id="seoRulesList" class="space-y-4">
-                    <p class="text-gray-500 text-center py-8">Loading rules...</p>
+                <div id="seoRulesList" class="space-y-3">
+                    <p class="text-secondary text-center py-8">Loading rules...</p>
                 </div>
             </div>
         </div>
 
         <!-- Voice & Tone Tab -->
         <div id="panel-voice" class="tab-panel hidden">
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="card rounded-xl p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-teal">Voice &amp; Tone Guidelines</h2>
-                    <button onclick="addVoiceRule()" class="btn-gold text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <h2 class="text-xl font-bold text-primary">Voice &amp; Tone Guidelines</h2>
+                    <button onclick="addVoiceRule()" class="btn-green text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
                         <span>+</span> Add Guideline
                     </button>
                 </div>
-                <div id="voiceRulesList" class="space-y-4">
-                    <p class="text-gray-500 text-center py-8">Loading guidelines...</p>
+                <div id="voiceRulesList" class="space-y-3">
+                    <p class="text-secondary text-center py-8">Loading guidelines...</p>
                 </div>
             </div>
         </div>
 
         <!-- Brand Standards Tab -->
         <div id="panel-brand" class="tab-panel hidden">
-            <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="card rounded-xl p-6">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-teal">Brand Standards</h2>
-                    <button onclick="addBrandStandard()" class="btn-sunset text-white px-4 py-2 rounded-lg flex items-center gap-2">
+                    <h2 class="text-xl font-bold text-primary">Brand Standards</h2>
+                    <button onclick="addBrandStandard()" class="btn-orange text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
                         <span>+</span> Add Standard
                     </button>
                 </div>
-                <div id="brandStandardsList" class="space-y-4">
-                    <p class="text-gray-500 text-center py-8">Loading standards...</p>
+                <div id="brandStandardsList" class="space-y-3">
+                    <p class="text-secondary text-center py-8">Loading standards...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Logs Tab -->
+        <div id="panel-logs" class="tab-panel hidden">
+            <div class="card rounded-xl p-6 mb-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-primary">Audit Run History</h2>
+                    <button onclick="loadAuditLogs()" class="btn-cyan px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                <div id="auditLogsList" class="space-y-4">
+                    <p class="text-secondary text-center py-8">Loading audit logs...</p>
                 </div>
             </div>
         </div>
@@ -174,27 +220,27 @@
     </div><!-- End mainApp -->
 
     <!-- Modal for Adding/Editing -->
-    <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6">
-                <h3 id="modalTitle" class="text-xl font-bold text-teal mb-4">Add Rule</h3>
+                <h3 id="modalTitle" class="text-xl font-bold text-primary mb-4">Add Rule</h3>
                 <form id="modalForm" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input type="text" id="formName" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required>
+                        <label class="block text-sm font-medium text-secondary mb-1">Name</label>
+                        <input type="text" id="formName" class="w-full input-dark border rounded-lg px-3 py-2" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-gray-400 font-normal">(shown in dashboard)</span></label>
-                        <textarea id="formDescription" rows="2" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent" required></textarea>
+                        <label class="block text-sm font-medium text-secondary mb-1">Description <span class="text-secondary/60 font-normal">(shown in dashboard)</span></label>
+                        <textarea id="formDescription" rows="2" class="w-full input-dark border rounded-lg px-3 py-2" required></textarea>
                     </div>
                     <div id="extraFields"></div>
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" id="formEnabled" class="w-4 h-4 text-teal-600 rounded" checked>
-                        <label for="formEnabled" class="text-sm text-gray-700">Enabled</label>
+                        <input type="checkbox" id="formEnabled" class="w-4 h-4 rounded bg-dark border-card accent-purple-500" checked>
+                        <label for="formEnabled" class="text-sm text-secondary">Enabled</label>
                     </div>
                     <div class="flex gap-3 pt-4">
-                        <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg flex-1">Save</button>
-                        <button type="button" onclick="closeModal()" class="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg">Cancel</button>
+                        <button type="submit" class="btn-primary text-white px-6 py-2 rounded-lg flex-1 font-medium">Save</button>
+                        <button type="button" onclick="closeModal()" class="bg-card border border-card text-secondary hover:text-primary px-6 py-2 rounded-lg transition">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -341,18 +387,22 @@
         // Tab Navigation
         function showTab(tabName) {
             currentTab = tabName;
-            var tabs = ['seo', 'voice', 'brand'];
+            var tabs = ['seo', 'voice', 'brand', 'logs'];
             tabs.forEach(function(tab) {
                 var tabBtn = document.getElementById('tab-' + tab);
                 var panel = document.getElementById('panel-' + tab);
                 if (tab === tabName) {
-                    tabBtn.className = 'px-6 py-3 font-medium transition-all tab-active rounded-t-lg';
+                    tabBtn.className = 'px-5 py-2 font-medium transition-all tab-active rounded-lg text-sm';
                     panel.classList.remove('hidden');
                 } else {
-                    tabBtn.className = 'px-6 py-3 font-medium transition-all tab-inactive rounded-t-lg';
+                    tabBtn.className = 'px-5 py-2 font-medium transition-all tab-inactive rounded-lg text-sm';
                     panel.classList.add('hidden');
                 }
             });
+            // Load logs when switching to that tab
+            if (tabName === 'logs') {
+                loadAuditLogs();
+            }
         }
 
         // Load SEO Rules
@@ -433,44 +483,144 @@
                 });
         }
 
+        // Load Audit Logs
+        function loadAuditLogs() {
+            var container = document.getElementById('auditLogsList');
+            container.innerHTML = '<p class="text-secondary text-center py-8">Loading audit logs...</p>';
+
+            db.collection('auditLogs').orderBy('timestamp', 'desc').limit(20).get()
+                .then(function(snapshot) {
+                    updateConnectionStatus(true);
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs yet. Run an audit to see results here.</p>';
+                        return;
+                    }
+                    var html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
+                    snapshot.forEach(function(doc) {
+                        var log = doc.data();
+                        html += createLogCard(doc.id, log);
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error loading audit logs:', error);
+                    container.innerHTML = '<p class="text-red-400 text-center py-8">Error loading logs. Check console for details.</p>';
+                });
+        }
+
+        // Create audit log card HTML (matching the design from screenshot)
+        function createLogCard(id, log) {
+            var timestamp = log.timestamp ? new Date(log.timestamp.toDate()).toLocaleString() : 'Unknown';
+            var pagesAudited = log.pagesAudited || 0;
+            var totalIssues = log.totalIssues || 0;
+            var tasksCreated = log.tasksCreated || 0;
+            var duplicatesSkipped = log.duplicatesSkipped || 0;
+
+            // Calculate completion percentage (tasks created / total issues)
+            var completionPct = totalIssues > 0 ? Math.round((tasksCreated / totalIssues) * 100) : 100;
+
+            // Issue breakdown
+            var seoIssues = log.seoIssues || 0;
+            var voiceIssues = log.voiceIssues || 0;
+            var brandIssues = log.brandIssues || 0;
+
+            return '<div class="card rounded-xl p-5">' +
+                '<div class="flex justify-between items-start mb-4">' +
+                    '<div>' +
+                        '<h3 class="font-bold text-primary text-lg">Audit Run</h3>' +
+                        '<p class="text-secondary text-sm">' + timestamp + '</p>' +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        '<span class="text-2xl font-bold text-accent">' + completionPct + '%</span>' +
+                        '<p class="text-secondary text-xs">Complete</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="space-y-2 mb-4">' +
+                    '<div class="flex justify-between text-sm">' +
+                        '<span class="text-secondary">Pages Audited</span>' +
+                        '<span class="text-primary font-medium">' + pagesAudited + '</span>' +
+                    '</div>' +
+                    '<div class="flex justify-between text-sm">' +
+                        '<span class="text-secondary">Issues Found</span>' +
+                        '<span class="text-primary font-medium">' + totalIssues + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="text-xs text-secondary mb-3">Issue Breakdown</div>' +
+                '<div class="grid grid-cols-2 gap-2 mb-4">' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-2 h-2 rounded-full bg-purple-500"></span>' +
+                        '<span class="text-secondary text-sm">SEO/GEO</span>' +
+                        '<span class="text-primary text-sm ml-auto">' + seoIssues + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-2 h-2 rounded-full bg-green-500"></span>' +
+                        '<span class="text-secondary text-sm">Voice/Tone</span>' +
+                        '<span class="text-primary text-sm ml-auto">' + voiceIssues + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-2 h-2 rounded-full bg-orange-500"></span>' +
+                        '<span class="text-secondary text-sm">Brand</span>' +
+                        '<span class="text-primary text-sm ml-auto">' + brandIssues + '</span>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<span class="w-2 h-2 rounded-full bg-gray-500"></span>' +
+                        '<span class="text-secondary text-sm">Duplicates</span>' +
+                        '<span class="text-primary text-sm ml-auto">' + duplicatesSkipped + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="space-y-2">' +
+                    '<div>' +
+                        '<div class="flex justify-between text-xs mb-1">' +
+                            '<span class="text-green-400">Tasks Created</span>' +
+                            '<span class="text-green-400">' + Math.round((tasksCreated / Math.max(totalIssues, 1)) * 100) + '%</span>' +
+                        '</div>' +
+                        '<div class="h-2 bg-dark rounded-full overflow-hidden">' +
+                            '<div class="h-full bg-green-500 rounded-full" style="width: ' + Math.round((tasksCreated / Math.max(totalIssues, 1)) * 100) + '%"></div>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+        }
+
         // Create rule card HTML
         function createRuleCard(id, data, type) {
-            var statusClass = data.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600';
+            var statusClass = data.enabled ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-gray-400';
             var statusText = data.enabled ? 'Enabled' : 'Disabled';
-            var borderColor = type === 'seo' ? 'border-l-teal' : (type === 'voice' ? 'border-l-4 border-l-[#c4a35a]' : 'border-l-4 border-l-[#e07c3e]');
+            var borderColor = type === 'seo' ? 'border-l-purple-500' : (type === 'voice' ? 'border-l-green-500' : 'border-l-orange-500');
 
             // Badge for LLM-powered rules
             var llmBadge = '';
             if (data.prompt) {
-                llmBadge = '<span class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">🤖 AI-Powered</span>';
+                llmBadge = '<span class="px-2 py-1 text-xs rounded-full bg-purple-500/20 text-purple-400">AI-Powered</span>';
             }
 
             // Severity badge for SEO rules
             var severityBadge = '';
             if (data.severity) {
                 var severityClass = {
-                    'Critical': 'bg-red-100 text-red-800',
-                    'High': 'bg-orange-100 text-orange-800',
-                    'Medium': 'bg-yellow-100 text-yellow-800',
-                    'Low': 'bg-blue-100 text-blue-800'
-                }[data.severity] || 'bg-gray-100 text-gray-800';
+                    'Critical': 'bg-red-500/20 text-red-400',
+                    'High': 'bg-orange-500/20 text-orange-400',
+                    'Medium': 'bg-yellow-500/20 text-yellow-400',
+                    'Low': 'bg-blue-500/20 text-blue-400'
+                }[data.severity] || 'bg-gray-500/20 text-gray-400';
                 severityBadge = '<span class="px-2 py-1 text-xs rounded-full ' + severityClass + '">' + data.severity + '</span>';
             }
 
-            return '<div class="border rounded-lg p-4 ' + borderColor + ' border-l-4 hover:shadow-md transition-shadow">' +
+            return '<div class="card rounded-lg p-4 ' + borderColor + ' border-l-4 hover:bg-card-hover transition-all">' +
                 '<div class="flex justify-between items-start">' +
                     '<div class="flex-1">' +
                         '<div class="flex items-center gap-2 mb-2 flex-wrap">' +
-                            '<h3 class="font-semibold text-gray-900">' + escapeHtml(data.name) + '</h3>' +
+                            '<h3 class="font-semibold text-primary">' + escapeHtml(data.name) + '</h3>' +
                             '<span class="px-2 py-1 text-xs rounded-full ' + statusClass + '">' + statusText + '</span>' +
                             severityBadge +
                             llmBadge +
                         '</div>' +
-                        '<p class="text-gray-600 text-sm">' + escapeHtml(data.description) + '</p>' +
+                        '<p class="text-secondary text-sm">' + escapeHtml(data.description) + '</p>' +
                     '</div>' +
                     '<div class="flex gap-2 ml-4">' +
-                        '<button onclick="editRule(\'' + type + '\', \'' + id + '\')" class="text-teal hover:bg-gray-100 p-2 rounded">Edit</button>' +
-                        '<button onclick="deleteRule(\'' + type + '\', \'' + id + '\')" class="text-red-600 hover:bg-red-50 p-2 rounded">Delete</button>' +
+                        '<button onclick="editRule(\'' + type + '\', \'' + id + '\')" class="text-accent hover:bg-card-hover p-2 rounded transition">Edit</button>' +
+                        '<button onclick="deleteRule(\'' + type + '\', \'' + id + '\')" class="text-red-400 hover:bg-red-500/10 p-2 rounded transition">Delete</button>' +
                     '</div>' +
                 '</div>' +
             '</div>';

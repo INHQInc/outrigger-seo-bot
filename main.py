@@ -1759,6 +1759,9 @@ def hello_http(request):
                 'issues': 0,
                 'tasks_created': 0,
                 'duplicates_skipped': 0,
+                'seo_issues': 0,
+                'voice_issues': 0,
+                'brand_issues': 0,
                 'config_loaded': config_loaded,
                 'rules_used': {
                     'seo': len(config_manager.seo_rules),
@@ -1771,13 +1774,42 @@ def hello_http(request):
                 # Pass config_manager to auditor so it only runs enabled checks
                 issues = auditor.audit(u['url'], config=config_manager)
                 results['issues'] += len(issues)
+
+                # Track issue types
                 for issue in issues:
+                    issue_type = issue.get('type', '')
+                    if issue_type.startswith('llm_voice') or 'voice' in issue_type.lower():
+                        results['voice_issues'] += 1
+                    elif issue_type.startswith('llm_brand') or 'brand' in issue_type.lower():
+                        results['brand_issues'] += 1
+                    else:
+                        results['seo_issues'] += 1
+
                     result = monday.create_task(issue)
                     if result == "duplicate":
                         results['duplicates_skipped'] += 1
                     elif result:
                         results['tasks_created'] += 1
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
+
+            # Log audit run to Firestore
+            try:
+                if db:
+                    audit_log = {
+                        'timestamp': firestore.SERVER_TIMESTAMP,
+                        'pagesAudited': results['pages'],
+                        'totalIssues': results['issues'],
+                        'tasksCreated': results['tasks_created'],
+                        'duplicatesSkipped': results['duplicates_skipped'],
+                        'seoIssues': results['seo_issues'],
+                        'voiceIssues': results['voice_issues'],
+                        'brandIssues': results['brand_issues'],
+                        'rulesUsed': results['rules_used']
+                    }
+                    db.collection('auditLogs').add(audit_log)
+                    print("Audit log saved to Firestore")
+            except Exception as log_err:
+                print(f"Warning: Failed to save audit log: {log_err}")
 
             return jsonify({"status": "success", "results": results}), 200, headers
         except Exception as e:
