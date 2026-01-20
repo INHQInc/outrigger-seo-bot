@@ -297,6 +297,12 @@
                             </svg>
                             Refresh
                         </button>
+                        <button onclick="clearAuditLogs()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                            Clear Logs
+                        </button>
                     </div>
                 </div>
                 <div id="auditLogsList" class="space-y-4">
@@ -1360,14 +1366,22 @@
                 .get()
                 .then(function(snapshot) {
                     updateConnectionStatus(true);
-                    if (snapshot.empty) {
+                    // Filter out hidden logs
+                    var visibleLogs = [];
+                    snapshot.forEach(function(doc) {
+                        var log = doc.data();
+                        if (!log.hidden) {
+                            visibleLogs.push({ id: doc.id, data: log });
+                        }
+                    });
+
+                    if (visibleLogs.length === 0) {
                         container.innerHTML = '<p class="text-secondary text-center py-8">No audit logs found for this site in the selected date range.</p>';
                         return;
                     }
                     var html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
-                    snapshot.forEach(function(doc) {
-                        var log = doc.data();
-                        html += createLogCard(doc.id, log);
+                    visibleLogs.forEach(function(item) {
+                        html += createLogCard(item.id, item.data);
                     });
                     html += '</div>';
                     container.innerHTML = html;
@@ -1375,6 +1389,61 @@
                 .catch(function(error) {
                     console.error('Error loading audit logs:', error);
                     container.innerHTML = '<p class="text-red-400 text-center py-8">Error loading logs. Check console for details.</p>';
+                });
+        }
+
+        // Clear Audit Logs (marks as hidden, doesn't delete)
+        function clearAuditLogs() {
+            if (!currentSiteId) {
+                alert('Please select a site first');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to clear all visible audit logs for this site?\n\nThis will hide them from the display but not delete them permanently.')) {
+                return;
+            }
+
+            var dateRange = getDateRange();
+            var container = document.getElementById('auditLogsList');
+            container.innerHTML = '<p class="text-secondary text-center py-8">Clearing logs...</p>';
+
+            getSiteCollection('auditLogs')
+                .where('timestamp', '>=', dateRange.startDate)
+                .where('timestamp', '<=', dateRange.endDate)
+                .get()
+                .then(function(snapshot) {
+                    if (snapshot.empty) {
+                        alert('No logs to clear.');
+                        loadAuditLogs();
+                        return;
+                    }
+
+                    // Use batch to update all docs
+                    var batch = db.batch();
+                    var count = 0;
+                    snapshot.forEach(function(doc) {
+                        var log = doc.data();
+                        if (!log.hidden) {
+                            batch.update(doc.ref, { hidden: true, hiddenAt: new Date() });
+                            count++;
+                        }
+                    });
+
+                    if (count === 0) {
+                        alert('No visible logs to clear.');
+                        loadAuditLogs();
+                        return;
+                    }
+
+                    return batch.commit().then(function() {
+                        alert(count + ' log(s) have been cleared.');
+                        loadAuditLogs();
+                    });
+                })
+                .catch(function(error) {
+                    console.error('Error clearing logs:', error);
+                    alert('Error clearing logs: ' + error.message);
+                    loadAuditLogs();
                 });
         }
 
