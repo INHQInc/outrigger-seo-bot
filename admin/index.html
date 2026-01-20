@@ -1163,7 +1163,6 @@
         var confirmCallback = null;
 
         function showConfirm(title, message, onConfirm, type) {
-            console.log('showConfirm called:', title);
             type = type || 'default';
             confirmCallback = onConfirm;
 
@@ -1188,19 +1187,14 @@
             yesBtn.parentNode.replaceChild(newBtn, yesBtn);
 
             newBtn.addEventListener('click', function() {
-                console.log('Yes button clicked, callback:', confirmCallback ? 'exists' : 'null');
                 var callback = confirmCallback;
                 closeConfirmModal();
-                if (callback) {
-                    console.log('Executing callback');
-                    callback();
-                }
+                if (callback) callback();
             });
 
             var modal = document.getElementById('confirmModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            console.log('Modal should be visible now');
         }
 
         function closeConfirmModal() {
@@ -2041,8 +2035,6 @@
 
         // Delete single audit log (soft delete - marks as hidden)
         function deleteAuditLog(logId) {
-            console.log('deleteAuditLog called with:', logId, 'currentSiteId:', currentSiteId);
-
             if (!currentSiteId) {
                 showToast('Please select a site first', 'warning');
                 return;
@@ -2053,26 +2045,18 @@
             }
 
             showConfirm('Delete Log', 'Are you sure you want to delete this audit log?', function() {
-                console.log('Confirm callback triggered for log:', logId);
-
-                // Show immediate feedback
                 showToast('Deleting log...', 'info');
 
                 var docRef = db.collection('sites').doc(currentSiteId).collection('auditLogs').doc(logId);
-                console.log('Document path:', 'sites/' + currentSiteId + '/auditLogs/' + logId);
 
-                // Soft delete by marking as hidden (same approach as clearAuditLogs)
                 docRef.update({ hidden: true, hiddenAt: new Date() })
                     .then(function() {
-                        console.log('Firestore update successful');
                         showToast('Audit log deleted', 'success');
                         delete auditLogsCache[logId];
                         loadAuditLogs();
                     })
                     .catch(function(error) {
-                        console.error('Firestore update error:', error);
-                        console.error('Error code:', error.code);
-                        console.error('Error message:', error.message);
+                        console.error('Error deleting log:', error);
                         showToast('Error deleting log: ' + error.message, 'error');
                     });
             }, 'danger');
