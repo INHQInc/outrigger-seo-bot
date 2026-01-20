@@ -2389,7 +2389,7 @@ def hello_http(request):
                     'tasksCreated': results['tasks_created'],
                     'duplicatesSkipped': results['duplicates_skipped'],
                     'recentIssues': recent_issues,
-                    'phaseLabel': f'Auditing page {page_index + 1}/{total_pages} - {results["tasks_created"]} tasks created...'
+                    'phaseLabel': f'Auditing page {page_index + 1}/{total_pages} - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)'
                 })
 
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
@@ -2397,7 +2397,7 @@ def hello_http(request):
             # Update progress: saving results
             update_audit_progress(site_id, {
                 'phase': 'saving',
-                'phaseLabel': f'Saving audit results ({results["issues"]} issues, {results["tasks_created"]} tasks)...'
+                'phaseLabel': f'Saving audit results - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)...'
             })
 
             # Log audit run to Firestore (site-specific subcollection)
@@ -2433,7 +2433,7 @@ def hello_http(request):
             update_audit_progress(site_id, {
                 'status': 'completed',
                 'phase': 'complete',
-                'phaseLabel': f'Audit complete! {results["pages"]} pages, {results["issues"]} issues, {results["tasks_created"]} tasks created.',
+                'phaseLabel': f'Audit complete! {results["pages"]} pages - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)',
                 'completedAt': firestore.SERVER_TIMESTAMP
             })
 
