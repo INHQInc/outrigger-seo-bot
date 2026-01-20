@@ -1934,6 +1934,10 @@ def hello_http(request):
             # Load site configuration
             site_config = SiteConfig.load(site_id)
             print(f"Site config: {site_config}")
+            print(f"  Sitemap URL: {site_config.sitemap_url}")
+            print(f"  Monday Board ID: {site_config.monday_board_id}")
+            print(f"  Days to check: {site_config.days_to_check}")
+            print(f"  Max pages: {site_config.max_pages}")
 
             # Load rules from Firestore for this specific site
             site_config_manager = ConfigManager(site_id)
@@ -1961,7 +1965,8 @@ def hello_http(request):
             # Update progress: fetching sitemap
             update_audit_progress(site_id, {
                 'phase': 'fetching_sitemap',
-                'phaseLabel': 'Fetching sitemap...'
+                'phaseLabel': f'Fetching sitemap from {site_config.sitemap_url}...',
+                'sitemapUrl': site_config.sitemap_url
             })
 
             urls = parser.get_urls(days=site_config.days_to_check)
