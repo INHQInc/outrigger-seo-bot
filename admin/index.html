@@ -33,6 +33,46 @@
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-700 to-teal-900">
+        <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <div class="text-center mb-8">
+                <svg class="w-16 h-16 mx-auto mb-4" viewBox="0 0 100 100" fill="none">
+                    <circle cx="50" cy="50" r="45" fill="#c4a35a"/>
+                    <path d="M30 70 L50 30 L70 70 Z" fill="#006272"/>
+                    <circle cx="50" cy="55" r="8" fill="white"/>
+                </svg>
+                <h1 class="text-2xl font-bold text-teal">Outrigger SEO Audit</h1>
+                <p class="text-gray-500 mt-1">Admin Dashboard</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="loginEmail"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                           placeholder="your.name@outrigger.com" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="loginPassword"
+                           class="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                           placeholder="Enter password" required>
+                </div>
+                <div id="loginError" class="text-red-600 text-sm hidden"></div>
+                <button type="submit" class="w-full btn-primary text-white py-3 rounded-lg font-medium hover:bg-opacity-90 transition">
+                    Sign In
+                </button>
+            </form>
+
+            <p class="text-center text-gray-400 text-xs mt-6">
+                Access restricted to @outrigger.com accounts
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App (hidden until authenticated) -->
+    <div id="mainApp" class="hidden">
     <!-- Header -->
     <header class="bg-teal text-white shadow-lg">
         <div class="max-w-7xl mx-auto px-4 py-4">
@@ -55,6 +95,12 @@
                     <div id="connectionStatus" class="flex items-center gap-2 text-sm">
                         <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
                         <span>Connecting...</span>
+                    </div>
+                    <div class="flex items-center gap-2 border-l border-white/30 pl-4">
+                        <span id="userEmail" class="text-sm opacity-80"></span>
+                        <button onclick="logout()" class="bg-white/20 hover:bg-white/30 px-3 py-1 rounded text-sm">
+                            Logout
+                        </button>
                     </div>
                 </div>
             </div>
@@ -125,6 +171,7 @@
             </div>
         </div>
     </main>
+    </div><!-- End mainApp -->
 
     <!-- Modal for Adding/Editing -->
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
@@ -155,6 +202,113 @@
     </div>
 
     <script>
+        // ============ AUTHENTICATION ============
+        const AUTH_COOKIE_NAME = 'outrigger_auth';
+        const AUTH_COOKIE_DAYS = 30;
+        const VALID_PASSWORD = 'outrigger2026';
+        const VALID_DOMAIN = '@outrigger.com';
+
+        // Cookie helpers
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + expires.toUTCString() + ';path=/;SameSite=Strict';
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length));
+            }
+            return null;
+        }
+
+        function deleteCookie(name) {
+            document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:01 GMT;path=/';
+        }
+
+        // Check authentication on page load
+        function checkAuth() {
+            const authData = getCookie(AUTH_COOKIE_NAME);
+            if (authData) {
+                try {
+                    const { email, expires } = JSON.parse(authData);
+                    if (email && email.toLowerCase().endsWith(VALID_DOMAIN) && new Date(expires) > new Date()) {
+                        showApp(email);
+                        return true;
+                    }
+                } catch (e) {
+                    console.error('Invalid auth cookie');
+                }
+            }
+            showLogin();
+            return false;
+        }
+
+        // Show login screen
+        function showLogin() {
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        // Show main app
+        function showApp(email) {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userEmail').textContent = email;
+            loadAllData();
+        }
+
+        // Handle login
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+            const password = document.getElementById('loginPassword').value;
+            const errorEl = document.getElementById('loginError');
+
+            // Validate email domain
+            if (!email.endsWith(VALID_DOMAIN)) {
+                errorEl.textContent = 'Access restricted to @outrigger.com email addresses';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            // Validate password
+            if (password !== VALID_PASSWORD) {
+                errorEl.textContent = 'Invalid password';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            // Success - set cookie for 30 days
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (AUTH_COOKIE_DAYS * 24 * 60 * 60 * 1000));
+            const authData = JSON.stringify({ email: email, expires: expires.toISOString() });
+            setCookie(AUTH_COOKIE_NAME, authData, AUTH_COOKIE_DAYS);
+
+            errorEl.classList.add('hidden');
+            showApp(email);
+        }
+
+        // Logout
+        function logout() {
+            deleteCookie(AUTH_COOKIE_NAME);
+            showLogin();
+            document.getElementById('loginEmail').value = '';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        // Attach login form handler
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            checkAuth();
+        });
+
+        // ============ FIREBASE & APP CODE ============
+
         // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyDu4Ka6oFSUOH_7PAZW7k9-2u46SlmbBWE",
@@ -699,10 +853,7 @@
             loadAllData();
         }
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', function() {
-            loadAllData();
-        });
+        // Note: Initialization is handled by the authentication code at the top of this script
     </script>
 </body>
 </html>
