@@ -1540,12 +1540,10 @@ class SEOAuditor:
 
             # ============ LLM-BASED RULES ============
             # Run voice/tone and brand rules using Claude
-            # Limit to first 1 voice rule + first 1 brand rule to conserve API usage
-
             if llm_auditor.client and config.has_llm_rules() and (run_voice or run_brand):
-                # Get rules based on selected audit types
-                voice_rules = config.get_voice_llm_rules()[:1] if run_voice else []
-                brand_rules = config.get_brand_llm_rules()[:1] if run_brand else []
+                # Get all voice and brand rules based on selected audit types
+                voice_rules = config.get_voice_llm_rules() if run_voice else []
+                brand_rules = config.get_brand_llm_rules() if run_brand else []
                 llm_rules = voice_rules + brand_rules
 
                 print(f"Running {len(llm_rules)} LLM-based rules for {url}")
