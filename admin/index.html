@@ -2411,6 +2411,15 @@
                 severityBadge = '<span class="px-2 py-1 text-xs rounded-full ' + severityClass + '">' + data.severity + '</span>';
             }
 
+            // System rules can't be deleted, only edited
+            var deleteButton = data.system
+                ? '<span class="text-gray-600 p-2 cursor-not-allowed" title="System rules cannot be deleted">🔒</span>'
+                : '<button onclick="deleteRule(\'' + type + '\', \'' + id + '\')" class="text-red-400 hover:bg-red-500/10 p-2 rounded transition">Delete</button>';
+
+            var systemBadge = data.system
+                ? '<span class="px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">System</span>'
+                : '';
+
             return '<div class="card rounded-lg p-4 ' + borderColor + ' border-l-4 hover:bg-card-hover transition-all">' +
                 '<div class="flex justify-between items-start">' +
                     '<div class="flex-1">' +
@@ -2419,12 +2428,13 @@
                             '<span class="px-2 py-1 text-xs rounded-full ' + statusClass + '">' + statusText + '</span>' +
                             severityBadge +
                             llmBadge +
+                            systemBadge +
                         '</div>' +
                         '<p class="text-secondary text-sm">' + escapeHtml(data.description) + '</p>' +
                     '</div>' +
                     '<div class="flex gap-2 ml-4">' +
                         '<button onclick="editRule(\'' + type + '\', \'' + id + '\')" class="text-accent hover:bg-card-hover p-2 rounded transition">Edit</button>' +
-                        '<button onclick="deleteRule(\'' + type + '\', \'' + id + '\')" class="text-red-400 hover:bg-red-500/10 p-2 rounded transition">Delete</button>' +
+                        deleteButton +
                     '</div>' +
                 '</div>' +
             '</div>';
@@ -2463,22 +2473,6 @@
             openModal('Add SEO/GEO Rule', 'seoRules');
             document.getElementById('extraFields').innerHTML =
                 '<div class="mb-4">' +
-                    '<label class="block text-sm font-medium text-secondary mb-1">Check Type <span class="text-secondary/60 font-normal">(identifier)</span></label>' +
-                    '<select id="formCheckType" class="w-full input-dark border rounded-lg px-3 py-2">' +
-                        '<option value="title">Title Tag</option>' +
-                        '<option value="meta">Meta Description</option>' +
-                        '<option value="h1">H1 Heading</option>' +
-                        '<option value="canonical">Canonical Tag</option>' +
-                        '<option value="schema">Schema/Structured Data</option>' +
-                        '<option value="content">Content Quality</option>' +
-                        '<option value="geo">Geo Meta Tags</option>' +
-                        '<option value="og">Open Graph Tags</option>' +
-                        '<option value="alt">Image Alt Tags</option>' +
-                        '<option value="robots">Robots Meta Tag</option>' +
-                        '<option value="custom">Custom (LLM-only)</option>' +
-                    '</select>' +
-                '</div>' +
-                '<div class="mb-4">' +
                     '<label class="block text-sm font-medium text-secondary mb-1">Severity</label>' +
                     '<select id="formSeverity" class="w-full input-dark border rounded-lg px-3 py-2">' +
                         '<option value="Critical">Critical</option>' +
@@ -2488,10 +2482,19 @@
                     '</select>' +
                 '</div>' +
                 '<div class="mb-4">' +
-                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-secondary/60 font-normal">(optional)</span></label>' +
-                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" placeholder="Describe what the AI should check for. Example:\n\nCheck if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag\n2. The title is less than 30 characters\n3. The title is generic like &quot;Home&quot;"></textarea>' +
-                    '<p class="text-xs text-secondary mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
-                '</div>';
+                    '<label class="block text-sm font-medium text-secondary mb-1">What should this rule check? <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formUserDescription" rows="3" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="Describe in plain English what you want to check. Example: Make sure all prices on the page are displayed in USD format with dollar signs."></textarea>' +
+                    '<button type="button" onclick="generatePrompt()" class="mt-2 px-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition flex items-center gap-2">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
+                        'Generate AI Prompt' +
+                    '</button>' +
+                '</div>' +
+                '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formPrompt" rows="8" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="Click \'Generate AI Prompt\' above, or write your own prompt.\n\nThe prompt should specify when the rule PASSES and when it FAILS."></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate pages against this prompt. Generated prompts can be edited before saving.</p>' +
+                '</div>' +
+                '<input type="hidden" id="formCheckType" value="custom">';
         }
 
         function addVoiceRule() {
@@ -2627,6 +2630,51 @@
                 });
         }
 
+        // Generate LLM prompt from user description using Claude
+        async function generatePrompt() {
+            var userDescription = document.getElementById('formUserDescription');
+            if (!userDescription) {
+                showToast('User description field not found', 'error');
+                return;
+            }
+
+            var description = userDescription.value.trim();
+            if (!description) {
+                showToast('Please describe what the rule should check', 'warning');
+                return;
+            }
+
+            var button = event.target.closest('button');
+            var originalText = button.innerHTML;
+            button.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="4" class="opacity-25"></circle><path class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...';
+            button.disabled = true;
+
+            try {
+                var response = await fetch('https://outrigger-seo-audit-22338575803.us-central1.run.app?generate_prompt=true', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ description: description })
+                });
+
+                var result = await response.json();
+
+                if (result.prompt) {
+                    document.getElementById('formPrompt').value = result.prompt;
+                    showToast('Prompt generated! Review and edit as needed.', 'success');
+                } else if (result.error) {
+                    showToast('Error: ' + result.error, 'error');
+                } else {
+                    showToast('Failed to generate prompt', 'error');
+                }
+            } catch (error) {
+                console.error('Error generating prompt:', error);
+                showToast('Error connecting to server', 'error');
+            } finally {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        }
+
         // Delete rule (site-specific)
         function deleteRule(type, id) {
             if (!confirm('Are you sure you want to delete this item?')) return;
@@ -2711,7 +2759,8 @@
                     prompt: 'Check if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag entirely, OR\n2. The title is empty or contains only whitespace, OR\n3. The title is less than 30 characters (too short to be descriptive), OR\n4. The title is generic like "Home" or "Page" without context\n\nFor a hotel/hospitality site, a good title should include the property name, location, and ideally brand.',
                     enabled: true,
                     severity: 'Critical',
-                    tier: 1
+                    tier: 1,
+                    system: true
                 },
                 {
                     name: 'Meta Description Check',
@@ -2720,7 +2769,8 @@
                     prompt: 'Check if this page has a proper meta description. The rule FAILS if:\n1. The page is missing a <meta name="description"> tag, OR\n2. The meta description content is empty, OR\n3. The meta description is less than 120 characters (too short), OR\n4. The meta description is over 160 characters (will be truncated)\n\nFor a hotel site, meta descriptions should be compelling and include a call-to-action.',
                     enabled: true,
                     severity: 'Critical',
-                    tier: 1
+                    tier: 1,
+                    system: true
                 },
                 {
                     name: 'Meta Content Relevance Check',
@@ -2729,7 +2779,8 @@
                     prompt: 'Check if the meta tags accurately describe THIS specific page. The rule FAILS if:\n1. The meta description mentions a DIFFERENT property/resort than the page is about, OR\n2. The og:description mentions a different location than the page URL indicates, OR\n3. The title tag references a different property than the page content, OR\n4. Meta content appears to be copy-pasted from another page (wrong property name, wrong location)\n\nIMPORTANT: Compare the URL path and H1/main content against the meta tags.\nExample FAIL: Page URL is "/kona-resort-spa" but meta description says "Waikiki Beach"\nThis catches copy-paste errors where someone duplicated a page but forgot to update the meta tags.',
                     enabled: true,
                     severity: 'Critical',
-                    tier: 1
+                    tier: 1,
+                    system: true
                 },
                 {
                     name: 'H1 Tag Check',
@@ -2738,7 +2789,8 @@
                     prompt: 'Check if this page has proper H1 heading structure. The rule FAILS if:\n1. The page has NO <h1> tag at all, OR\n2. The page has MORE than one <h1> tag (should have exactly one), OR\n3. The H1 is empty or contains only whitespace\n\nBest practice: Each page should have exactly one H1 that clearly describes the main topic.',
                     enabled: true,
                     severity: 'Critical',
-                    tier: 1
+                    tier: 1,
+                    system: true
                 },
                 {
                     name: 'Canonical Tag Check',
@@ -2747,7 +2799,8 @@
                     prompt: 'Check if this page has a canonical tag. The rule FAILS if:\n1. The page is missing a <link rel="canonical"> tag, OR\n2. The canonical tag exists but has no href value, OR\n3. The canonical href is empty or invalid\n\nA canonical tag tells search engines which version of a page is the "master" copy.',
                     enabled: true,
                     severity: 'Critical',
-                    tier: 1
+                    tier: 1,
+                    system: true
                 },
                 // TIER 2: HIGH PRIORITY
                 {
@@ -2757,7 +2810,8 @@
                     prompt: 'Check if this page has appropriate JSON-LD structured data. The rule FAILS if:\n1. The page has NO <script type="application/ld+json"> tags, OR\n2. For hotel/resort pages: Missing Hotel, LodgingBusiness, or LocalBusiness schema, OR\n3. Schema exists but is missing critical properties like name, address, or description\n\nThis is CRITICAL for AI/LLM visibility - ChatGPT and Google AI pull from structured data.',
                     enabled: true,
                     severity: 'High',
-                    tier: 2
+                    tier: 2,
+                    system: true
                 },
                 {
                     name: 'Thin Content Check',
@@ -2766,7 +2820,8 @@
                     prompt: 'Analyze the main content (excluding navigation, headers, footers). The rule FAILS if:\n1. The page has less than approximately 300 words of actual content, OR\n2. The content is mostly duplicated/boilerplate text, OR\n3. The main content area appears empty or contains only images without supporting text\n\nFor hotel pages, there should be substantial descriptive content about property features and amenities.',
                     enabled: true,
                     severity: 'High',
-                    tier: 2
+                    tier: 2,
+                    system: true
                 },
                 {
                     name: 'Geo Meta Tags Check',
@@ -2775,7 +2830,8 @@
                     prompt: 'Check if this page has geographic meta tags. The rule FAILS if:\n1. The page is missing BOTH geo.region and geo.placename meta tags\n\nLook for these tags:\n- <meta name="geo.region" content="US-HI">\n- <meta name="geo.placename" content="Honolulu">\n\nThese help AI travel assistants understand location context.',
                     enabled: true,
                     severity: 'High',
-                    tier: 2
+                    tier: 2,
+                    system: true
                 },
                 {
                     name: 'Open Graph Tags Check',
@@ -2784,7 +2840,8 @@
                     prompt: 'Check if this page has proper Open Graph tags. The rule FAILS if:\n1. Missing og:image tag (critical for social engagement), OR\n2. Missing og:title tag, OR\n3. Missing og:description tag\n\nLook for meta tags with property attribute:\n- <meta property="og:image" content="...">\n- <meta property="og:title" content="...">\n- <meta property="og:description" content="...">',
                     enabled: true,
                     severity: 'High',
-                    tier: 2
+                    tier: 2,
+                    system: true
                 },
                 // TIER 3: MEDIUM
                 {
@@ -2794,7 +2851,8 @@
                     prompt: 'Check if images have proper alt text for accessibility. The rule FAILS if:\n1. Multiple <img> tags are missing the alt attribute, OR\n2. Images have empty alt="" attributes (unless decorative), OR\n3. Alt text is generic like "image" instead of descriptive\n\nNote: A few missing alt tags on decorative images is acceptable. Flag only if there is a significant pattern.',
                     enabled: true,
                     severity: 'Medium',
-                    tier: 3
+                    tier: 3,
+                    system: true
                 },
                 {
                     name: 'Robots Meta Tag Check',
@@ -2802,6 +2860,7 @@
                     description: 'Checks for presence of robots meta tag to explicitly declare indexing instructions.',
                     prompt: 'Check if this page has a robots meta tag. The rule FAILS if:\n1. The page is missing a <meta name="robots"> tag\n\nThis is a LOW priority check - only flag if completely missing.',
                     enabled: false,
+                    system: true,
                     severity: 'Low',
                     tier: 3
                 },
@@ -2814,7 +2873,8 @@
                     description: 'Content should convey genuine Hawaiian hospitality - warm, welcoming, and relaxed. Avoid corporate jargon.',
                     prompt: 'Analyze the tone and voice of this page content. The rule FAILS if:\n1. The content feels cold, corporate, or impersonal\n2. There is excessive use of business jargon or formal language\n3. The writing lacks warmth or a welcoming feel\n\nLook for: friendly greetings, personal pronouns (you, your, we), inviting language, and genuine hospitality expressions. The content should make readers feel welcomed and valued.',
                     severity: 'Medium',
-                    enabled: true
+                    enabled: true,
+                    system: true
                 },
                 {
                     name: 'Adventure & Discovery',
@@ -2822,7 +2882,8 @@
                     description: 'Inspire a sense of adventure and discovery. Highlight unique experiences and hidden gems.',
                     prompt: 'Check if the content inspires adventure and discovery. The rule FAILS if:\n1. The content is purely transactional without any inspiring language\n2. There are no mentions of unique experiences, hidden gems, or discoveries\n3. The writing is bland and doesnt evoke excitement or curiosity\n\nLook for: action words, experiential language, mentions of unique offerings, and content that makes readers want to explore.',
                     severity: 'Low',
-                    enabled: true
+                    enabled: true,
+                    system: true
                 },
                 {
                     name: 'Authentic Local Voice',
@@ -2830,7 +2891,8 @@
                     description: 'Use authentic Hawaiian and local terms appropriately (aloha, mahalo, ohana). Include cultural context.',
                     prompt: 'Check for authentic Hawaiian and local voice. The rule FAILS if:\n1. Hawaiian terms are used incorrectly or out of context\n2. Cultural references feel forced or inauthentic\n3. The content completely lacks any local flavor or cultural connection\n\nNote: Not every page needs Hawaiian terms - only flag if terms are misused or if a page about Hawaiian culture lacks authenticity.',
                     severity: 'Low',
-                    enabled: false
+                    enabled: false,
+                    system: true
                 },
                 {
                     name: 'Sensory Language',
@@ -2838,7 +2900,8 @@
                     description: 'Use vivid sensory language - describe sounds of waves, smell of plumeria, feel of warm sand.',
                     prompt: 'Check for vivid sensory language. The rule FAILS if:\n1. Descriptive content about experiences lacks any sensory details\n2. Property or experience descriptions are purely factual without evoking senses\n\nLook for: visual imagery, sounds, smells, textures, and tastes. Content should help readers imagine being there.',
                     severity: 'Low',
-                    enabled: false
+                    enabled: false,
+                    system: true
                 },
             ];
 
@@ -2849,7 +2912,8 @@
                     description: 'Always use "Outrigger" not "OUTRIGGER" or "outrigger". Full name is "Outrigger Hotels & Resorts".',
                     prompt: 'Check brand name usage consistency. The rule FAILS if:\n1. "Outrigger" is written as "OUTRIGGER" (all caps) or "outrigger" (all lowercase)\n2. The brand is referred to incorrectly (e.g., "Outriggers" plural, or missing "Hotels & Resorts" where the full name is expected)\n\nCorrect usage: "Outrigger" or "Outrigger Hotels & Resorts"',
                     severity: 'High',
-                    enabled: true
+                    enabled: true,
+                    system: true
                 },
                 {
                     name: 'Property Names',
@@ -2857,7 +2921,8 @@
                     description: 'Use official property names exactly as registered. Include location identifiers.',
                     prompt: 'Check that property names are used correctly. The rule FAILS if:\n1. Property names are abbreviated incorrectly\n2. Location identifiers are missing where needed\n3. Property names are misspelled\n\nNote: Only flag obvious errors in property naming.',
                     severity: 'Medium',
-                    enabled: true
+                    enabled: true,
+                    system: true
                 },
                 {
                     name: 'Contact Information',
@@ -2865,7 +2930,8 @@
                     description: 'Ensure contact pages have accurate phone numbers, email addresses, and physical addresses.',
                     prompt: 'Check for presence of contact information. The rule FAILS if:\n1. A contact or location page is missing phone number, OR\n2. A contact or location page is missing physical address\n\nNote: Only apply to pages that should have contact info (contact pages, location pages, footer sections).',
                     severity: 'High',
-                    enabled: true
+                    enabled: true,
+                    system: true
                 },
                 {
                     name: 'Call-to-Action Presence',
@@ -2873,7 +2939,8 @@
                     description: 'Pages should have clear calls-to-action (Book Now, Learn More, Contact Us).',
                     prompt: 'Check for clear calls-to-action. The rule FAILS if:\n1. A marketing or property page has no visible call-to-action\n2. CTAs are buried or unclear\n\nLook for: "Book Now", "Reserve", "Learn More", "Contact Us", "Get Started" buttons or links.',
                     severity: 'Medium',
-                    enabled: false
+                    enabled: false,
+                    system: true
                 },
             ];
 

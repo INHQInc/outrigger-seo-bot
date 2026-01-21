@@ -2254,6 +2254,49 @@ def hello_http(request):
         }), 200, headers
 
     if request.method == 'POST':
+        # Generate LLM prompt from user description
+        if request.args.get('generate_prompt') == 'true':
+            try:
+                request_json = request.get_json(silent=True) or {}
+                description = request_json.get('description', '')
+
+                if not description:
+                    return jsonify({"error": "Description is required"}), 400, headers
+
+                if not anthropic_client:
+                    return jsonify({"error": "Anthropic API not configured"}), 500, headers
+
+                # Use Claude to generate a well-structured audit prompt
+                system_prompt = """You are an expert at creating SEO audit rules. Given a user's description of what they want to check, create a detailed LLM audit prompt.
+
+The prompt should:
+1. Start with a clear description of what to check
+2. List specific conditions that would cause the rule to FAIL
+3. Provide examples when helpful
+4. Be specific enough that an AI can evaluate a webpage against it
+
+Format the output as a ready-to-use audit prompt. Do NOT include any preamble or explanation - just output the prompt itself."""
+
+                user_message = f"Create an SEO/content audit prompt for this requirement:\n\n{description}"
+
+                response = anthropic_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=1000,
+                    messages=[
+                        {"role": "user", "content": user_message}
+                    ],
+                    system=system_prompt
+                )
+
+                generated_prompt = response.content[0].text.strip()
+                return jsonify({"prompt": generated_prompt}), 200, headers
+
+            except Exception as e:
+                print(f"Error generating prompt: {e}")
+                import traceback
+                traceback.print_exc()
+                return jsonify({"error": str(e)}), 500, headers
+
         try:
             # Parse request body for site_id (multi-site support)
             request_json = request.get_json(silent=True) or {}
