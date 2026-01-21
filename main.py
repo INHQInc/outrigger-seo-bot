@@ -1234,7 +1234,7 @@ class GEOScorer:
 
 
 class SEOAuditor:
-    def audit(self, url, config=None, audit_types=None):
+    def audit(self, url, config=None, audit_types=None, progress_callback=None):
         """
         Audit a URL for SEO issues.
 
@@ -1246,6 +1246,8 @@ class SEOAuditor:
             config: ConfigManager instance with loaded rules
             audit_types: Dict specifying which audit categories to run:
                          {'seo': True/False, 'voice': True/False, 'brand': True/False}
+            progress_callback: Optional function to call with progress updates
+                               callback(phase_label: str) - e.g., "Scraping page..."
 
         Config checkTypes supported:
         - title: Title tag checks (missing_title, short_title)
@@ -1275,7 +1277,13 @@ class SEOAuditor:
             print(f"No config provided for {url} - skipping all checks")
             return issues
 
+        # Helper to update progress
+        def update_phase(label):
+            if progress_callback:
+                progress_callback(label)
+
         try:
+            update_phase('Scraping page content...')
             resp = fetch_with_scraper_api(url)
             print(f"Auditing {url} - Status: {resp.status_code}")
             print(f"  Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
@@ -1321,6 +1329,8 @@ class SEOAuditor:
 
             # ============ TIER 1: CRITICAL CHECKS ============
             # Only run if enabled in config AND seo audit type is selected
+            if run_seo:
+                update_phase('Running legacy SEO checks...')
 
             # Title tag (Critical) - checkType: 'title'
             if run_seo and config.is_check_enabled('title'):
@@ -1554,6 +1564,9 @@ class SEOAuditor:
                 voice_rules = config.get_voice_llm_rules() if run_voice else []
                 brand_rules = config.get_brand_llm_rules() if run_brand else []
                 llm_rules = voice_rules + brand_rules
+
+                if llm_rules:
+                    update_phase(f'Running AI analysis ({len(llm_rules)} rules)...')
 
                 print(f"Running {len(llm_rules)} LLM-based rules for {url}")
                 print(f"  - Voice rules: {len(voice_rules)} (run_voice={run_voice})")
@@ -2446,18 +2459,30 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             for page_index, u in enumerate(urls):
                 page_url = u['url']
 
-                # Update progress: starting this page (use page_index for "in progress" state)
-                # currentPage stays at previous completed count until this page finishes
-                update_audit_progress(site_id, {
-                    'currentPage': page_index,  # Pages completed so far (0-indexed)
-                    'currentPageUrl': page_url,
-                    'phaseLabel': f'Processing page {page_index + 1} of {total_pages}...'
-                })
+                # Create progress callback for this page
+                def make_progress_callback(pg_idx, total):
+                    def callback(phase_label):
+                        update_audit_progress(site_id, {
+                            'currentPage': pg_idx,
+                            'currentPageUrl': page_url,
+                            'phaseLabel': f'Page {pg_idx + 1}/{total}: {phase_label}'
+                        })
+                    return callback
+
+                progress_cb = make_progress_callback(page_index, total_pages)
+
+                # Update progress: starting this page
+                progress_cb('Starting...')
 
                 # Pass site_config_manager to auditor so it only runs enabled checks
                 # Also pass audit_types to control which audit categories run
-                issues = auditor.audit(page_url, config=site_config_manager, audit_types=audit_types)
+                # Pass progress_callback for real-time phase updates
+                issues = auditor.audit(page_url, config=site_config_manager, audit_types=audit_types, progress_callback=progress_cb)
                 results['issues'] += len(issues)
+
+                # Update progress for creating tasks
+                if issues:
+                    progress_cb(f'Creating {len(issues)} Monday tasks...')
 
                 # Track issue types
                 for issue in issues:
