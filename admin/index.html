@@ -313,6 +313,26 @@
 
         <!-- Settings Tab -->
         <div id="panel-settings" class="tab-panel hidden">
+            <!-- Site Information Card -->
+            <div class="card rounded-xl p-6 mb-6">
+                <h2 class="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Site Information
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-dark rounded-lg p-4 border border-card">
+                        <p class="text-secondary text-sm mb-1">Site ID</p>
+                        <p id="displaySiteId" class="text-primary font-mono text-lg">-</p>
+                    </div>
+                    <div class="bg-dark rounded-lg p-4 border border-card">
+                        <p class="text-secondary text-sm mb-1">Site Name</p>
+                        <p id="displaySiteName" class="text-primary text-lg">-</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Connection Status Card -->
             <div class="card rounded-xl p-6 mb-6">
                 <h2 class="text-xl font-bold text-primary mb-4 flex items-center gap-2">
@@ -2897,13 +2917,20 @@
             // Load saved settings from site-specific config
             if (!currentSiteId) {
                 console.log('No site selected, cannot load settings');
+                document.getElementById('displaySiteId').textContent = '-';
+                document.getElementById('displaySiteName').textContent = '-';
                 return;
             }
+
+            // Display Site ID
+            document.getElementById('displaySiteId').textContent = currentSiteId;
 
             db.collection('sites').doc(currentSiteId).collection('config').doc('settings').get()
                 .then(function(doc) {
                     if (doc.exists) {
                         var settings = doc.data();
+                        // Display Site Name
+                        document.getElementById('displaySiteName').textContent = settings.name || currentSiteId;
                         if (settings.sitemapUrl) document.getElementById('configSitemapUrl').value = settings.sitemapUrl;
                         if (settings.daysToCheck) document.getElementById('configDaysToCheck').value = settings.daysToCheck;
                         if (settings.maxPages !== undefined) document.getElementById('configMaxPages').value = settings.maxPages;
@@ -2913,6 +2940,7 @@
                         // Load schedule configuration
                         loadScheduleConfig(settings.schedule);
                     } else {
+                        document.getElementById('displaySiteName').textContent = currentSiteId;
                         // Clear form if no settings exist for this site
                         document.getElementById('configSitemapUrl').value = '';
                         document.getElementById('configDaysToCheck').value = '7';
