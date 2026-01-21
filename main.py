@@ -2208,6 +2208,38 @@ def hello_http(request):
             except Exception as e:
                 return f"Error loading admin dashboard: {e}", 500, headers
 
+        # Debug: Check rules for a specific site
+        if request.args.get('debug_site'):
+            debug_site_id = request.args.get('debug_site')
+            try:
+                config_manager = ConfigManager(debug_site_id)
+                loaded = config_manager.load_config()
+                return jsonify({
+                    "site_id": debug_site_id,
+                    "config_loaded": loaded,
+                    "seo_rules_count": len(config_manager.seo_rules),
+                    "voice_rules_count": len(config_manager.voice_rules),
+                    "brand_standards_count": len(config_manager.brand_standards),
+                    "legacy_rules_count": len(config_manager.get_legacy_rules()),
+                    "llm_rules_count": len(config_manager.get_llm_rules()),
+                    "seo_rules": config_manager.seo_rules,
+                    "legacy_rules": config_manager.get_legacy_rules(),
+                    "check_types_enabled": {
+                        "title": config_manager.is_check_enabled('title'),
+                        "meta": config_manager.is_check_enabled('meta'),
+                        "canonical": config_manager.is_check_enabled('canonical'),
+                        "h1": config_manager.is_check_enabled('h1'),
+                        "schema": config_manager.is_check_enabled('schema'),
+                        "geo": config_manager.is_check_enabled('geo'),
+                        "og": config_manager.is_check_enabled('og'),
+                        "alt": config_manager.is_check_enabled('alt'),
+                    }
+                }), 200, headers
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                return jsonify({"error": str(e)}), 500, headers
+
         return jsonify({
             "status": "healthy",
             "service": "outrigger-seo-audit",
@@ -2215,7 +2247,8 @@ def hello_http(request):
             "firestore_connected": db is not None,
             "firestore_project": FIRESTORE_PROJECT_ID,
             "config_endpoint": "Add ?config=true to see loaded rules from admin dashboard",
-            "admin_dashboard": "Add ?admin=true to access the admin dashboard"
+            "admin_dashboard": "Add ?admin=true to access the admin dashboard",
+            "debug_site": "Add ?debug_site=SITE_ID to check rules for a specific site"
         }), 200, headers
 
     if request.method == 'POST':
