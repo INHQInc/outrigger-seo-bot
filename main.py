@@ -2359,11 +2359,12 @@ def hello_http(request):
             for page_index, u in enumerate(urls):
                 page_url = u['url']
 
-                # Update progress: starting this page
+                # Update progress: starting this page (use page_index for "in progress" state)
+                # currentPage stays at previous completed count until this page finishes
                 update_audit_progress(site_id, {
-                    'currentPage': page_index + 1,
+                    'currentPage': page_index,  # Pages completed so far (0-indexed)
                     'currentPageUrl': page_url,
-                    'phaseLabel': f'Auditing pages ({page_index + 1}/{total_pages})...'
+                    'phaseLabel': f'Processing page {page_index + 1} of {total_pages}...'
                 })
 
                 # Pass site_config_manager to auditor so it only runs enabled checks
@@ -2415,8 +2416,9 @@ def hello_http(request):
                         'monday_status': task_status
                     })
 
-                # Update progress with issue counts after each page
+                # Update progress with issue counts after each page completes
                 update_audit_progress(site_id, {
+                    'currentPage': page_index + 1,  # Now this page is complete
                     'issuesFound': results['issues'],
                     'seoIssues': results['seo_issues'],
                     'voiceIssues': results['voice_issues'],
@@ -2424,7 +2426,7 @@ def hello_http(request):
                     'tasksCreated': results['tasks_created'],
                     'duplicatesSkipped': results['duplicates_skipped'],
                     'recentIssues': recent_issues,
-                    'phaseLabel': f'Auditing page {page_index + 1}/{total_pages} - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)'
+                    'phaseLabel': f'Completed page {page_index + 1}/{total_pages} - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)'
                 })
 
                 time.sleep(1)  # Increased delay for ScraperAPI rate limits
