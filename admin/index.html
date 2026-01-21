@@ -1650,9 +1650,16 @@
                     if (currentSiteId && selector.querySelector('option[value="' + currentSiteId + '"]')) {
                         selector.value = currentSiteId;
                     } else if (snapshot.size > 0) {
+                        // Saved site doesn't exist anymore, clear it and use first available
+                        console.log('Saved site "' + currentSiteId + '" not found, switching to first available site');
+                        localStorage.removeItem('selectedSite');
                         currentSiteId = snapshot.docs[0].id;
                         selector.value = currentSiteId;
                         localStorage.setItem('selectedSite', currentSiteId);
+                        // Update URL to remove invalid site param
+                        var urlParams = new URLSearchParams(window.location.search);
+                        urlParams.set('site', currentSiteId);
+                        window.history.replaceState({}, '', window.location.pathname + '?' + urlParams.toString());
                     }
                 })
                 .catch(function(error) {
@@ -1685,7 +1692,8 @@
             var currentTab = urlParams.get('tab') || 'seo';
 
             // Reload page with new site and maintain current tab
-            var newUrl = window.location.pathname + '?site=' + encodeURIComponent(newSiteId) + '&tab=' + encodeURIComponent(currentTab);
+            // Always include admin=true to stay in admin dashboard
+            var newUrl = window.location.pathname + '?admin=true&site=' + encodeURIComponent(newSiteId) + '&tab=' + encodeURIComponent(currentTab);
             window.location.href = newUrl;
         }
 
