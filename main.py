@@ -369,11 +369,14 @@ class ConfigManager:
             self.seo_rules = [r for r in all_seo if r.get('enabled', False)]
             print(f"Loaded {len(self.seo_rules)} SEO rules (from {len(all_seo)} total)")
 
-            # Separate LLM-based rules (have 'prompt' field) from legacy rules (have 'checkType')
+            # Separate rules by type:
+            # - Legacy rules: have 'checkType' (run code-based checks)
+            # - LLM rules: have 'prompt' (run AI-powered checks)
+            # A rule can be BOTH if it has both checkType and prompt
             self._llm_rules = [r for r in self.seo_rules if r.get('prompt')]
-            self._legacy_rules = [r for r in self.seo_rules if r.get('checkType') and not r.get('prompt')]
+            self._legacy_rules = [r for r in self.seo_rules if r.get('checkType')]
             print(f"  - LLM rules (with prompts): {len(self._llm_rules)}")
-            print(f"  - Legacy rules (checkType only): {len(self._legacy_rules)}")
+            print(f"  - Legacy rules (with checkType): {len(self._legacy_rules)}")
 
             # Load Voice Rules
             voice_docs = self._load_collection_with_fallback('voiceRules')
@@ -435,7 +438,8 @@ class ConfigManager:
         if not self._loaded or not self.seo_rules:
             return False
 
-        # Look for a matching LEGACY rule (no prompt) that is enabled
+        # Look for a matching rule with this checkType that is enabled
+        # Rules can have both checkType (for code checks) and prompt (for LLM checks)
         for rule in self._legacy_rules:
             if rule.get('checkType') == check_type and rule.get('enabled', False):
                 return True
