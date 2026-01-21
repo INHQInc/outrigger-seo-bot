@@ -732,6 +732,56 @@
     <!-- Toast Container -->
     <div id="toastContainer" class="fixed top-4 right-4 z-[100] flex flex-col gap-2"></div>
 
+    <!-- Reseed Rules Modal -->
+    <div id="reseedModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            <div class="bg-gradient-to-r from-orange-600 to-red-500 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-white">Reset Rules to Defaults</h3>
+                    <button onclick="closeReseedModal()" class="text-white/70 hover:text-white transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <p class="text-secondary mb-4">Select which rule types to reset. Your custom rules in selected categories will be replaced with defaults.</p>
+                <div class="space-y-3 mb-6">
+                    <label class="flex items-center gap-3 p-3 bg-dark rounded-lg border border-card cursor-pointer hover:border-purple-500/50 transition">
+                        <input type="checkbox" id="reseedSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500">
+                        <div>
+                            <span class="text-primary font-medium">SEO/GEO Rules</span>
+                            <p class="text-secondary text-sm">Title, meta, H1, canonical, schema checks (legacy + LLM)</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-dark rounded-lg border border-card cursor-pointer hover:border-cyan-500/50 transition">
+                        <input type="checkbox" id="reseedVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-cyan-500">
+                        <div>
+                            <span class="text-primary font-medium">Voice & Tone</span>
+                            <p class="text-secondary text-sm">Brand voice example rules (LLM-powered)</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-3 p-3 bg-dark rounded-lg border border-card cursor-pointer hover:border-teal-500/50 transition">
+                        <input type="checkbox" id="reseedBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-teal-500">
+                        <div>
+                            <span class="text-primary font-medium">Brand Standards</span>
+                            <p class="text-secondary text-sm">Brand consistency example rules (LLM-powered)</p>
+                        </div>
+                    </label>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="executeReseed()" class="flex-1 bg-gradient-to-r from-orange-600 to-red-500 text-white py-3 rounded-lg font-medium hover:opacity-90 transition">
+                        Reset Selected
+                    </button>
+                    <button onclick="closeReseedModal()" class="flex-1 px-6 py-3 bg-card border border-card text-secondary hover:text-primary rounded-lg transition font-medium">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirm Modal -->
     <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
         <div class="card rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
@@ -2770,8 +2820,8 @@
         }
 
         // Seed default rules (run once to populate)
-        async function seedDefaultRules() {
-            if (!confirm('This will add all recommended SEO/GEO rules with AI-powered prompts. Continue?')) return;
+        // Parameters: which rule types to reseed (all default to true for backward compatibility)
+        async function seedDefaultRules(reseedSeo = true, reseedVoice = true, reseedBrand = true) {
 
             const seoRules = [
                 // ============================================
@@ -2925,6 +2975,7 @@
             ];
 
             let added = 0;
+            let deleted = 0;
 
             // Check if site is selected
             if (!currentSiteId) {
@@ -2932,38 +2983,62 @@
                 return;
             }
 
-            // Delete all existing rules first
-            console.log('Deleting existing rules...');
-            const collections = ['seoRules', 'voiceRules', 'brandStandards'];
-            for (const collectionName of collections) {
-                const snapshot = await getSiteCollection(collectionName).get();
+            // Delete and reseed only selected rule types
+            console.log('Reseeding rules...', { reseedSeo, reseedVoice, reseedBrand });
+
+            // SEO Rules
+            if (reseedSeo) {
+                const snapshot = await getSiteCollection('seoRules').get();
                 const batch = db.batch();
                 snapshot.forEach(doc => batch.delete(doc.ref));
                 if (!snapshot.empty) {
                     await batch.commit();
-                    console.log(`Deleted ${snapshot.size} ${collectionName}`);
+                    deleted += snapshot.size;
+                    console.log(`Deleted ${snapshot.size} seoRules`);
+                }
+                for (const rule of seoRules) {
+                    await getSiteCollection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
                 }
             }
 
-            // Add SEO rules - site-specific
-            for (const rule of seoRules) {
-                await getSiteCollection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                added++;
+            // Voice Rules
+            if (reseedVoice) {
+                const snapshot = await getSiteCollection('voiceRules').get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                if (!snapshot.empty) {
+                    await batch.commit();
+                    deleted += snapshot.size;
+                    console.log(`Deleted ${snapshot.size} voiceRules`);
+                }
+                for (const rule of voiceRules) {
+                    await getSiteCollection('voiceRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
+                }
             }
 
-            // Add Voice rules - site-specific
-            for (const rule of voiceRules) {
-                await getSiteCollection('voiceRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                added++;
+            // Brand Standards
+            if (reseedBrand) {
+                const snapshot = await getSiteCollection('brandStandards').get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                if (!snapshot.empty) {
+                    await batch.commit();
+                    deleted += snapshot.size;
+                    console.log(`Deleted ${snapshot.size} brandStandards`);
+                }
+                for (const standard of brandStandards) {
+                    await getSiteCollection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                    added++;
+                }
             }
 
-            // Add Brand standards - site-specific
-            for (const standard of brandStandards) {
-                await getSiteCollection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                added++;
-            }
-
-            showToast('Added ' + added + ' new rules/standards', 'success');
+            var types = [];
+            if (reseedSeo) types.push('SEO');
+            if (reseedVoice) types.push('Voice');
+            if (reseedBrand) types.push('Brand');
+            showToast('Reset ' + types.join(', ') + ' rules (' + added + ' added)', 'success');
             loadAllData();
         }
 
@@ -3294,11 +3369,37 @@
             }, 'danger');
         }
 
-        // Confirm reset rules
+        // Show reseed modal with options
         function confirmResetRules() {
-            showConfirm('Reset All Rules', 'This will replace all SEO, voice, and brand rules with defaults. Your custom rules will be lost.', function() {
-                seedDefaultRules();
-            }, 'danger');
+            if (!currentSiteId) {
+                showToast('Please select a site first', 'warning');
+                return;
+            }
+            var modal = document.getElementById('reseedModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        // Close reseed modal
+        function closeReseedModal() {
+            var modal = document.getElementById('reseedModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Execute reseed with selected options
+        function executeReseed() {
+            var reseedSeo = document.getElementById('reseedSeo').checked;
+            var reseedVoice = document.getElementById('reseedVoice').checked;
+            var reseedBrand = document.getElementById('reseedBrand').checked;
+
+            if (!reseedSeo && !reseedVoice && !reseedBrand) {
+                showToast('Please select at least one rule type', 'warning');
+                return;
+            }
+
+            closeReseedModal();
+            seedDefaultRules(reseedSeo, reseedVoice, reseedBrand);
         }
 
         // Confirm delete site
