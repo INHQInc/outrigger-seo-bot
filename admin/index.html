@@ -2996,8 +2996,7 @@
             // Add Brand standards - site-specific
             for (const standard of brandStandards) {
                 await getSiteCollection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    added++;
-                }
+                added++;
             }
 
             showToast('Added ' + added + ' new rules/standards', 'success');
