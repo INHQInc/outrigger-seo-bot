@@ -253,8 +253,17 @@ IMPORTANT: Return ONLY the JSON array, no other text. Example:
                     rule_idx = result.get('rule_index', 1) - 1
                     if 0 <= rule_idx < len(rules):
                         rule = rules[rule_idx]
+                        # Determine issue type based on rule structure
+                        # Voice rules have 'category', Brand rules have 'standardType', SEO rules have 'checkType'
+                        if rule.get('category'):
+                            issue_type = 'llm_voice'
+                        elif rule.get('standardType'):
+                            issue_type = 'llm_brand'
+                        else:
+                            issue_type = f"llm_{rule.get('checkType', 'custom')}"
+
                         issues.append({
-                            'type': f"llm_{rule.get('checkType', 'custom')}",
+                            'type': issue_type,
                             'title': result.get('title', rule.get('name', 'SEO Issue')),
                             'severity': rule.get('severity', 'Medium'),
                             'url': url,
