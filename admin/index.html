@@ -2885,37 +2885,34 @@
                 return;
             }
 
-            // Add SEO rules (or update existing ones with prompts) - site-specific
-            for (const rule of seoRules) {
-                const existing = await getSiteCollection('seoRules').where('checkType', '==', rule.checkType).get();
-                if (existing.empty) {
-                    await getSiteCollection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    added++;
-                } else {
-                    // Update existing rule with prompt if it doesn't have one
-                    const doc = existing.docs[0];
-                    const data = doc.data();
-                    if (!data.prompt && rule.prompt) {
-                        await getSiteCollection('seoRules').doc(doc.id).update({ prompt: rule.prompt });
-                        added++;
-                    }
+            // Delete all existing rules first
+            console.log('Deleting existing rules...');
+            const collections = ['seoRules', 'voiceRules', 'brandStandards'];
+            for (const collectionName of collections) {
+                const snapshot = await getSiteCollection(collectionName).get();
+                const batch = db.batch();
+                snapshot.forEach(doc => batch.delete(doc.ref));
+                if (!snapshot.empty) {
+                    await batch.commit();
+                    console.log(`Deleted ${snapshot.size} ${collectionName}`);
                 }
+            }
+
+            // Add SEO rules - site-specific
+            for (const rule of seoRules) {
+                await getSiteCollection('seoRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                added++;
             }
 
             // Add Voice rules - site-specific
             for (const rule of voiceRules) {
-                const existing = await getSiteCollection('voiceRules').where('name', '==', rule.name).get();
-                if (existing.empty) {
-                    await getSiteCollection('voiceRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-                    added++;
-                }
+                await getSiteCollection('voiceRules').add({ ...rule, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                added++;
             }
 
             // Add Brand standards - site-specific
             for (const standard of brandStandards) {
-                const existing = await getSiteCollection('brandStandards').where('name', '==', standard.name).get();
-                if (existing.empty) {
-                    await getSiteCollection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                await getSiteCollection('brandStandards').add({ ...standard, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
                     added++;
                 }
             }
