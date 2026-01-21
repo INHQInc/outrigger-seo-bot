@@ -698,7 +698,14 @@
     <div id="modal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
         <div class="card rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6">
-                <h3 id="modalTitle" class="text-xl font-bold text-primary mb-4">Add Rule</h3>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="modalTitle" class="text-xl font-bold text-primary">Add Rule</h3>
+                    <button onclick="closeModal()" class="text-secondary hover:text-primary transition" title="Close">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
                 <form id="modalForm" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-secondary mb-1">Name</label>
@@ -2882,81 +2889,43 @@
                 },
             ];
 
+            // Voice rules - examples only, NOT system rules (can be deleted/customized per site)
             const voiceRules = [
                 {
-                    name: 'Warm & Welcoming',
+                    name: 'Warm & Welcoming Tone',
                     category: 'tone',
-                    description: 'Content should convey genuine Hawaiian hospitality - warm, welcoming, and relaxed. Avoid corporate jargon.',
-                    prompt: 'Analyze the tone and voice of this page content. The rule FAILS if:\n1. The content feels cold, corporate, or impersonal\n2. There is excessive use of business jargon or formal language\n3. The writing lacks warmth or a welcoming feel\n\nLook for: friendly greetings, personal pronouns (you, your, we), inviting language, and genuine hospitality expressions. The content should make readers feel welcomed and valued.',
+                    description: 'Example: Content should convey warmth and hospitality. Customize this for your brand voice.',
+                    prompt: 'Analyze the tone and voice of this page content. The rule FAILS if:\n1. The content feels cold, corporate, or impersonal\n2. There is excessive use of business jargon or formal language\n3. The writing lacks warmth or a welcoming feel\n\nLook for: friendly greetings, personal pronouns (you, your, we), inviting language, and genuine hospitality expressions.',
                     severity: 'Medium',
-                    enabled: true,
-                    system: true
+                    enabled: true
                 },
                 {
-                    name: 'Adventure & Discovery',
+                    name: 'Engaging & Inspiring',
                     category: 'tone',
-                    description: 'Inspire a sense of adventure and discovery. Highlight unique experiences and hidden gems.',
-                    prompt: 'Check if the content inspires adventure and discovery. The rule FAILS if:\n1. The content is purely transactional without any inspiring language\n2. There are no mentions of unique experiences, hidden gems, or discoveries\n3. The writing is bland and doesnt evoke excitement or curiosity\n\nLook for: action words, experiential language, mentions of unique offerings, and content that makes readers want to explore.',
+                    description: 'Example: Content should inspire and engage readers. Customize this for your brand voice.',
+                    prompt: 'Check if the content is engaging and inspiring. The rule FAILS if:\n1. The content is purely transactional without any inspiring language\n2. The writing is bland and doesnt evoke excitement or curiosity\n3. There is no emotional connection with the reader\n\nLook for: action words, experiential language, and content that makes readers want to learn more.',
                     severity: 'Low',
-                    enabled: true,
-                    system: true
-                },
-                {
-                    name: 'Authentic Local Voice',
-                    category: 'language',
-                    description: 'Use authentic Hawaiian and local terms appropriately (aloha, mahalo, ohana). Include cultural context.',
-                    prompt: 'Check for authentic Hawaiian and local voice. The rule FAILS if:\n1. Hawaiian terms are used incorrectly or out of context\n2. Cultural references feel forced or inauthentic\n3. The content completely lacks any local flavor or cultural connection\n\nNote: Not every page needs Hawaiian terms - only flag if terms are misused or if a page about Hawaiian culture lacks authenticity.',
-                    severity: 'Low',
-                    enabled: false,
-                    system: true
-                },
-                {
-                    name: 'Sensory Language',
-                    category: 'language',
-                    description: 'Use vivid sensory language - describe sounds of waves, smell of plumeria, feel of warm sand.',
-                    prompt: 'Check for vivid sensory language. The rule FAILS if:\n1. Descriptive content about experiences lacks any sensory details\n2. Property or experience descriptions are purely factual without evoking senses\n\nLook for: visual imagery, sounds, smells, textures, and tastes. Content should help readers imagine being there.',
-                    severity: 'Low',
-                    enabled: false,
-                    system: true
+                    enabled: true
                 },
             ];
 
+            // Brand standards - examples only, NOT system rules (can be deleted/customized per site)
             const brandStandards = [
                 {
-                    name: 'Brand Name Usage',
+                    name: 'Brand Name Consistency',
                     standardType: 'terminology',
-                    description: 'Always use "Outrigger" not "OUTRIGGER" or "outrigger". Full name is "Outrigger Hotels & Resorts".',
-                    prompt: 'Check brand name usage consistency. The rule FAILS if:\n1. "Outrigger" is written as "OUTRIGGER" (all caps) or "outrigger" (all lowercase)\n2. The brand is referred to incorrectly (e.g., "Outriggers" plural, or missing "Hotels & Resorts" where the full name is expected)\n\nCorrect usage: "Outrigger" or "Outrigger Hotels & Resorts"',
+                    description: 'Example: Ensure brand name is used consistently. Customize this with your brand guidelines.',
+                    prompt: 'Check brand name usage consistency. The rule FAILS if:\n1. The brand name is written inconsistently (different capitalizations, spellings, or variations)\n2. The brand is referred to incorrectly\n\nNote: Customize this prompt with your specific brand name and approved variations.',
                     severity: 'High',
-                    enabled: true,
-                    system: true
-                },
-                {
-                    name: 'Property Names',
-                    standardType: 'terminology',
-                    description: 'Use official property names exactly as registered. Include location identifiers.',
-                    prompt: 'Check that property names are used correctly. The rule FAILS if:\n1. Property names are abbreviated incorrectly\n2. Location identifiers are missing where needed\n3. Property names are misspelled\n\nNote: Only flag obvious errors in property naming.',
-                    severity: 'Medium',
-                    enabled: true,
-                    system: true
-                },
-                {
-                    name: 'Contact Information',
-                    standardType: 'compliance',
-                    description: 'Ensure contact pages have accurate phone numbers, email addresses, and physical addresses.',
-                    prompt: 'Check for presence of contact information. The rule FAILS if:\n1. A contact or location page is missing phone number, OR\n2. A contact or location page is missing physical address\n\nNote: Only apply to pages that should have contact info (contact pages, location pages, footer sections).',
-                    severity: 'High',
-                    enabled: true,
-                    system: true
+                    enabled: true
                 },
                 {
                     name: 'Call-to-Action Presence',
                     standardType: 'compliance',
-                    description: 'Pages should have clear calls-to-action (Book Now, Learn More, Contact Us).',
-                    prompt: 'Check for clear calls-to-action. The rule FAILS if:\n1. A marketing or property page has no visible call-to-action\n2. CTAs are buried or unclear\n\nLook for: "Book Now", "Reserve", "Learn More", "Contact Us", "Get Started" buttons or links.',
+                    description: 'Example: Pages should have clear calls-to-action. Customize based on your conversion goals.',
+                    prompt: 'Check for clear calls-to-action. The rule FAILS if:\n1. A marketing or key landing page has no visible call-to-action\n2. CTAs are buried or unclear\n\nLook for: action buttons or links that guide users to the next step.',
                     severity: 'Medium',
-                    enabled: false,
-                    system: true
+                    enabled: true
                 },
             ];
 
