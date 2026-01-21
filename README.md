@@ -777,13 +777,25 @@ Claude has access to:
 
 ### Standard Development Workflow
 
-After every code change, Claude must:
+After every code change:
 
-1. **Make the code changes** in the local repository
-2. **Commit changes to git** with a clear, descriptive commit message
-3. **Update documentation** (this README) to reflect any changes
-4. **Inform user to push** - User runs `git push` locally
-5. **Trigger Cloud Build** - Either automatically via push, or manually via GCP Console
+1. **Claude makes the code changes** in the local repository
+2. **Claude commits changes to git** with a clear, descriptive commit message:
+   ```bash
+   git add -A && git commit -m "description of changes"
+   ```
+3. **User pushes to GitHub** - Claude cannot push due to auth, so user runs:
+   ```bash
+   git push
+   ```
+4. **Cloud Build triggers automatically** - Pushing to `main` branch triggers a Cloud Build that:
+   - Builds a new Docker container
+   - Deploys to Cloud Run
+   - Updates the admin dashboard in Cloud Storage
+5. **Wait for deployment** (~2 minutes) - Check build status at:
+   https://console.cloud.google.com/cloud-build/builds?project=project-85d26db5-f70f-487e-b0e
+
+**Important**: Code changes require `git push` to deploy. Simply clicking "Deploy" in Cloud Run only redeploys the existing container - it does NOT pick up code changes.
 
 ### Commit Message Format
 
