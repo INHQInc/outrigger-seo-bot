@@ -2774,12 +2774,14 @@
             if (!confirm('This will add all recommended SEO/GEO rules with AI-powered prompts. Continue?')) return;
 
             const seoRules = [
-                // TIER 1: CRITICAL - All with LLM prompts
+                // ============================================
+                // LEGACY RULES (code-based only, no LLM)
+                // Fast & free - just checks if elements exist
+                // ============================================
                 {
                     name: 'Title Tag Check',
                     checkType: 'title',
-                    description: 'Checks for missing or too-short title tags. Title should be 50-60 characters and include primary keywords.',
-                    prompt: 'Check if this page has a proper <title> tag. The rule FAILS if:\n1. The page is missing a <title> tag entirely, OR\n2. The title is empty or contains only whitespace, OR\n3. The title is less than 30 characters (too short to be descriptive), OR\n4. The title is generic like "Home" or "Page" without context\n\nFor a hotel/hospitality site, a good title should include the property name, location, and ideally brand.',
+                    description: 'Checks for missing or too-short title tags (under 30 chars).',
                     enabled: true,
                     severity: 'Critical',
                     tier: 1,
@@ -2788,18 +2790,7 @@
                 {
                     name: 'Meta Description Check',
                     checkType: 'meta',
-                    description: 'Checks for missing or too-short meta descriptions. Should be 150-160 characters with compelling copy.',
-                    prompt: 'Check if this page has a proper meta description. The rule FAILS if:\n1. The page is missing a <meta name="description"> tag, OR\n2. The meta description content is empty, OR\n3. The meta description is less than 120 characters (too short), OR\n4. The meta description is over 160 characters (will be truncated)\n\nFor a hotel site, meta descriptions should be compelling and include a call-to-action.',
-                    enabled: true,
-                    severity: 'Critical',
-                    tier: 1,
-                    system: true
-                },
-                {
-                    name: 'Meta Content Relevance Check',
-                    checkType: 'meta_relevance',
-                    description: 'Checks that meta title, description, and OG tags accurately describe THIS page content. Catches copy-paste errors.',
-                    prompt: 'Check if the meta tags accurately describe THIS specific page. The rule FAILS if:\n1. The meta description mentions a DIFFERENT property/resort than the page is about, OR\n2. The og:description mentions a different location than the page URL indicates, OR\n3. The title tag references a different property than the page content, OR\n4. Meta content appears to be copy-pasted from another page (wrong property name, wrong location)\n\nIMPORTANT: Compare the URL path and H1/main content against the meta tags.\nExample FAIL: Page URL is "/kona-resort-spa" but meta description says "Waikiki Beach"\nThis catches copy-paste errors where someone duplicated a page but forgot to update the meta tags.',
+                    description: 'Checks for missing or too-short meta descriptions (under 120 chars).',
                     enabled: true,
                     severity: 'Critical',
                     tier: 1,
@@ -2808,8 +2799,7 @@
                 {
                     name: 'H1 Tag Check',
                     checkType: 'h1',
-                    description: 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1.',
-                    prompt: 'Check if this page has proper H1 heading structure. The rule FAILS if:\n1. The page has NO <h1> tag at all, OR\n2. The page has MORE than one <h1> tag (should have exactly one), OR\n3. The H1 is empty or contains only whitespace\n\nBest practice: Each page should have exactly one H1 that clearly describes the main topic.',
+                    description: 'Checks for missing H1 or multiple H1 tags.',
                     enabled: true,
                     severity: 'Critical',
                     tier: 1,
@@ -2818,19 +2808,16 @@
                 {
                     name: 'Canonical Tag Check',
                     checkType: 'canonical',
-                    description: 'Checks for missing canonical URLs to prevent duplicate content issues.',
-                    prompt: 'Check if this page has a canonical tag. The rule FAILS if:\n1. The page is missing a <link rel="canonical"> tag, OR\n2. The canonical tag exists but has no href value, OR\n3. The canonical href is empty or invalid\n\nA canonical tag tells search engines which version of a page is the "master" copy.',
+                    description: 'Checks for missing canonical URL tag.',
                     enabled: true,
                     severity: 'Critical',
                     tier: 1,
                     system: true
                 },
-                // TIER 2: HIGH PRIORITY
                 {
                     name: 'Schema/Structured Data Check',
                     checkType: 'schema',
-                    description: 'Comprehensive schema.org checks for Hotel, LocalBusiness, Organization, FAQ schemas. Critical for AI/LLM visibility.',
-                    prompt: 'Check if this page has appropriate JSON-LD structured data. The rule FAILS if:\n1. The page has NO <script type="application/ld+json"> tags, OR\n2. For hotel/resort pages: Missing Hotel, LodgingBusiness, or LocalBusiness schema, OR\n3. Schema exists but is missing critical properties like name, address, or description\n\nThis is CRITICAL for AI/LLM visibility - ChatGPT and Google AI pull from structured data.',
+                    description: 'Checks for presence of JSON-LD structured data.',
                     enabled: true,
                     severity: 'High',
                     tier: 2,
@@ -2839,8 +2826,7 @@
                 {
                     name: 'Thin Content Check',
                     checkType: 'content',
-                    description: 'Flags pages with less than 300 words of content. Thin pages rank poorly.',
-                    prompt: 'Analyze the main content (excluding navigation, headers, footers). The rule FAILS if:\n1. The page has less than approximately 300 words of actual content, OR\n2. The content is mostly duplicated/boilerplate text, OR\n3. The main content area appears empty or contains only images without supporting text\n\nFor hotel pages, there should be substantial descriptive content about property features and amenities.',
+                    description: 'Flags pages with less than 300 words of content.',
                     enabled: true,
                     severity: 'High',
                     tier: 2,
@@ -2849,8 +2835,7 @@
                 {
                     name: 'Geo Meta Tags Check',
                     checkType: 'geo',
-                    description: 'Checks for geo.region and geo.placename meta tags for location-based searches.',
-                    prompt: 'Check if this page has geographic meta tags. The rule FAILS if:\n1. The page is missing BOTH geo.region and geo.placename meta tags\n\nLook for these tags:\n- <meta name="geo.region" content="US-HI">\n- <meta name="geo.placename" content="Honolulu">\n\nThese help AI travel assistants understand location context.',
+                    description: 'Checks for geo.region and geo.placename meta tags.',
                     enabled: true,
                     severity: 'High',
                     tier: 2,
@@ -2859,19 +2844,16 @@
                 {
                     name: 'Open Graph Tags Check',
                     checkType: 'og',
-                    description: 'Checks for og:image, og:title, og:description for social sharing.',
-                    prompt: 'Check if this page has proper Open Graph tags. The rule FAILS if:\n1. Missing og:image tag (critical for social engagement), OR\n2. Missing og:title tag, OR\n3. Missing og:description tag\n\nLook for meta tags with property attribute:\n- <meta property="og:image" content="...">\n- <meta property="og:title" content="...">\n- <meta property="og:description" content="...">',
+                    description: 'Checks for og:image, og:title, og:description tags.',
                     enabled: true,
                     severity: 'High',
                     tier: 2,
                     system: true
                 },
-                // TIER 3: MEDIUM
                 {
                     name: 'Image Alt Tags Check',
                     checkType: 'alt',
-                    description: 'Checks for missing alt text on images for ADA accessibility compliance.',
-                    prompt: 'Check if images have proper alt text for accessibility. The rule FAILS if:\n1. Multiple <img> tags are missing the alt attribute, OR\n2. Images have empty alt="" attributes (unless decorative), OR\n3. Alt text is generic like "image" instead of descriptive\n\nNote: A few missing alt tags on decorative images is acceptable. Flag only if there is a significant pattern.',
+                    description: 'Checks for missing alt text on images.',
                     enabled: true,
                     severity: 'Medium',
                     tier: 3,
@@ -2880,12 +2862,25 @@
                 {
                     name: 'Robots Meta Tag Check',
                     checkType: 'robots',
-                    description: 'Checks for presence of robots meta tag to explicitly declare indexing instructions.',
-                    prompt: 'Check if this page has a robots meta tag. The rule FAILS if:\n1. The page is missing a <meta name="robots"> tag\n\nThis is a LOW priority check - only flag if completely missing.',
+                    description: 'Checks for presence of robots meta tag.',
                     enabled: false,
-                    system: true,
                     severity: 'Low',
-                    tier: 3
+                    tier: 3,
+                    system: true
+                },
+                // ============================================
+                // LLM RULES (AI-powered, require prompt)
+                // These analyze content quality & relevance
+                // ============================================
+                {
+                    name: 'Meta Content Relevance Check',
+                    checkType: 'meta_relevance',
+                    description: 'AI checks that meta tags accurately describe THIS page (catches copy-paste errors).',
+                    prompt: 'Check if the meta tags accurately describe THIS specific page. The rule FAILS if:\n1. The meta description mentions a DIFFERENT property/resort than the page is about, OR\n2. The og:description mentions a different location than the page URL indicates, OR\n3. The title tag references a different property than the page content, OR\n4. Meta content appears to be copy-pasted from another page (wrong property name, wrong location)\n\nIMPORTANT: Compare the URL path and H1/main content against the meta tags.\nExample FAIL: Page URL is "/kona-resort-spa" but meta description says "Waikiki Beach"',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1,
+                    system: true
                 },
             ];
 
