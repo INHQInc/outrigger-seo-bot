@@ -2519,9 +2519,17 @@
                     '</select>' +
                 '</div>' +
                 '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">What should this rule check? <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formUserDescription" rows="3" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="Describe in plain English what voice/tone aspect you want to check. Example: Make sure the content sounds friendly and welcoming, not corporate or cold."></textarea>' +
+                    '<button type="button" onclick="generatePrompt()" class="mt-2 px-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition flex items-center gap-2">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
+                        'Generate AI Prompt' +
+                    '</button>' +
+                '</div>' +
+                '<div class="mb-4">' +
                     '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
-                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="e.g., Check if the content uses a warm, welcoming tone that makes readers feel valued. Look for friendly language, personal pronouns, and inviting phrases."></textarea>' +
-                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate the page content against this prompt. Be specific about what to check.</p>' +
+                    '<textarea id="formPrompt" rows="8" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="Click \'Generate AI Prompt\' above, or write your own prompt.\n\nThe prompt should specify when the rule PASSES and when it FAILS."></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate pages against this prompt. Generated prompts can be edited before saving.</p>' +
                 '</div>';
         }
 
@@ -2547,9 +2555,17 @@
                     '</select>' +
                 '</div>' +
                 '<div class="mb-4">' +
+                    '<label class="block text-sm font-medium text-secondary mb-1">What should this rule check? <span class="text-red-400">*</span></label>' +
+                    '<textarea id="formUserDescription" rows="3" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="Describe in plain English what brand standard you want to check. Example: Make sure the brand name is always capitalized correctly as Outrigger, not OUTRIGGER or outrigger."></textarea>' +
+                    '<button type="button" onclick="generatePrompt()" class="mt-2 px-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition flex items-center gap-2">' +
+                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
+                        'Generate AI Prompt' +
+                    '</button>' +
+                '</div>' +
+                '<div class="mb-4">' +
                     '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
-                    '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="e.g., Check if the page correctly uses the brand name \'Outrigger\' (not \'OutRigger\' or \'OUTRIGGER\'). Verify trademark symbols are used appropriately."></textarea>' +
-                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate the page content against this prompt. Be specific about what to check.</p>' +
+                    '<textarea id="formPrompt" rows="8" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm" required placeholder="Click \'Generate AI Prompt\' above, or write your own prompt.\n\nThe prompt should specify when the rule PASSES and when it FAILS."></textarea>' +
+                    '<p class="text-xs text-secondary mt-1">Claude AI will evaluate pages against this prompt. Generated prompts can be edited before saving.</p>' +
                 '</div>';
         }
 
