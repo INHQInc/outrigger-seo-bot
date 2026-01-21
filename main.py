@@ -953,26 +953,21 @@ class SitemapParser:
             print(f"Found {len(urls)} recent URLs (within {days} days)")
 
             if len(urls) == 0:
-                print("No recent URLs found, using fallback URLs")
-                return [
-                    {'url': 'https://www.outrigger.com/'},
-                    {'url': 'https://www.outrigger.com/hotels-resorts/hawaii'},
-                    {'url': 'https://www.outrigger.com/hotels-resorts/fiji'},
-                    {'url': 'https://www.outrigger.com/hotels-resorts/thailand'},
-                    {'url': 'https://www.outrigger.com/hotels-resorts/mauritius'}
-                ]
+                print("No recent URLs found within date range, returning all URLs from sitemap")
+                # Return all URLs if none match the date filter
+                for match in matches:
+                    loc = match[0].strip()
+                    if loc:
+                        urls.append({'url': loc})
+                print(f"Returning {len(urls)} total URLs from sitemap")
 
-            return urls[:1]  # Limit to 1 page for testing
+            return urls  # Return all matching URLs
         except Exception as e:
             print(f"Error parsing sitemap: {e}")
-            print("Using fallback URLs due to error")
-            return [
-                {'url': 'https://www.outrigger.com/'},
-                {'url': 'https://www.outrigger.com/hotels-resorts/hawaii'},
-                {'url': 'https://www.outrigger.com/hotels-resorts/fiji'},
-                {'url': 'https://www.outrigger.com/hotels-resorts/thailand'},
-                {'url': 'https://www.outrigger.com/hotels-resorts/mauritius'}
-            ]
+            import traceback
+            traceback.print_exc()
+            # Return empty list - let caller handle the error
+            return []
 
 
 class GEOScorer:
@@ -2290,6 +2285,18 @@ def hello_http(request):
                     'sitemapUrl': site_config.sitemap_url
                 })
                 urls = parser.get_urls(days=site_config.days_to_check)
+
+            # Check if we got any URLs
+            if not urls or len(urls) == 0:
+                update_audit_progress(site_id, {
+                    'status': 'error',
+                    'phase': 'error',
+                    'phaseLabel': f'No URLs found in sitemap: {site_config.sitemap_url}'
+                })
+                return jsonify({
+                    "status": "error",
+                    "error": f"No URLs found in sitemap: {site_config.sitemap_url}. Please check the sitemap URL in settings."
+                }), 400, headers
 
             # Update progress: got pages count
             total_pages = len(urls)
