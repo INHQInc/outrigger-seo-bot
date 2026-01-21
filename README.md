@@ -312,6 +312,47 @@ The system prevents duplicates by:
 
 ---
 
+## Rule System Architecture
+
+### Two Types of Checks
+
+The audit system uses two complementary approaches:
+
+| Type | Purpose | Speed | Cost | Example |
+|------|---------|-------|------|---------|
+| **Legacy (Code-based)** | Simple structural checks | Fast (ms) | Free | Is there a `<title>` tag? |
+| **LLM (AI-powered)** | Complex content analysis | Slower | API cost | Is the meta description accurate for THIS page? |
+
+### How Rules Work
+
+Rules can have:
+- `checkType`: Triggers legacy code-based checks (e.g., `title`, `meta`, `h1`)
+- `prompt`: Triggers LLM evaluation via Claude
+
+A rule with **both** `checkType` and `prompt` will run both checks:
+1. Legacy check: "Does the tag exist?"
+2. LLM check: "Is the content correct/relevant?"
+
+### System vs Custom Rules
+
+| Attribute | System Rules | Custom Rules |
+|-----------|--------------|--------------|
+| Created by | Seed defaults | Users |
+| `system: true` | ✅ Yes | ❌ No |
+| Can delete? | ❌ No (locked) | ✅ Yes |
+| Can disable? | ✅ Yes | ✅ Yes |
+| Can edit prompt? | ✅ Yes | ✅ Yes |
+
+### Creating New Rules
+
+Users can only create LLM-based rules (no legacy checkType). The workflow:
+1. Describe what you want to check in plain English
+2. Click "Generate AI Prompt" - Claude creates a structured audit prompt
+3. Review/edit the generated prompt
+4. Save the rule
+
+---
+
 ## LLM-Powered Auditing
 
 ### How It Works
@@ -542,6 +583,7 @@ curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app/
 | `GET /?test=true` | Creates a test Monday.com task |
 | `GET /?debug_site=SITE_ID` | Shows rules loaded for a specific site (useful for debugging multi-site issues) |
 | `POST /` | Runs full audit |
+| `POST /?generate_prompt=true` | Generate LLM audit prompt from plain English description |
 
 ### Checking Logs
 
@@ -886,10 +928,16 @@ For these operations, the user should run commands locally.
 
 ### Recent Changes (January 2026)
 
+- **System Rules Protection**: Seeded rules now have `system: true` flag and cannot be deleted (only disabled)
+- **AI-Powered Prompt Generation**: Users can describe rules in plain English and click "Generate AI Prompt" to create structured audit prompts using Claude
+- **Meta Content Relevance Check**: New SEO rule that catches copy-paste errors where meta tags describe the wrong property
+- **All Voice/Brand Rules Run**: Removed the [:1] limit so all enabled Voice and Brand rules are evaluated (not just the first one)
+- **LLM-First Rule Creation**: New rules are LLM-only by default; legacy checkType is preserved for system rules
 - **Site ID Display**: Settings tab now shows the Site ID and Site Name at the top
 - **Progress Panel Persistence**: Progress panel automatically reappears if you refresh while an audit is running
 - **Debug Site Endpoint**: Added `?debug_site=SITE_ID` endpoint to diagnose rule loading issues
 - **Site Deletion Fix**: Fixed issue where deleting sites with empty subcollections would fail
+- **Reset All Rules**: Button now properly deletes existing rules before seeding defaults
 - **3-Page Test Limit**: Temporarily limited audits to 3 pages for faster testing (remove `MAX_PAGES_FOR_TESTING` when ready for production)
 
 ---
