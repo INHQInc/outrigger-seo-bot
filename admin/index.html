@@ -3266,8 +3266,6 @@
                 document.getElementById('deleteStatus').textContent = msg;
             };
 
-            var siteRef = db.collection('sites').document(siteId);
-
             // Delete subcollections: auditLogs, auditProgress, config, seoRules, voiceRules, brandStandards
             var subcollections = ['auditLogs', 'auditProgress', 'config', 'seoRules', 'voiceRules', 'brandStandards'];
             var deletePromises = [];
@@ -3276,6 +3274,9 @@
                 var promise = db.collection('sites').doc(siteId).collection(subcollection).get()
                     .then(function(snapshot) {
                         updateStatus('Deleting ' + subcollection + ' (' + snapshot.size + ' documents)...');
+                        if (snapshot.empty) {
+                            return Promise.resolve(); // Nothing to delete
+                        }
                         var batch = db.batch();
                         snapshot.forEach(function(doc) {
                             batch.delete(doc.ref);
