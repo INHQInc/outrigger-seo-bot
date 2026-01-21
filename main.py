@@ -899,10 +899,14 @@ def fetch_with_scraper_api(url):
         }
         return requests.get(url, timeout=60, headers=headers)
 
-    # Use ScraperAPI
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true"
+    # Use ScraperAPI with additional options for better compatibility
+    # - render=true: JavaScript rendering
+    # - country_code=us: Use US-based proxy
+    import urllib.parse
+    encoded_url = urllib.parse.quote(url, safe='')
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={encoded_url}&render=true&country_code=us"
     print(f"Fetching via ScraperAPI: {url}")
-    return requests.get(api_url, timeout=60)
+    return requests.get(api_url, timeout=90)
 
 class SitemapParser:
     def __init__(self, sitemap_url=None):
