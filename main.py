@@ -902,9 +902,7 @@ def fetch_with_scraper_api(url):
     # Use ScraperAPI with additional options for better compatibility
     # - render=true: JavaScript rendering
     # - country_code=us: Use US-based proxy
-    import urllib.parse
-    encoded_url = urllib.parse.quote(url, safe='')
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={encoded_url}&render=true&country_code=us"
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us"
     print(f"Fetching via ScraperAPI: {url}")
     return requests.get(api_url, timeout=90)
 
