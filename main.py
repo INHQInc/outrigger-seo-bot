@@ -1265,16 +1265,43 @@ class SEOAuditor:
             print(f"Auditing {url} - Status: {resp.status_code}")
             print(f"  Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
 
+            # Check for HTTP errors
+            if resp.status_code >= 400:
+                error_msg = f"HTTP {resp.status_code} error"
+                if resp.status_code == 401:
+                    error_msg = "401 Unauthorized - site may be blocking scraper"
+                elif resp.status_code == 403:
+                    error_msg = "403 Forbidden - access denied"
+                elif resp.status_code == 404:
+                    error_msg = "404 Not Found - page does not exist"
+                elif resp.status_code == 500:
+                    error_msg = "500 Server Error"
+
+                print(f"  ERROR: {error_msg}")
+                issues.append({
+                    'type': 'http_error',
+                    'title': f'Page returned {error_msg}',
+                    'severity': 'Critical',
+                    'url': url,
+                    'description': f'The page at {url} returned an HTTP {resp.status_code} error. This may indicate the page is inaccessible or blocking automated access.'
+                })
+                return issues
+
             soup = BeautifulSoup(resp.text, 'html.parser')
 
             # Check if we got a real page (not Cloudflare challenge)
             title_tag = soup.find('title')
             if title_tag and 'Just a moment' in title_tag.text:
                 print(f"Warning: Got Cloudflare challenge page for {url}")
+                issues.append({
+                    'type': 'cloudflare_blocked',
+                    'title': 'Page blocked by Cloudflare',
+                    'severity': 'High',
+                    'url': url,
+                    'description': 'The page is protected by Cloudflare and cannot be audited automatically.'
+                })
                 return issues
 
-            # TESTING: Limit SEO checks to 1 issue
-            MAX_SEO_ISSUES = 1
             seo_issue_count = 0
 
             # ============ TIER 1: CRITICAL CHECKS ============
