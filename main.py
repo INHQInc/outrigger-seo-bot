@@ -1310,7 +1310,7 @@ class SEOAuditor:
             # Only run if enabled in config AND seo audit type is selected
 
             # Title tag (Critical) - checkType: 'title'
-            if run_seo and config.is_check_enabled('title') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('title'):
                 if not title_tag or not title_tag.text.strip():
                     issues.append({'type': 'missing_title', 'title': 'Missing page title', 'severity': 'Critical', 'url': url})
                     seo_issue_count += 1
@@ -1319,7 +1319,7 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # Meta description (Critical) - checkType: 'meta'
-            if run_seo and config.is_check_enabled('meta') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('meta'):
                 meta_desc = soup.find('meta', attrs={'name': 'description'})
                 if not meta_desc or not meta_desc.get('content', '').strip():
                     issues.append({'type': 'missing_meta', 'title': 'Missing meta description', 'severity': 'Critical', 'url': url})
@@ -1329,7 +1329,7 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # H1 tag (Critical) - checkType: 'h1'
-            if run_seo and config.is_check_enabled('h1') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('h1'):
                 h1_tags = soup.find_all('h1')
                 if not h1_tags:
                     issues.append({'type': 'missing_h1', 'title': 'Missing H1 tag', 'severity': 'Critical', 'url': url})
@@ -1339,24 +1339,18 @@ class SEOAuditor:
                     seo_issue_count += 1
 
             # Canonical tag (Critical) - checkType: 'canonical'
-            if run_seo and config.is_check_enabled('canonical') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('canonical'):
                 canonical = soup.find('link', attrs={'rel': 'canonical'})
                 if not canonical or not canonical.get('href'):
                     issues.append({'type': 'missing_canonical', 'title': 'Missing canonical tag', 'severity': 'Critical', 'url': url})
                     seo_issue_count += 1
 
-            # TESTING: Skip remaining SEO checks if we already have 1 issue
-            if seo_issue_count >= MAX_SEO_ISSUES:
-                print(f"Skipping remaining SEO checks - already have {seo_issue_count} issue(s)")
 
             # ============ SCHEMA/STRUCTURED DATA CHECKS ============
             # checkType: 'schema'
-            # Skip if we already have enough SEO issues or SEO not enabled
             schemas = []
             schema_types = set()
-            if seo_issue_count >= MAX_SEO_ISSUES:
-                pass  # Skip schema checks
-            if run_seo and config.is_check_enabled('schema') and seo_issue_count < MAX_SEO_ISSUES:
+            if run_seo and config.is_check_enabled('schema'):
                 # Find all JSON-LD scripts
                 schema_scripts = soup.find_all('script', attrs={'type': 'application/ld+json'})
                 for script in schema_scripts:
@@ -2356,6 +2350,11 @@ def hello_http(request):
             # Collect all issues for storing in Firestore
             all_issues_list = []
             recent_issues = []  # Track last 10 issues for progress panel
+
+            # TESTING: Limit to 3 pages for faster testing
+            MAX_PAGES_FOR_TESTING = 3
+            urls = urls[:MAX_PAGES_FOR_TESTING]
+            total_pages = len(urls)
 
             for page_index, u in enumerate(urls):
                 page_url = u['url']
