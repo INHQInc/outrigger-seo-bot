@@ -540,6 +540,7 @@ curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app/
 | `GET /` | Health check, shows service status |
 | `GET /?config=true` | Shows loaded Firestore rules |
 | `GET /?test=true` | Creates a test Monday.com task |
+| `GET /?debug_site=SITE_ID` | Shows rules loaded for a specific site (useful for debugging multi-site issues) |
 | `POST /` | Runs full audit |
 
 ### Checking Logs
@@ -728,6 +729,18 @@ The system supports managing multiple websites from a single deployment. Each si
 2. All tabs (Rules, Voice, Brand, Logs) show data for the selected site
 3. **Add a new site** by clicking "+ Add Site" button
 4. **Run audit** for the current site using the "Run" button
+5. **View Site ID** in Settings tab - displays the internal site ID for debugging
+6. **Delete a site** via the Settings tab (permanently removes all site data)
+
+### Progress Panel
+
+When an audit runs, a real-time progress panel shows:
+- Current page being processed
+- Issues found (SEO, Voice, Brand counts)
+- Tasks created vs duplicates skipped
+- Recent issues list
+
+The progress panel **persists across page refreshes** - if you refresh while an audit is running, the panel automatically reappears and continues showing progress.
 
 ### Backend API
 
@@ -868,6 +881,16 @@ The mounted directory may have permission restrictions that prevent Claude from:
 - Modifying `.git/` internal files directly
 
 For these operations, the user should run commands locally.
+
+---
+
+### Recent Changes (January 2026)
+
+- **Site ID Display**: Settings tab now shows the Site ID and Site Name at the top
+- **Progress Panel Persistence**: Progress panel automatically reappears if you refresh while an audit is running
+- **Debug Site Endpoint**: Added `?debug_site=SITE_ID` endpoint to diagnose rule loading issues
+- **Site Deletion Fix**: Fixed issue where deleting sites with empty subcollections would fail
+- **3-Page Test Limit**: Temporarily limited audits to 3 pages for faster testing (remove `MAX_PAGES_FOR_TESTING` when ready for production)
 
 ---
 
