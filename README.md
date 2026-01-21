@@ -874,33 +874,27 @@ Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 | Cloud Build Triggers | https://console.cloud.google.com/cloud-build/triggers?project=project-85d26db5-f70f-487e-b0e |
 | Cloud Run Console | https://console.cloud.google.com/run?project=project-85d26db5-f70f-487e-b0e |
 
-### Git Authentication for Claude
+### Git Setup (HTTPS - Recommended)
 
-To enable Claude to push directly to GitHub, an SSH key must be set up each session:
+The repository uses HTTPS for simplicity - no SSH keys required:
 
-1. **Generate SSH key** (Claude runs this):
-   ```bash
-   ssh-keygen -t ed25519 -C "claude@anthropic.com" -f ~/.ssh/id_ed25519 -N ""
-   ```
+```bash
+# Verify remote is set to HTTPS
+git remote -v
+# Should show: https://github.com/INHQInc/outrigger-seo-bot.git
 
-2. **Add to GitHub**: The public key must be added to GitHub SSH keys:
-   - Go to: https://github.com/settings/keys
-   - Click "New SSH key"
-   - Title: `Claude AI Session`
-   - Paste the public key from `~/.ssh/id_ed25519.pub`
+# If it shows git@github.com (SSH), switch to HTTPS:
+git remote set-url origin https://github.com/INHQInc/outrigger-seo-bot.git
+```
 
-3. **Configure git remote** (Claude runs this):
-   ```bash
-   cd /path/to/outrigger-seo-bot
-   git remote set-url origin git@github.com:INHQInc/outrigger-seo-bot.git
-   ```
+With HTTPS, `git push` works directly with GitHub credentials cached on your Mac (via macOS Keychain or Git Credential Manager).
 
-4. **Test connection**:
-   ```bash
-   ssh -T git@github.com
-   ```
-
-**Note**: SSH keys are session-specific. Each new Claude session requires a new key to be generated and added to GitHub. Old session keys can be removed from GitHub settings.
+**Troubleshooting Push Issues:**
+- If you see `Permission denied (publickey)` - the remote is set to SSH. Run:
+  ```bash
+  git remote set-url origin https://github.com/INHQInc/outrigger-seo-bot.git
+  ```
+- If prompted for credentials, use your GitHub username and a Personal Access Token (not password)
 
 ### Starting a New Claude Session
 
