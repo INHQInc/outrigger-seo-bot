@@ -46,6 +46,25 @@ Example: "Experience paradise at our oceanfront Waikiki resort. Stunning views, 
         'tier': 1
     },
     {
+        'name': 'Meta Content Relevance Check',
+        'checkType': 'meta_relevance',
+        'description': 'Checks that meta title, description, and OG tags accurately describe THIS page content. Catches copy-paste errors where meta refers to wrong property.',
+        'prompt': '''Check if the meta tags accurately describe THIS specific page. The rule FAILS if:
+1. The meta description mentions a DIFFERENT property/resort than the page is about, OR
+2. The og:description mentions a different location than the page URL indicates, OR
+3. The title tag references a different property than the page content, OR
+4. Meta content appears to be copy-pasted from another page (wrong property name, wrong location)
+
+IMPORTANT: Compare the URL path and H1/main content against the meta tags.
+Example FAIL: Page URL is "/kona-resort-spa" but meta description says "Waikiki Beach" or "Infinity Spa Waikiki"
+Example FAIL: Page is about "Outrigger Kona Resort" but og:description mentions "Outrigger Reef Waikiki"
+
+This catches copy-paste errors where someone duplicated a page but forgot to update the meta tags.''',
+        'enabled': True,
+        'severity': 'Critical',
+        'tier': 1
+    },
+    {
         'name': 'H1 Tag Check',
         'checkType': 'h1',
         'description': 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1 describing the main topic.',

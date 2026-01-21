@@ -2723,6 +2723,15 @@
                     tier: 1
                 },
                 {
+                    name: 'Meta Content Relevance Check',
+                    checkType: 'meta_relevance',
+                    description: 'Checks that meta title, description, and OG tags accurately describe THIS page content. Catches copy-paste errors.',
+                    prompt: 'Check if the meta tags accurately describe THIS specific page. The rule FAILS if:\n1. The meta description mentions a DIFFERENT property/resort than the page is about, OR\n2. The og:description mentions a different location than the page URL indicates, OR\n3. The title tag references a different property than the page content, OR\n4. Meta content appears to be copy-pasted from another page (wrong property name, wrong location)\n\nIMPORTANT: Compare the URL path and H1/main content against the meta tags.\nExample FAIL: Page URL is "/kona-resort-spa" but meta description says "Waikiki Beach"\nThis catches copy-paste errors where someone duplicated a page but forgot to update the meta tags.',
+                    enabled: true,
+                    severity: 'Critical',
+                    tier: 1
+                },
+                {
                     name: 'H1 Tag Check',
                     checkType: 'h1',
                     description: 'Checks for missing H1 tags or multiple H1s. Each page should have exactly one H1.',
