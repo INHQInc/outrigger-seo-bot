@@ -1824,6 +1824,20 @@ class MondayClient:
             column_values[severity_col] = {"label": severity_value}
             print(f"Setting Severity column to: {severity_value}")
 
+        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards)
+        issue_type_col = self._get_column_id('issue_type')
+        if issue_type_col:
+            # Map category to Monday.com label values
+            category = issue.get('category', 'seo')
+            issue_type_map = {
+                'seo': 'SEO/GEO',
+                'voice': 'Tone/Voice',
+                'brand': 'Brand Standards'
+            }
+            issue_type_value = issue_type_map.get(category, 'SEO/GEO')
+            column_values[issue_type_col] = {"label": issue_type_value}
+            print(f"Setting Issue Type column to: {issue_type_value}")
+
         print(f"Creating task with columns: {list(column_values.keys())}")
 
         query = '''mutation ($board_id: ID!, $item_name: String!, $column_values: JSON!) {
@@ -2496,6 +2510,9 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                         issue_category = 'brand'
                     else:
                         results['seo_issues'] += 1
+
+                    # Add category to issue for Monday.com Issue Type column
+                    issue['category'] = issue_category
 
                     result = monday.create_task(issue)
                     task_status = 'created'
