@@ -926,10 +926,16 @@ class SitemapParser:
         self.sitemap_url = sitemap_url or DEFAULT_SITEMAP_URL
 
     def get_urls(self, days=7):
+        """
+        Get URLs from sitemap.
+
+        Args:
+            days: Number of days to look back for modified pages.
+                  If None, returns ALL URLs without date filtering.
+        """
         try:
             resp = fetch_with_scraper_api(self.sitemap_url)
             print(f"Response status: {resp.status_code}")
-            cutoff = datetime.now() - timedelta(days=days)
             urls = []
 
             content = resp.text
@@ -951,6 +957,17 @@ class SitemapParser:
 
             print(f"Found {len(matches)} URL entries with loc tags")
 
+            # If days is None, return ALL URLs without date filtering
+            if days is None:
+                for match in matches:
+                    loc = match[0].strip()
+                    if loc:
+                        urls.append({'url': loc})
+                print(f"Returning all {len(urls)} URLs from sitemap (no date filter)")
+                return urls
+
+            # Apply date filter
+            cutoff = datetime.now() - timedelta(days=days)
             for match in matches:
                 loc = match[0].strip()
                 lastmod = match[1].strip() if match[1] else None
@@ -2419,13 +2436,16 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             run_voice = audit_types.get('voice', True)
             run_brand = audit_types.get('brand', True)
 
-            # Check for single URL audit
+            # Check for single URL audit and subfolder option
             single_url = request_json.get('single_url', None)
+            include_subfolders = request_json.get('include_subfolders', False)
 
             print(f"=== Starting audit for site: {site_id} ===")
             print(f"Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
             if single_url:
                 print(f"Single URL mode: {single_url}")
+                if include_subfolders:
+                    print(f"Include subfolders: enabled")
 
             # Initialize progress tracking
             update_audit_progress(site_id, {
@@ -2479,8 +2499,44 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             if not SCRAPER_API_KEY:
                 print("WARNING: SCRAPER_API_KEY not configured - may be blocked by Cloudflare")
 
-            # Get URLs to audit - either single URL or from sitemap
-            if single_url:
+            # Get URLs to audit - either single URL, subfolder scan, or from sitemap
+            if single_url and include_subfolders:
+                # Subfolder mode - find all URLs from sitemap that start with the given path
+                update_audit_progress(site_id, {
+                    'phase': 'scanning_subfolders',
+                    'phaseLabel': f'Scanning sitemap for pages under {single_url}...',
+                    'sitemapUrl': site_config.sitemap_url
+                })
+
+                # Get all URLs from sitemap (no date filter for subfolder scan)
+                all_sitemap_urls = parser.get_urls(days=None)  # No date filter
+                print(f"Found {len(all_sitemap_urls)} total URLs in sitemap")
+
+                # Extract the path from single_url to match against
+                from urllib.parse import urlparse
+                parsed_url = urlparse(single_url)
+                base_path = parsed_url.path.rstrip('/')  # Remove trailing slash
+
+                # Filter URLs that start with the base path
+                urls = []
+                for u in all_sitemap_urls:
+                    url_parsed = urlparse(u['url'])
+                    # Check if the URL path starts with our base path
+                    if url_parsed.path.startswith(base_path + '/') or url_parsed.path == base_path:
+                        urls.append(u)
+
+                print(f"Subfolder scan - found {len(urls)} pages under {base_path}")
+                update_audit_progress(site_id, {
+                    'phase': 'subfolder_scan',
+                    'phaseLabel': f'Found {len(urls)} pages under {base_path}',
+                })
+
+                if not urls:
+                    # If no subfolder matches, try to audit just the single URL
+                    print(f"No subpages found, falling back to single URL: {single_url}")
+                    urls = [{'url': single_url}]
+
+            elif single_url:
                 # Single URL mode - just audit the one URL provided
                 update_audit_progress(site_id, {
                     'phase': 'single_url_mode',

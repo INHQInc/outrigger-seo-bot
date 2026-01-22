@@ -986,9 +986,23 @@
 
                 <!-- Single URL Input (hidden by default) -->
                 <div id="singleUrlInput" class="hidden mb-4">
-                    <label class="block text-sm font-medium text-secondary mb-2">Page URL to Audit</label>
-                    <input type="url" id="auditSingleUrl" class="w-full input-dark border rounded-lg px-4 py-3" placeholder="https://example.com/page-to-audit">
-                    <p class="text-xs text-secondary mt-1">Enter the full URL of the page you want to audit</p>
+                    <label class="block text-sm font-medium text-secondary mb-2">Page URL or Folder Path</label>
+                    <input type="url" id="auditSingleUrl" class="w-full input-dark border rounded-lg px-4 py-3" placeholder="https://example.com/folder/page-to-audit">
+                    <p class="text-xs text-secondary mt-1">Enter a single page URL or a folder path to scan</p>
+
+                    <!-- Include Subfolders Checkbox -->
+                    <label class="flex items-center gap-3 mt-3 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition">
+                        <input type="checkbox" id="includeSubfolders" class="w-5 h-5 rounded bg-dark border-card accent-cyan-500">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                </svg>
+                                <span class="text-primary font-medium">Include Subfolders</span>
+                            </div>
+                            <p class="text-secondary text-xs mt-1">Scan all pages under this path from the sitemap</p>
+                        </div>
+                    </label>
                 </div>
 
                 <!-- Sitemap Info (shown by default) -->
@@ -1509,8 +1523,10 @@
 
             // Get single URL if in URL mode
             var singleUrl = null;
+            var includeSubfolders = false;
             if (currentAuditSource === 'url') {
                 singleUrl = document.getElementById('auditSingleUrl').value.trim();
+                includeSubfolders = document.getElementById('includeSubfolders').checked;
                 if (!singleUrl) {
                     showToast('Please enter a URL to audit', 'warning');
                     return;
@@ -1526,11 +1542,11 @@
             closeRunAuditModal();
 
             // Run the audit with options
-            runAuditNow(auditTypes, singleUrl);
+            runAuditNow(auditTypes, singleUrl, includeSubfolders);
         }
 
         // Run audit now
-        function runAuditNow(auditTypes, singleUrl) {
+        function runAuditNow(auditTypes, singleUrl, includeSubfolders) {
             if (!currentSiteId) {
                 showToast('Please select a site first', 'warning');
                 return;
@@ -1538,6 +1554,7 @@
 
             // Default to all if not specified
             auditTypes = auditTypes || { seo: true, voice: true, brand: true };
+            includeSubfolders = includeSubfolders || false;
 
             var btn = document.getElementById('runAuditBtn');
             var originalContent = btn.innerHTML;
@@ -1560,6 +1577,7 @@
             // Add single URL if provided
             if (singleUrl) {
                 requestBody.single_url = singleUrl;
+                requestBody.include_subfolders = includeSubfolders;
             }
 
             // Make POST request to trigger audit for current site with audit type options
