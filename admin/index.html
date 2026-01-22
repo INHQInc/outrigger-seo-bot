@@ -1080,92 +1080,76 @@
                 <p class="text-secondary text-sm mb-3">Select audit types:</p>
 
                 <div class="space-y-3 mb-6">
-                    <!-- SEO/GEO Checkbox -->
-                    <label class="flex items-center gap-3 p-3 rounded-lg bg-dark border border-card hover:border-purple-500/50 cursor-pointer transition">
-                        <input type="checkbox" id="auditSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                                <span class="text-primary font-medium">SEO/GEO Rules</span>
+                    <!-- SEO/GEO Checkbox with expandable rules -->
+                    <div class="rounded-lg bg-dark border border-card hover:border-purple-500/50 transition">
+                        <div class="flex items-center gap-3 p-3">
+                            <input type="checkbox" id="auditSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500" onclick="event.stopPropagation()">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                                    <span class="text-primary font-medium">SEO/GEO Rules</span>
+                                    <span id="seoRulesCount" class="text-xs text-purple-400"></span>
+                                </div>
+                                <p class="text-secondary text-xs mt-1">Title tags, meta descriptions, schema markup, etc.</p>
                             </div>
-                            <p class="text-secondary text-xs mt-1">Title tags, meta descriptions, schema markup, etc.</p>
+                            <button type="button" onclick="toggleAuditTypeRules('seo')" class="p-1 hover:bg-card rounded transition">
+                                <svg id="seoRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
                         </div>
-                    </label>
-
-                    <!-- Voice & Tone Checkbox -->
-                    <label class="flex items-center gap-3 p-3 rounded-lg bg-dark border border-card hover:border-green-500/50 cursor-pointer transition">
-                        <input type="checkbox" id="auditVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                <span class="text-primary font-medium">Voice & Tone</span>
-                            </div>
-                            <p class="text-secondary text-xs mt-1">Warm hospitality tone, Hawaiian voice, sensory language</p>
-                        </div>
-                    </label>
-
-                    <!-- Brand Standards Checkbox -->
-                    <label class="flex items-center gap-3 p-3 rounded-lg bg-dark border border-card hover:border-orange-500/50 cursor-pointer transition">
-                        <input type="checkbox" id="auditBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500">
-                        <div class="flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-                                <span class="text-primary font-medium">Brand Standards</span>
-                            </div>
-                            <p class="text-secondary text-xs mt-1">Brand name usage, property names, image standards</p>
-                        </div>
-                    </label>
-                </div>
-
-                <!-- Specific Rules Selection -->
-                <div class="mb-6">
-                    <button type="button" onclick="toggleRuleSelection()" class="flex items-center gap-2 text-sm text-secondary hover:text-cyan-400 transition">
-                        <svg id="ruleSelectionArrow" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                        <span>Select specific rules (optional)</span>
-                        <span id="selectedRulesCount" class="hidden px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full"></span>
-                    </button>
-
-                    <div id="ruleSelectionPanel" class="hidden mt-3 p-3 bg-dark rounded-lg border border-card max-h-64 overflow-y-auto">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="text-xs text-secondary">Select rules to run (leave empty to run all enabled rules)</span>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="selectAllRulesInModal()" class="text-xs text-cyan-400 hover:text-cyan-300">Select All</button>
-                                <span class="text-secondary">|</span>
-                                <button type="button" onclick="clearAllRulesInModal()" class="text-xs text-cyan-400 hover:text-cyan-300">Clear All</button>
-                            </div>
-                        </div>
-
-                        <!-- SEO Rules -->
-                        <div id="modalSeoRules" class="mb-3">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                                <span class="text-xs font-medium text-purple-400">SEO/GEO Rules</span>
-                            </div>
-                            <div id="modalSeoRulesList" class="space-y-1 pl-4">
+                        <div id="seoRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                            <div id="modalSeoRulesList" class="space-y-1">
                                 <span class="text-xs text-secondary">Loading...</span>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Voice Rules -->
-                        <div id="modalVoiceRules" class="mb-3">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                                <span class="text-xs font-medium text-green-400">Voice & Tone Rules</span>
+                    <!-- Voice & Tone Checkbox with expandable rules -->
+                    <div class="rounded-lg bg-dark border border-card hover:border-green-500/50 transition">
+                        <div class="flex items-center gap-3 p-3">
+                            <input type="checkbox" id="auditVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500" onclick="event.stopPropagation()">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                    <span class="text-primary font-medium">Voice & Tone</span>
+                                    <span id="voiceRulesCount" class="text-xs text-green-400"></span>
+                                </div>
+                                <p class="text-secondary text-xs mt-1">Warm hospitality tone, Hawaiian voice, sensory language</p>
                             </div>
-                            <div id="modalVoiceRulesList" class="space-y-1 pl-4">
+                            <button type="button" onclick="toggleAuditTypeRules('voice')" class="p-1 hover:bg-card rounded transition">
+                                <svg id="voiceRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="voiceRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                            <div id="modalVoiceRulesList" class="space-y-1">
                                 <span class="text-xs text-secondary">Loading...</span>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- Brand Rules -->
-                        <div id="modalBrandRules" class="mb-3">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                                <span class="text-xs font-medium text-orange-400">Brand Standards</span>
+                    <!-- Brand Standards Checkbox with expandable rules -->
+                    <div class="rounded-lg bg-dark border border-card hover:border-orange-500/50 transition">
+                        <div class="flex items-center gap-3 p-3">
+                            <input type="checkbox" id="auditBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500" onclick="event.stopPropagation()">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                                    <span class="text-primary font-medium">Brand Standards</span>
+                                    <span id="brandRulesCount" class="text-xs text-orange-400"></span>
+                                </div>
+                                <p class="text-secondary text-xs mt-1">Brand name usage, property names, image standards</p>
                             </div>
-                            <div id="modalBrandRulesList" class="space-y-1 pl-4">
+                            <button type="button" onclick="toggleAuditTypeRules('brand')" class="p-1 hover:bg-card rounded transition">
+                                <svg id="brandRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="brandRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                            <div id="modalBrandRulesList" class="space-y-1">
                                 <span class="text-xs text-secondary">Loading...</span>
                             </div>
                         </div>
@@ -1589,15 +1573,19 @@
             setAuditSource('sitemap');
             document.getElementById('auditSingleUrl').value = '';
 
-            // Reset rule selection panel
-            document.getElementById('ruleSelectionPanel').classList.add('hidden');
-            document.getElementById('ruleSelectionArrow').classList.remove('rotate-90');
-            document.getElementById('selectedRulesCount').classList.add('hidden');
-
             // Reset audit type checkboxes to checked
             document.getElementById('auditSeo').checked = true;
             document.getElementById('auditVoice').checked = true;
             document.getElementById('auditBrand').checked = true;
+
+            // Collapse all rule panels
+            ['seo', 'voice', 'brand'].forEach(function(type) {
+                document.getElementById(type + 'RulesPanel').classList.add('hidden');
+                document.getElementById(type + 'RulesArrow').classList.remove('rotate-180');
+            });
+
+            // Load rules for all audit types
+            loadRulesForModal();
 
             var modal = document.getElementById('runAuditModal');
             modal.classList.remove('hidden');
@@ -1620,17 +1608,17 @@
         };
 
         // Toggle rule selection panel in Run Audit modal
-        function toggleRuleSelection() {
-            var panel = document.getElementById('ruleSelectionPanel');
-            var arrow = document.getElementById('ruleSelectionArrow');
+        // Toggle individual audit type rule panels
+        function toggleAuditTypeRules(type) {
+            var panel = document.getElementById(type + 'RulesPanel');
+            var arrow = document.getElementById(type + 'RulesArrow');
 
             if (panel.classList.contains('hidden')) {
                 panel.classList.remove('hidden');
-                arrow.classList.add('rotate-90');
-                loadRulesForModal();
+                arrow.classList.add('rotate-180');
             } else {
                 panel.classList.add('hidden');
-                arrow.classList.remove('rotate-90');
+                arrow.classList.remove('rotate-180');
             }
         }
 
@@ -1650,7 +1638,7 @@
         }
 
         // Helper to load and render rules for a collection
-        function loadRulesForCollection(collectionName, containerId, checkboxClass, accentColor, ruleType, cacheKey) {
+        function loadRulesForCollection(collectionName, containerId, checkboxClass, accentColor, ruleType, cacheKey, countBadgeId) {
             getSiteCollection(collectionName).get()
                 .then(function(snapshot) {
                     var container = document.getElementById(containerId);
@@ -1668,6 +1656,14 @@
                         cachedRules[cacheKey] = rules;
                     }
 
+                    // Update count badge if provided
+                    if (countBadgeId) {
+                        var countBadge = document.getElementById(countBadgeId);
+                        if (countBadge) {
+                            countBadge.textContent = '(' + rules.length + ' rules)';
+                        }
+                    }
+
                     if (rules.length === 0) {
                         container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
                         return;
@@ -1675,7 +1671,7 @@
                     var html = '';
                     rules.forEach(function(rule) {
                         html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="' + checkboxClass + ' w-3 h-3 accent-' + accentColor + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + ruleType + '" onchange="update' + (checkboxClass === 'modal-rule-checkbox' ? 'SelectedRulesCount' : 'ScheduleSelectedRulesCount') + '()">' +
+                            '<input type="checkbox" class="' + checkboxClass + ' w-3 h-3 accent-' + accentColor + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + ruleType + '" onchange="updateSelectedRulesCount()">' +
                             '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
                             '</label>';
                     });
@@ -1692,18 +1688,18 @@
         function loadRulesForModal() {
             if (!currentSiteId) return;
 
-            loadRulesForCollection('seoRules', 'modalSeoRulesList', 'modal-rule-checkbox', 'purple', 'seo', 'seo');
-            loadRulesForCollection('voiceRules', 'modalVoiceRulesList', 'modal-rule-checkbox', 'green', 'voice', 'voice');
-            loadRulesForCollection('brandStandards', 'modalBrandRulesList', 'modal-rule-checkbox', 'orange', 'brand', 'brand');
+            loadRulesForCollection('seoRules', 'modalSeoRulesList', 'modal-rule-checkbox', 'purple', 'seo', 'seo', 'seoRulesCount');
+            loadRulesForCollection('voiceRules', 'modalVoiceRulesList', 'modal-rule-checkbox', 'green', 'voice', 'voice', 'voiceRulesCount');
+            loadRulesForCollection('brandStandards', 'modalBrandRulesList', 'modal-rule-checkbox', 'orange', 'brand', 'brand', 'brandRulesCount');
         }
 
         // Load rules into the scheduler checkboxes
         function loadRulesForScheduler() {
             if (!currentSiteId) return;
 
-            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null);
-            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null);
-            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null);
+            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null, null);
+            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null, null);
+            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null, null);
         }
 
         // Get selected rule IDs from modal
@@ -1742,14 +1738,8 @@
 
         // Update selected rules count badge in modal
         function updateSelectedRulesCount() {
-            var count = document.querySelectorAll('.modal-rule-checkbox:checked').length;
-            var badge = document.getElementById('selectedRulesCount');
-            if (count > 0) {
-                badge.textContent = count + ' selected';
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
+            // No longer needed for global badge, but kept for compatibility
+            // Individual rule counts are shown per audit type
         }
 
         // Update selected rules count badge in scheduler
