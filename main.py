@@ -289,6 +289,13 @@ IMPORTANT: Return ONLY the JSON array, no other text. Example:
 
             results = json.loads(response_text)
 
+            # Log all results for debugging
+            for result in results:
+                rule_idx = result.get('rule_index', 1) - 1
+                if 0 <= rule_idx < len(rules):
+                    rule = rules[rule_idx]
+                    print(f"LLMAuditor: Rule '{rule.get('name')}' - status: {result.get('status')}, resultType: {rule.get('resultType', 'fail')}")
+
             # Convert results to issues list
             issues = []
             for result in results:
