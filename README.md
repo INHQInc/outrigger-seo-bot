@@ -186,24 +186,30 @@ The compute service account needs:
 }
 ```
 
-#### `voiceRules` Collection
+#### `voiceRules` Collection (Brand Rules)
 
 ```javascript
 {
   name: "Warm & Welcoming",
   category: "tone",                  // tone/language/audience/messaging
   description: "Content should...",
+  prompt: "Check if the content...", // LLM prompt for AI-powered checking
+  severity: "Medium",                // Critical/High/Medium/Low
+  resultType: "fail",                // "fail" (standard) or "log" (informational)
   enabled: true
 }
 ```
 
-#### `brandStandards` Collection
+#### `brandStandards` Collection (Specialty Rules)
 
 ```javascript
 {
   name: "Brand Name Usage",
   standardType: "terminology",       // terminology/visual/compliance/accessibility
   description: "Always use...",
+  prompt: "Check if the content...", // LLM prompt for AI-powered checking
+  severity: "Medium",                // Critical/High/Medium/Low
+  resultType: "fail",                // "fail" (standard) or "log" (informational)
   enabled: true
 }
 ```
@@ -379,7 +385,7 @@ class LLMAuditor:
 
 - **Model**: `claude-sonnet-4-20250514`
 - **Max Tokens**: 4000
-- **HTML Truncation**: 50,000 characters
+- **HTML Truncation**: 100,000 characters
 
 ### Prompt Structure
 
@@ -528,13 +534,20 @@ curl -X POST https://outrigger-seo-audit-22338575803.us-central1.run.app/
 4. Add role: "Secret Manager Secret Accessor"
 5. Save
 
-### 3. Cloudflare Blocking Requests
+### 3. Cloudflare/403 Blocking Requests
 
-**Symptom**: Pages return "Just a moment" challenge page
+**Symptom**: Pages return "Just a moment" challenge page or 403 Forbidden errors. Logs show `HTML may contain error page indicators: ['403']`
 
-**Cause**: Outrigger.com has Cloudflare protection
+**Cause**: Outrigger.com has Cloudflare protection and bot detection
 
-**Solution**: Ensure `SCRAPER_API_KEY` is configured. ScraperAPI handles Cloudflare bypass.
+**Solution**:
+1. Ensure `SCRAPER_API_KEY` is configured
+2. The system uses ScraperAPI with premium residential proxies and desktop browser emulation:
+   - `render=true` - JavaScript rendering
+   - `premium=true` - Residential proxies for better success rate
+   - `device_type=desktop` - Desktop browser emulation
+   - `keep_headers=true` - Preserve headers for compatibility
+   - `wait=10000` - 10 second wait for JavaScript content (carousels, lazy loading)
 
 ### 4. Severity Labels Not Working
 
@@ -940,6 +953,19 @@ For these operations, the user should run commands locally.
 - **Sitemap Caching**: Sitemaps cached for 24 hours for faster manual audits. "Refresh sitemap" checkbox to force fresh fetch.
 - **Detailed Progress Phases**: Progress panel shows contextual status (Scraping, Running legacy checks, Running AI analysis, Creating tasks)
 - **3-Page Test Limit**: Temporarily limited audits to 3 pages for faster testing (remove `MAX_PAGES_FOR_TESTING` when ready for production)
+- **Category Renaming**: "Voice & Tone" renamed to "Brand Rules", "Brand Standards" renamed to "Specialty Rules"
+- **Result Type Field**: Rules now support a "Result Type" option:
+  - **Fail on Issue** (default): Standard pass/fail behavior - creates issues in Monday.com when problems are found
+  - **Log Findings** (informational): Always logs when items are found without failing. Useful for tracking items that need attention but aren't "issues" (e.g., finding all links to a specific domain). Logged items appear in Monday.com with `[LOG]` prefix and Low severity.
+- **Audit Types Unchecked by Default**: When opening the Run Audit modal, all audit types start unchecked - user must select which to run
+- **Progress Panel Labels**: Simplified labels (SEO, Brand, Specialty instead of "SEO Issues", etc.)
+- **Enhanced ScraperAPI Configuration**:
+  - Increased HTML truncation limit from 50k to 100k characters for better carousel/lazy content capture
+  - Increased wait time to 10 seconds for JavaScript-rendered content
+  - Added `premium=true` for residential proxies
+  - Added `device_type=desktop` and `keep_headers=true` to bypass 403 blocks
+- **Scheduler UI Update**: Scheduler now matches Run Audit modal layout with expandable audit type boxes and auto check/uncheck behavior
+- **Run Button Moved**: "Last run" timestamp, "Run" button, Settings gear, and connection indicator moved to Site Selector row (same row as site dropdown)
 
 ---
 
