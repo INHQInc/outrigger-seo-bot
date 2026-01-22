@@ -2079,15 +2079,15 @@ class MondayClient:
             column_values[severity_col] = {"label": severity_value}
             print(f"Setting Severity column to: {severity_value}")
 
-        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards)
+        # Issue Type (status column with labels: SEO/GEO, Brand, Specialty)
         issue_type_col = self._get_column_id('issue_type')
         if issue_type_col:
             # Map category to Monday.com label
             category = issue.get('category', 'seo')
             issue_type_map = {
                 'seo': 'SEO/GEO',
-                'voice': 'Tone/Voice',
-                'brand': 'Brand Standards'
+                'voice': 'Brand',
+                'brand': 'Specialty'
             }
             issue_type_value = issue_type_map.get(category, 'SEO/GEO')
             column_values[issue_type_col] = {"label": issue_type_value}

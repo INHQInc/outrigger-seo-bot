@@ -947,7 +947,7 @@ For these operations, the user should run commands locally.
 - **Reset All Rules**: Now shows modal with checkboxes to select which rule types to reset (SEO, Voice, Brand)
 - **Selective Reseed**: Users can choose to reset only specific rule categories instead of all rules
 - **Modal Close Button**: Added X button to rule modals for easier closing
-- **Issue Type in Monday.com**: Tasks now populate the Issue Type field (SEO/GEO, Tone/Voice, Brand Standards)
+- **Issue Type in Monday.com**: Tasks now populate the Issue Type field (SEO/GEO, Brand, Specialty)
 - **Improved Duplicate Detection**: Uses rule name + URL for duplicate detection, plus fuzzy matching (75% similarity) to catch LLM-generated title variations
 - **Subfolder Scanning**: Enter a folder URL and check "Include Subfolders" to scan all pages under that path from sitemap
 - **Sitemap Caching**: Sitemaps cached for 24 hours for faster manual audits. "Refresh sitemap" checkbox to force fresh fetch.
@@ -956,7 +956,7 @@ For these operations, the user should run commands locally.
 - **Category Renaming**: "Voice & Tone" renamed to "Brand Rules", "Brand Standards" renamed to "Specialty Rules"
 - **Result Type Field**: Rules now support a "Result Type" option:
   - **Fail on Issue** (default): Standard pass/fail behavior - creates issues in Monday.com when problems are found
-  - **Log Findings** (informational): Always logs when items are found without failing. Useful for tracking items that need attention but aren't "issues" (e.g., finding all links to a specific domain). Logged items appear in Monday.com with `[LOG]` prefix and Low severity.
+  - **Log Findings** (informational): Always logs when items are found without failing. Useful for tracking items that need attention but aren't "issues" (e.g., finding all links to a specific domain). Logged items appear in Monday.com with Severity set to "Log".
 - **Audit Types Unchecked by Default**: When opening the Run Audit modal, all audit types start unchecked - user must select which to run
 - **Progress Panel Labels**: Simplified labels (SEO, Brand, Specialty instead of "SEO Issues", etc.)
 - **Enhanced ScraperAPI Configuration**:
