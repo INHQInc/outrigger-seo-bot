@@ -1089,7 +1089,7 @@
                     <!-- SEO/GEO Checkbox with expandable rules -->
                     <div class="rounded-lg bg-dark border border-card hover:border-purple-500/50 transition">
                         <div class="flex items-center gap-3 p-3">
-                            <input type="checkbox" id="auditSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="auditSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForType('seo', this.checked)">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="w-3 h-3 rounded-full bg-purple-500"></span>
@@ -1114,7 +1114,7 @@
                     <!-- Voice & Tone Checkbox with expandable rules -->
                     <div class="rounded-lg bg-dark border border-card hover:border-green-500/50 transition">
                         <div class="flex items-center gap-3 p-3">
-                            <input type="checkbox" id="auditVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="auditVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForType('voice', this.checked)">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="w-3 h-3 rounded-full bg-green-500"></span>
@@ -1139,7 +1139,7 @@
                     <!-- Brand Standards Checkbox with expandable rules -->
                     <div class="rounded-lg bg-dark border border-card hover:border-orange-500/50 transition">
                         <div class="flex items-center gap-3 p-3">
-                            <input type="checkbox" id="auditBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500" onclick="event.stopPropagation()">
+                            <input type="checkbox" id="auditBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForType('brand', this.checked)">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="w-3 h-3 rounded-full bg-orange-500"></span>
@@ -1683,6 +1683,20 @@
             }
         }
 
+        // Toggle all rules for a given audit type when parent checkbox changes
+        function toggleAllRulesForType(type, checked) {
+            var containerId = type === 'seo' ? 'modalSeoRulesList' :
+                              type === 'voice' ? 'modalVoiceRulesList' : 'modalBrandRulesList';
+            var container = document.getElementById(containerId);
+            if (container) {
+                var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = checked;
+                });
+                updateSelectedRulesCount();
+            }
+        }
+
         // Helper to load and render rules for a collection
         function loadRulesForCollection(collectionName, containerId, checkboxClass, accentColor, ruleType, cacheKey, countBadgeId) {
             getSiteCollection(collectionName).get()
@@ -1717,7 +1731,7 @@
                     var html = '';
                     rules.forEach(function(rule) {
                         html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="' + checkboxClass + ' w-3 h-3 accent-' + accentColor + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + ruleType + '" onchange="updateSelectedRulesCount()">' +
+                            '<input type="checkbox" checked class="' + checkboxClass + ' w-3 h-3 accent-' + accentColor + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + ruleType + '" onchange="updateSelectedRulesCount()">' +
                             '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
                             '</label>';
                     });
