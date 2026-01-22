@@ -2896,6 +2896,20 @@
             return div.innerHTML;
         }
 
+        // Toggle LLM prompt section visibility based on check type
+        function toggleLLMPromptSection() {
+            var checkType = document.getElementById('formCheckType');
+            var llmSection = document.getElementById('llmPromptSection');
+            if (checkType && llmSection) {
+                // Show LLM section only for 'custom' type
+                if (checkType.value === 'custom') {
+                    llmSection.style.display = 'block';
+                } else {
+                    llmSection.style.display = 'none';
+                }
+            }
+        }
+
         // Modal functions
         function openModal(title, collection) {
             currentCollection = collection;
@@ -3034,10 +3048,13 @@
 
                         // Build extra fields based on type
                         if (type === 'seo') {
-                            document.getElementById('extraFields').innerHTML =
+                            // Check if this is a system rule (has a checkType that's not 'custom')
+                            var isSystemRule = data.checkType && data.checkType !== 'custom';
+
+                            var extraFieldsHtml =
                                 '<div class="mb-4">' +
                                     '<label class="block text-sm font-medium text-secondary mb-1">Check Type</label>' +
-                                    '<select id="formCheckType" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                                    '<select id="formCheckType" class="w-full input-dark border rounded-lg px-3 py-2" onchange="toggleLLMPromptSection()">' +
                                         '<option value="title"' + (data.checkType === 'title' ? ' selected' : '') + '>Title Tag</option>' +
                                         '<option value="meta"' + (data.checkType === 'meta' ? ' selected' : '') + '>Meta Description</option>' +
                                         '<option value="h1"' + (data.checkType === 'h1' ? ' selected' : '') + '>H1 Heading</option>' +
@@ -3060,11 +3077,21 @@
                                         '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
                                     '</select>' +
                                 '</div>' +
-                                '<div class="mb-4">' +
+                                '<div id="llmPromptSection" class="mb-4"' + (isSystemRule ? ' style="display:none"' : '') + '>' +
                                     '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-secondary/60 font-normal">(optional)</span></label>' +
+                                    '<div class="mb-2">' +
+                                        '<label class="block text-xs text-secondary mb-1">Describe what you want to check:</label>' +
+                                        '<input type="text" id="formUserDescription" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="e.g., Check if the page has a noindex directive">' +
+                                        '<button type="button" onclick="generatePrompt()" class="mt-2 px-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition flex items-center gap-2">' +
+                                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
+                                            'Generate AI Prompt' +
+                                        '</button>' +
+                                    '</div>' +
                                     '<textarea id="formPrompt" rows="6" class="w-full input-dark border rounded-lg px-3 py-2 font-mono text-sm">' + escapeHtml(data.prompt || '') + '</textarea>' +
                                     '<p class="text-xs text-secondary mt-1">When a prompt is provided, Claude AI will evaluate the page against this rule dynamically.</p>' +
                                 '</div>';
+
+                            document.getElementById('extraFields').innerHTML = extraFieldsHtml;
                         } else {
                             // Voice & Brand rules - show severity and prompt fields for LLM evaluation
                             document.getElementById('extraFields').innerHTML =
@@ -3076,6 +3103,14 @@
                                         '<option value="Medium"' + (data.severity === 'Medium' || !data.severity ? ' selected' : '') + '>Medium</option>' +
                                         '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
                                     '</select>' +
+                                '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-xs text-secondary mb-1">Describe what you want to check:</label>' +
+                                    '<input type="text" id="formUserDescription" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="e.g., Check for warm, hospitable tone">' +
+                                    '<button type="button" onclick="generatePrompt()" class="mt-2 px-4 py-2 bg-purple-500/20 border border-purple-500 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30 transition flex items-center gap-2">' +
+                                        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>' +
+                                        'Generate AI Prompt' +
+                                    '</button>' +
                                 '</div>' +
                                 '<div class="mb-4">' +
                                     '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-red-400">*</span></label>' +
