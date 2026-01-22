@@ -1028,8 +1028,10 @@ def fetch_with_scraper_api(url):
     # - country_code=us: Use US-based proxy
     # - wait=10000: Wait 10 seconds for JavaScript to fully render (carousels, lazy content)
     # - premium=true: Use residential proxies with better JS rendering
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=10000&premium=true"
-    print(f"Fetching via ScraperAPI (with 10s wait + premium JS rendering): {url}")
+    # - device_type=desktop: Emulate desktop browser
+    # - keep_headers=true: Preserve headers for better compatibility
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=10000&premium=true&device_type=desktop&keep_headers=true"
+    print(f"Fetching via ScraperAPI (premium + desktop emulation): {url}")
     return requests.get(api_url, timeout=120)
 
 class SitemapParser:
