@@ -567,76 +567,80 @@
 
                         <!-- Audit Types for Schedule -->
                         <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Audit Types</label>
-                            <div class="flex flex-wrap gap-2">
-                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-purple-500/50 cursor-pointer transition">
-                                    <input type="checkbox" id="scheduleSeo" class="w-4 h-4 accent-purple-500" checked>
-                                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                                    <span class="text-primary text-sm">SEO/GEO</span>
-                                </label>
-                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-green-500/50 cursor-pointer transition">
-                                    <input type="checkbox" id="scheduleVoice" class="w-4 h-4 accent-green-500" checked>
-                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                                    <span class="text-primary text-sm">Voice</span>
-                                </label>
-                                <label class="flex items-center gap-2 px-3 py-2 rounded-lg bg-dark border border-card hover:border-orange-500/50 cursor-pointer transition">
-                                    <input type="checkbox" id="scheduleBrand" class="w-4 h-4 accent-orange-500" checked>
-                                    <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                                    <span class="text-primary text-sm">Brand</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Specific Rules Selection for Schedule -->
-                        <div>
-                            <button type="button" onclick="toggleScheduleRuleSelection()" class="flex items-center gap-2 text-sm text-secondary hover:text-cyan-400 transition">
-                                <svg id="scheduleRuleSelectionArrow" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                                </svg>
-                                <span>Select specific rules (optional)</span>
-                                <span id="scheduleSelectedRulesCount" class="hidden px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full"></span>
-                            </button>
-
-                            <div id="scheduleRuleSelectionPanel" class="hidden mt-3 p-3 bg-dark rounded-lg border border-card max-h-48 overflow-y-auto">
-                                <div class="flex items-center justify-between mb-3">
-                                    <span class="text-xs text-secondary">Select rules to run (leave empty to run all)</span>
-                                    <div class="flex gap-2">
-                                        <button type="button" onclick="selectAllScheduleRules()" class="text-xs text-cyan-400 hover:text-cyan-300">Select All</button>
-                                        <span class="text-secondary">|</span>
-                                        <button type="button" onclick="clearAllScheduleRules()" class="text-xs text-cyan-400 hover:text-cyan-300">Clear All</button>
+                            <label class="block text-sm font-medium text-secondary mb-2">Audit Types & Rules</label>
+                            <div class="space-y-3">
+                                <!-- SEO/GEO Checkbox with expandable rules -->
+                                <div class="rounded-lg bg-dark border border-card hover:border-purple-500/50 transition">
+                                    <div class="flex items-center gap-3 p-3">
+                                        <input type="checkbox" id="scheduleSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('seo', this.checked)">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                                                <span class="text-primary font-medium">SEO/GEO Rules</span>
+                                                <span id="scheduleSeoRulesCount" class="text-xs text-purple-400"></span>
+                                            </div>
+                                            <p class="text-secondary text-xs mt-1">Title tags, meta descriptions, schema markup, etc.</p>
+                                        </div>
+                                        <button type="button" onclick="toggleScheduleAuditTypeRules('seo')" class="p-1 hover:bg-card rounded transition">
+                                            <svg id="scheduleSeoRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div id="scheduleSeoRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                                        <div id="scheduleSeoRulesList" class="space-y-1">
+                                            <span class="text-xs text-secondary">Loading...</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- SEO Rules -->
-                                <div id="scheduleSeoRulesSection" class="mb-2">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                                        <span class="text-xs font-medium text-purple-400">SEO/GEO</span>
+                                <!-- Voice & Tone Checkbox with expandable rules -->
+                                <div class="rounded-lg bg-dark border border-card hover:border-green-500/50 transition">
+                                    <div class="flex items-center gap-3 p-3">
+                                        <input type="checkbox" id="scheduleVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('voice', this.checked)">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                                <span class="text-primary font-medium">Voice & Tone</span>
+                                                <span id="scheduleVoiceRulesCount" class="text-xs text-green-400"></span>
+                                            </div>
+                                            <p class="text-secondary text-xs mt-1">Warm hospitality tone, Hawaiian voice, sensory language</p>
+                                        </div>
+                                        <button type="button" onclick="toggleScheduleAuditTypeRules('voice')" class="p-1 hover:bg-card rounded transition">
+                                            <svg id="scheduleVoiceRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
                                     </div>
-                                    <div id="scheduleSeoRulesList" class="space-y-1 pl-4">
-                                        <span class="text-xs text-secondary">Loading...</span>
+                                    <div id="scheduleVoiceRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                                        <div id="scheduleVoiceRulesList" class="space-y-1">
+                                            <span class="text-xs text-secondary">Loading...</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Voice Rules -->
-                                <div id="scheduleVoiceRulesSection" class="mb-2">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
-                                        <span class="text-xs font-medium text-green-400">Voice</span>
+                                <!-- Brand Standards Checkbox with expandable rules -->
+                                <div class="rounded-lg bg-dark border border-card hover:border-orange-500/50 transition">
+                                    <div class="flex items-center gap-3 p-3">
+                                        <input type="checkbox" id="scheduleBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('brand', this.checked)">
+                                        <div class="flex-1">
+                                            <div class="flex items-center gap-2">
+                                                <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                                                <span class="text-primary font-medium">Brand Standards</span>
+                                                <span id="scheduleBrandRulesCount" class="text-xs text-orange-400"></span>
+                                            </div>
+                                            <p class="text-secondary text-xs mt-1">Brand name usage, property names, image standards</p>
+                                        </div>
+                                        <button type="button" onclick="toggleScheduleAuditTypeRules('brand')" class="p-1 hover:bg-card rounded transition">
+                                            <svg id="scheduleBrandRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
                                     </div>
-                                    <div id="scheduleVoiceRulesList" class="space-y-1 pl-4">
-                                        <span class="text-xs text-secondary">Loading...</span>
-                                    </div>
-                                </div>
-
-                                <!-- Brand Rules -->
-                                <div id="scheduleBrandRulesSection" class="mb-2">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
-                                        <span class="text-xs font-medium text-orange-400">Brand</span>
-                                    </div>
-                                    <div id="scheduleBrandRulesList" class="space-y-1 pl-4">
-                                        <span class="text-xs text-secondary">Loading...</span>
+                                    <div id="scheduleBrandRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
+                                        <div id="scheduleBrandRulesList" class="space-y-1">
+                                            <span class="text-xs text-secondary">Loading...</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1757,9 +1761,33 @@
         function loadRulesForScheduler() {
             if (!currentSiteId) return;
 
-            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null, null);
-            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null, null);
-            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null, null);
+            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null, 'scheduleSeoRulesCount');
+            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null, 'scheduleVoiceRulesCount');
+            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null, 'scheduleBrandRulesCount');
+        }
+
+        // Toggle schedule audit type rules panel visibility
+        function toggleScheduleAuditTypeRules(type) {
+            var panelId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesPanel';
+            var arrowId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesArrow';
+            var panel = document.getElementById(panelId);
+            var arrow = document.getElementById(arrowId);
+            if (panel && arrow) {
+                panel.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+            }
+        }
+
+        // Toggle all rules for a given schedule audit type when parent checkbox changes
+        function toggleAllRulesForScheduleType(type, checked) {
+            var containerId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesList';
+            var container = document.getElementById(containerId);
+            if (container) {
+                var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = checked;
+                });
+            }
         }
 
         // Get selected rule IDs from modal
@@ -3496,6 +3524,9 @@
                 document.getElementById('displaySiteName').textContent = '-';
                 return;
             }
+
+            // Load rules for scheduler audit type dropdowns
+            loadRulesForScheduler();
 
             // Display Site ID
             document.getElementById('displaySiteId').textContent = currentSiteId;
