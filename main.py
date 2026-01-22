@@ -1030,8 +1030,11 @@ def fetch_with_scraper_api(url):
     # - premium=true: Use residential proxies with better JS rendering
     # - device_type=desktop: Emulate desktop browser
     # - keep_headers=true: Preserve headers for better compatibility
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=20000&premium=true&device_type=desktop&keep_headers=true"
-    print(f"Fetching via ScraperAPI (premium + desktop, 20s wait): {url}")
+    # - session_number: Random session to bypass caching
+    import random
+    session = random.randint(1, 1000000)
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=20000&premium=true&device_type=desktop&keep_headers=true&session_number={session}"
+    print(f"Fetching via ScraperAPI (premium + desktop, 20s wait, session={session}): {url}")
     return requests.get(api_url, timeout=150)
 
 class SitemapParser:
