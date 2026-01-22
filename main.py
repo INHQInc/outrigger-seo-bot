@@ -5,6 +5,7 @@ import time
 import requests
 import re
 import gzip
+from difflib import SequenceMatcher
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from flask import jsonify
@@ -1794,6 +1795,36 @@ class MondayClient:
         """Check if this issue already exists"""
         return task_title in self.existing_issues
 
+    def _fuzzy_match(self, text1, text2, threshold=0.75):
+        """Check if two strings are similar enough to be considered duplicates"""
+        if not text1 or not text2:
+            return False
+        # Normalize strings for comparison
+        t1 = text1.lower().strip()
+        t2 = text2.lower().strip()
+        ratio = SequenceMatcher(None, t1, t2).ratio()
+        return ratio >= threshold
+
+    def _find_fuzzy_duplicate(self, title, url):
+        """
+        Check if a similar issue already exists using fuzzy matching.
+        Returns the matched key if found, None otherwise.
+        """
+        # First check exact match
+        exact_key = f"{title}|{url}"
+        if exact_key in self.existing_issues:
+            return exact_key
+
+        # Check fuzzy match against all existing issues with same URL
+        for existing_key in self.existing_issues:
+            if '|' in existing_key:
+                existing_title, existing_url = existing_key.rsplit('|', 1)
+                # Only fuzzy match if URLs are the same
+                if existing_url == url and self._fuzzy_match(title, existing_title):
+                    print(f"  Fuzzy match found: '{title[:40]}...' ≈ '{existing_title[:40]}...'")
+                    return existing_key
+        return None
+
     def create_task(self, issue):
         """Create a task with all column values populated"""
         if not self.api_token:
@@ -1808,8 +1839,16 @@ class MondayClient:
         duplicate_identifier = issue.get('rule_name') or issue.get('type') or issue['title']
         duplicate_key = f"{duplicate_identifier}|{issue['url']}"
 
+        # Check exact match first (fast path)
         if duplicate_key in self.existing_issues:
-            print(f"Skipping duplicate: {duplicate_identifier[:60]}... (URL: {issue['url'][:50]})")
+            print(f"Skipping duplicate (exact): {duplicate_identifier[:60]}... (URL: {issue['url'][:50]})")
+            return "duplicate"
+
+        # Check fuzzy match on task title for LLM-generated titles
+        # This catches cases where the same rule generates slightly different titles
+        fuzzy_match = self._find_fuzzy_duplicate(task_title, issue['url'])
+        if fuzzy_match:
+            print(f"Skipping duplicate (fuzzy): {task_title[:60]}... (URL: {issue['url'][:50]})")
             return "duplicate"
 
         # Build column values JSON
