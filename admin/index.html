@@ -957,6 +957,12 @@
                         <span id="progressStatus" class="px-3 py-1 bg-white/20 rounded-full text-sm text-white">
                             Running...
                         </span>
+                        <button id="cancelAuditBtn" onclick="cancelAudit()" class="px-3 py-1 bg-red-500/80 hover:bg-red-500 rounded-full text-sm text-white transition flex items-center gap-1" title="Cancel Audit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            Cancel
+                        </button>
                         <button onclick="closeProgressPanel()" class="text-white/70 hover:text-white transition" title="Close">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -1480,6 +1486,36 @@
             showTab('logs');
         }
 
+        // Cancel running audit
+        function cancelAudit() {
+            if (!currentSiteId) return;
+
+            var btn = document.getElementById('cancelAuditBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Cancelling...';
+
+            // Update Firestore to set cancelled status
+            var progressRef = db.collection('sites').doc(currentSiteId).collection('auditProgress').doc('current');
+            progressRef.update({
+                status: 'cancelled',
+                phaseLabel: 'Audit cancelled by user',
+                completedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(function() {
+                showToast('Audit cancelled', 'info');
+                // Update UI
+                document.getElementById('progressStatus').textContent = 'Cancelled';
+                document.getElementById('progressStatus').className = 'px-3 py-1 bg-red-500/50 rounded-full text-sm text-white';
+                document.getElementById('progressPhase').textContent = 'Audit cancelled by user';
+                btn.classList.add('hidden');
+                document.getElementById('progressFooter').classList.remove('hidden');
+            }).catch(function(error) {
+                console.error('Error cancelling audit:', error);
+                showToast('Failed to cancel audit', 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Cancel';
+            });
+        }
+
         // Check for running audit on page load and show progress panel if one is active
         function checkForRunningAudit() {
             if (!currentSiteId) return;
@@ -1515,19 +1551,29 @@
         }
 
         function updateProgressUI(data) {
-            // Update status badge
+            // Update status badge and cancel button visibility
             var statusEl = document.getElementById('progressStatus');
+            var cancelBtn = document.getElementById('cancelAuditBtn');
+
             if (data.status === 'completed') {
                 statusEl.textContent = 'Complete!';
                 statusEl.className = 'px-3 py-1 bg-green-500/30 rounded-full text-sm text-green-300';
                 document.getElementById('progressFooter').classList.remove('hidden');
+                cancelBtn.classList.add('hidden');
+            } else if (data.status === 'cancelled') {
+                statusEl.textContent = 'Cancelled';
+                statusEl.className = 'px-3 py-1 bg-red-500/30 rounded-full text-sm text-red-300';
+                document.getElementById('progressFooter').classList.remove('hidden');
+                cancelBtn.classList.add('hidden');
             } else if (data.status === 'error') {
                 statusEl.textContent = 'Error';
                 statusEl.className = 'px-3 py-1 bg-red-500/30 rounded-full text-sm text-red-300';
                 document.getElementById('progressFooter').classList.remove('hidden');
+                cancelBtn.classList.add('hidden');
             } else {
                 statusEl.textContent = 'Running...';
                 statusEl.className = 'px-3 py-1 bg-white/20 rounded-full text-sm text-white';
+                cancelBtn.classList.remove('hidden');
             }
 
             // Update phase text

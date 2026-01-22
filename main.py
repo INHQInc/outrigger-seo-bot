@@ -57,6 +57,26 @@ def update_audit_progress(site_id, progress_data):
         print(f"Warning: Could not update audit progress: {e}")
 
 
+def is_audit_cancelled(site_id):
+    """
+    Check if the current audit has been cancelled by the user.
+
+    Returns True if the audit status is 'cancelled', False otherwise.
+    """
+    if not db:
+        return False
+    try:
+        progress_ref = db.collection('sites').document(site_id).collection('auditProgress').document('current')
+        doc = progress_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            return data.get('status') == 'cancelled'
+        return False
+    except Exception as e:
+        print(f"Warning: Could not check audit cancellation status: {e}")
+        return False
+
+
 class SiteConfig:
     """
     Configuration for a single site in the multi-site system.
@@ -2727,6 +2747,12 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             total_pages = len(urls)
 
             for page_index, u in enumerate(urls):
+                # Check for cancellation before processing each page
+                if is_audit_cancelled(site_id):
+                    print(f"Audit cancelled by user at page {page_index + 1}/{total_pages}")
+                    results['cancelled'] = True
+                    break
+
                 page_url = u['url']
 
                 # Create progress callback for this page
@@ -2852,13 +2878,16 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             except Exception as log_err:
                 print(f"Warning: Failed to save audit log: {log_err}")
 
-            # Update progress: complete
-            update_audit_progress(site_id, {
-                'status': 'completed',
-                'phase': 'complete',
-                'phaseLabel': f'Audit complete! {results["pages"]} pages - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)',
-                'completedAt': firestore.SERVER_TIMESTAMP
-            })
+            # Update progress: complete (only if not cancelled)
+            if not results.get('cancelled'):
+                update_audit_progress(site_id, {
+                    'status': 'completed',
+                    'phase': 'complete',
+                    'phaseLabel': f'Audit complete! {results["pages"]} pages - Tasks: {results["tasks_created"]}/{results["issues"]} ({results["duplicates_skipped"]} duplicates)',
+                    'completedAt': firestore.SERVER_TIMESTAMP
+                })
+            else:
+                print(f"Audit was cancelled - not updating completion status")
 
             return jsonify({"status": "success", "results": results}), 200, headers
         except Exception as e:
