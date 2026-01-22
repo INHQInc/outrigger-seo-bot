@@ -1023,26 +1023,16 @@ def fetch_with_scraper_api(url):
         }
         return requests.get(url, timeout=60, headers=headers)
 
-    # Use ScraperAPI with render instruction set for reliable JS content capture
+    # Use ScraperAPI with additional options for better compatibility
     # - render=true: JavaScript rendering
     # - country_code=us: Use US-based proxy
+    # - wait=20000: Wait 20 seconds for JavaScript to fully render (carousels, lazy content)
     # - premium=true: Use residential proxies with better JS rendering
     # - device_type=desktop: Emulate desktop browser
     # - keep_headers=true: Preserve headers for better compatibility
-    # - instruction_set: Wait for networkidle (all network requests finished)
-    import json
-    instruction_set = json.dumps([{
-        "type": "wait_for_event",
-        "event": "networkidle",
-        "timeout": 30
-    }])
-
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&premium=true&device_type=desktop&keep_headers=true"
-    headers = {
-        'x-sapi-instruction_set': instruction_set
-    }
-    print(f"Fetching via ScraperAPI (premium + desktop + networkidle): {url}")
-    return requests.get(api_url, timeout=120, headers=headers)
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=20000&premium=true&device_type=desktop&keep_headers=true"
+    print(f"Fetching via ScraperAPI (premium + desktop, 20s wait): {url}")
+    return requests.get(api_url, timeout=150)
 
 class SitemapParser:
     # Class-level cache for sitemap data
