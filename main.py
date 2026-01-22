@@ -218,11 +218,13 @@ Each rule has a "Result Type" that determines how to respond:
    - FAIL - The page does not meet the requirements
    - When FAIL, provide a title and description of the issue
 
-2. Result Type = "log": Information gathering (always returns findings)
+2. Result Type = "log": Information gathering (ALWAYS use "log" status when findings exist)
+   - IMPORTANT: When Result Type is "log", NEVER return "fail" - use "log" instead
    - LOG - Return all items found that match the rule criteria
    - These are not failures, just information to record
-   - Always return findings if any are found, even if everything is correct
-   - Example: "Find all URLs on this page" should return all URLs found
+   - Always return "log" status if any matches are found, even if the rule prompt says "fails"
+   - The rule prompt may say "fails if found" but you should return "log" status, not "fail"
+   - Example: "Find all URLs on this page" should return all URLs found with status "log"
 
 When a rule FAILs, provide:
 - A specific, actionable issue title (short, ~50 chars)
@@ -251,10 +253,11 @@ URL: {url}
 
 For each rule, respond with a JSON array. Each element should be:
 - For PASS: {{"rule_index": N, "status": "pass"}}
-- For FAIL: {{"rule_index": N, "status": "fail", "title": "Short issue title", "description": "Detailed description with why it failed and how to fix it"}}
-- For LOG (when Result Type is "log"): {{"rule_index": N, "status": "log", "title": "Summary of findings", "description": "Detailed list of all items found"}}
+- For FAIL (only when Result Type is "fail"): {{"rule_index": N, "status": "fail", "title": "Short issue title", "description": "Detailed description with why it failed and how to fix it"}}
+- For LOG (MUST use when Result Type is "log" and findings exist): {{"rule_index": N, "status": "log", "title": "Summary of findings", "description": "Detailed list of all items found"}}
 
-Note: For "log" type rules, if nothing is found, return {{"rule_index": N, "status": "pass"}} (no findings to log).
+CRITICAL: When a rule has Result Type = "log", you MUST return status "log" (not "fail") when items are found. The rule prompt might say "fails if found" but ignore that - return "log" status instead.
+For "log" type rules, if nothing is found, return {{"rule_index": N, "status": "pass"}} (no findings to log).
 
 IMPORTANT: Return ONLY the JSON array, no other text. Example:
 [
