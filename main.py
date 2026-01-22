@@ -175,7 +175,8 @@ class LLMAuditor:
             return []
 
         # Truncate HTML if too long (Claude has context limits)
-        max_html_length = 50000
+        # Increased to 100000 to capture more content like carousels/lazy-loaded sections
+        max_html_length = 100000
         if len(html_content) > max_html_length:
             html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
 
@@ -1025,9 +1026,9 @@ def fetch_with_scraper_api(url):
     # Use ScraperAPI with additional options for better compatibility
     # - render=true: JavaScript rendering
     # - country_code=us: Use US-based proxy
-    # - wait=5000: Wait 5 seconds for JavaScript to fully render
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=5000"
-    print(f"Fetching via ScraperAPI (with 5s wait for JS): {url}")
+    # - wait=8000: Wait 8 seconds for JavaScript to fully render (carousels, lazy content)
+    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=8000"
+    print(f"Fetching via ScraperAPI (with 8s wait for JS): {url}")
     return requests.get(api_url, timeout=120)
 
 class SitemapParser:
