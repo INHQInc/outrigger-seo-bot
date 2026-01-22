@@ -922,16 +922,23 @@ For these operations, the user should run commands locally.
 
 ### Recent Changes (January 2026)
 
-- **System Rules Protection**: Seeded rules now have `system: true` flag and cannot be deleted (only disabled)
+- **System Rules Protection**: Seeded SEO rules have `system: true` flag and cannot be deleted (only disabled). Voice/Brand rules are examples that can be customized.
 - **AI-Powered Prompt Generation**: Users can describe rules in plain English and click "Generate AI Prompt" to create structured audit prompts using Claude
-- **Meta Content Relevance Check**: New SEO rule that catches copy-paste errors where meta tags describe the wrong property
+- **Meta Content Relevance Check**: LLM-powered SEO rule that catches copy-paste errors where meta tags describe the wrong property
 - **All Voice/Brand Rules Run**: Removed the [:1] limit so all enabled Voice and Brand rules are evaluated (not just the first one)
-- **LLM-First Rule Creation**: New rules are LLM-only by default; legacy checkType is preserved for system rules
+- **Legacy vs LLM Rules**: SEO rules split into legacy (code-based, fast, free) and LLM (AI-powered). Legacy rules check if elements exist; LLM rules analyze content quality.
 - **Site ID Display**: Settings tab now shows the Site ID and Site Name at the top
 - **Progress Panel Persistence**: Progress panel automatically reappears if you refresh while an audit is running
 - **Debug Site Endpoint**: Added `?debug_site=SITE_ID` endpoint to diagnose rule loading issues
 - **Site Deletion Fix**: Fixed issue where deleting sites with empty subcollections would fail
-- **Reset All Rules**: Button now properly deletes existing rules before seeding defaults
+- **Reset All Rules**: Now shows modal with checkboxes to select which rule types to reset (SEO, Voice, Brand)
+- **Selective Reseed**: Users can choose to reset only specific rule categories instead of all rules
+- **Modal Close Button**: Added X button to rule modals for easier closing
+- **Issue Type in Monday.com**: Tasks now populate the Issue Type field (SEO/GEO, Tone/Voice, Brand Standards)
+- **Improved Duplicate Detection**: Uses rule name + URL for duplicate detection, plus fuzzy matching (75% similarity) to catch LLM-generated title variations
+- **Subfolder Scanning**: Enter a folder URL and check "Include Subfolders" to scan all pages under that path from sitemap
+- **Sitemap Caching**: Sitemaps cached for 24 hours for faster manual audits. "Refresh sitemap" checkbox to force fresh fetch.
+- **Detailed Progress Phases**: Progress panel shows contextual status (Scraping, Running legacy checks, Running AI analysis, Creating tasks)
 - **3-Page Test Limit**: Temporarily limited audits to 3 pages for faster testing (remove `MAX_PAGES_FOR_TESTING` when ready for production)
 
 ---
