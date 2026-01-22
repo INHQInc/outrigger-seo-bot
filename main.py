@@ -183,6 +183,12 @@ class LLMAuditor:
         print(f"LLMAuditor: HTML length={len(html_content)}")
         print(f"LLMAuditor: First 1000 chars of HTML: {html_content[:1000]}")
 
+        # Check if specific strings exist in HTML (for debugging log-type rules)
+        if 'bluehawaiianconcierge' in html_content.lower():
+            print(f"LLMAuditor: DEBUG - Found 'bluehawaiianconcierge' in HTML content!")
+        else:
+            print(f"LLMAuditor: DEBUG - 'bluehawaiianconcierge' NOT found in HTML content")
+
         # Check for common error page indicators
         error_indicators = ['401', '403', 'Unauthorized', 'Access Denied', 'Forbidden', 'blocked', 'rate limit']
         found_errors = [e for e in error_indicators if e.lower() in html_content[:5000].lower()]
