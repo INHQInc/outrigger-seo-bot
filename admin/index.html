@@ -3119,6 +3119,14 @@
                                         '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
                                     '</select>' +
                                 '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">Result Type</label>' +
+                                    '<select id="formResultType" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                                        '<option value="fail"' + (data.resultType === 'fail' || !data.resultType ? ' selected' : '') + '>Fail on Issue (default)</option>' +
+                                        '<option value="log"' + (data.resultType === 'log' ? ' selected' : '') + '>Log Findings (informational)</option>' +
+                                    '</select>' +
+                                    '<p class="text-xs text-secondary mt-1">Fail = creates issue when check fails. Log = records all findings (e.g., list all URLs found).</p>' +
+                                '</div>' +
                                 '<div id="llmPromptSection" class="mb-4"' + (isSystemRule ? ' style="display:none"' : '') + '>' +
                                     '<label class="block text-sm font-medium text-secondary mb-1">LLM Audit Prompt <span class="text-secondary/60 font-normal">(optional)</span></label>' +
                                     '<div class="mb-2">' +
@@ -3145,6 +3153,14 @@
                                         '<option value="Medium"' + (data.severity === 'Medium' || !data.severity ? ' selected' : '') + '>Medium</option>' +
                                         '<option value="Low"' + (data.severity === 'Low' ? ' selected' : '') + '>Low</option>' +
                                     '</select>' +
+                                '</div>' +
+                                '<div class="mb-4">' +
+                                    '<label class="block text-sm font-medium text-secondary mb-1">Result Type</label>' +
+                                    '<select id="formResultType" class="w-full input-dark border rounded-lg px-3 py-2">' +
+                                        '<option value="fail"' + (data.resultType === 'fail' || !data.resultType ? ' selected' : '') + '>Fail on Issue (default)</option>' +
+                                        '<option value="log"' + (data.resultType === 'log' ? ' selected' : '') + '>Log Findings (informational)</option>' +
+                                    '</select>' +
+                                    '<p class="text-xs text-secondary mt-1">Fail = creates issue when check fails. Log = records all findings (e.g., list all URLs found).</p>' +
                                 '</div>' +
                                 '<div class="mb-4">' +
                                     '<label class="block text-xs text-secondary mb-1">Describe what you want to check:</label>' +
@@ -3254,6 +3270,8 @@
             if (category) data.category = category.value;
             if (standardType) data.standardType = standardType.value;
             if (severity) data.severity = severity.value;
+            var resultType = document.getElementById('formResultType');
+            if (resultType) data.resultType = resultType.value;
             if (prompt && prompt.value.trim()) {
                 data.prompt = prompt.value.trim();
             }

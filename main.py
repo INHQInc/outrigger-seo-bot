@@ -194,10 +194,12 @@ class LLMAuditor:
         for i, rule in enumerate(rules, 1):
             rule_name = rule.get('name', 'Unnamed Rule')
             rule_prompt = rule.get('prompt', rule.get('description', 'No prompt provided'))
-            print(f"LLMAuditor: Rule {i}: {rule_name} - prompt length: {len(rule_prompt)}")
+            result_type = rule.get('resultType', 'fail')
+            print(f"LLMAuditor: Rule {i}: {rule_name} - prompt length: {len(rule_prompt)}, resultType: {result_type}")
             rules_text += f"""
 Rule {i}: {rule_name}
 Severity: {rule.get('severity', 'Medium')}
+Result Type: {result_type}
 Check: {rule.get('prompt', rule.get('description', 'No prompt provided'))}
 """
 
@@ -209,13 +211,26 @@ Your task is to analyze HTML pages and determine if they pass or fail specific r
 2. Voice & Tone - warm hospitality tone, adventure/discovery language, authentic Hawaiian voice
 3. Brand Standards - correct brand name usage, property names, brand compliance
 
-For each rule, you must analyze the HTML and determine:
-1. PASS - The page meets the requirements of the rule
-2. FAIL - The page does not meet the requirements
+Each rule has a "Result Type" that determines how to respond:
+
+1. Result Type = "fail" (default): Standard pass/fail check
+   - PASS - The page meets the requirements
+   - FAIL - The page does not meet the requirements
+   - When FAIL, provide a title and description of the issue
+
+2. Result Type = "log": Information gathering (always returns findings)
+   - LOG - Return all items found that match the rule criteria
+   - These are not failures, just information to record
+   - Always return findings if any are found, even if everything is correct
+   - Example: "Find all URLs on this page" should return all URLs found
 
 When a rule FAILs, provide:
 - A specific, actionable issue title (short, ~50 chars)
 - A detailed description explaining why it failed and how to fix it
+
+When a rule LOGs, provide:
+- A descriptive title summarizing what was found
+- A detailed description listing all items found
 
 IMPORTANT: If the HTML appears to be an error page (403, 401, 500, access denied, rate limited, blocked, etc.) rather than actual content, mark ALL rules as PASS since we cannot fairly evaluate error pages.
 
@@ -237,11 +252,15 @@ URL: {url}
 For each rule, respond with a JSON array. Each element should be:
 - For PASS: {{"rule_index": N, "status": "pass"}}
 - For FAIL: {{"rule_index": N, "status": "fail", "title": "Short issue title", "description": "Detailed description with why it failed and how to fix it"}}
+- For LOG (when Result Type is "log"): {{"rule_index": N, "status": "log", "title": "Summary of findings", "description": "Detailed list of all items found"}}
+
+Note: For "log" type rules, if nothing is found, return {{"rule_index": N, "status": "pass"}} (no findings to log).
 
 IMPORTANT: Return ONLY the JSON array, no other text. Example:
 [
   {{"rule_index": 1, "status": "pass"}},
-  {{"rule_index": 2, "status": "fail", "title": "Missing meta description", "description": "The page lacks a meta description tag..."}}
+  {{"rule_index": 2, "status": "fail", "title": "Missing meta description", "description": "The page lacks a meta description tag..."}},
+  {{"rule_index": 3, "status": "log", "title": "Found 5 external URLs", "description": "External URLs found on this page:\\n1. https://example.com/link1\\n2. https://example.com/link2..."}}
 ]"""
 
         try:
@@ -270,7 +289,8 @@ IMPORTANT: Return ONLY the JSON array, no other text. Example:
             # Convert results to issues list
             issues = []
             for result in results:
-                if result.get('status') == 'fail':
+                status = result.get('status')
+                if status in ('fail', 'log'):
                     rule_idx = result.get('rule_index', 1) - 1
                     if 0 <= rule_idx < len(rules):
                         rule = rules[rule_idx]
@@ -283,16 +303,20 @@ IMPORTANT: Return ONLY the JSON array, no other text. Example:
                         else:
                             issue_type = f"llm_{rule.get('checkType', 'custom')}"
 
-                        issues.append({
+                        issue = {
                             'type': issue_type,
                             'title': result.get('title', rule.get('name', 'SEO Issue')),
                             'severity': rule.get('severity', 'Medium'),
                             'url': url,
                             'description': result.get('description', ''),
-                            'rule_name': rule.get('name', '')
-                        })
+                            'rule_name': rule.get('name', ''),
+                            'is_log': status == 'log'  # Flag to indicate this is informational, not a failure
+                        }
+                        issues.append(issue)
 
-            print(f"LLMAuditor: Found {len(issues)} issues for {url}")
+            log_count = sum(1 for i in issues if i.get('is_log'))
+            fail_count = len(issues) - log_count
+            print(f"LLMAuditor: Found {fail_count} failures and {log_count} log entries for {url}")
             return issues
 
         except json.JSONDecodeError as e:
@@ -1970,7 +1994,9 @@ class MondayClient:
             return None
 
         # Task title uses the LLM-generated title for context
-        task_title = issue['title']
+        # Add [LOG] prefix for informational findings (not failures)
+        is_log = issue.get('is_log', False)
+        task_title = f"[LOG] {issue['title']}" if is_log else issue['title']
 
         # For duplicate detection, prefer rule_name over title for LLM rules
         # This prevents duplicates when LLM generates slightly different titles
@@ -2022,12 +2048,16 @@ class MondayClient:
         severity_col = self._get_column_id('severity')
         if severity_col:
             # Map our severity values to Monday.com labels
-            severity_value = issue.get('severity', 'Medium')
-            # Ensure it matches one of the valid options
-            if severity_value not in ['Low', 'Medium', 'High', 'Critical']:
-                severity_value = 'Medium'
+            # For log entries (informational), always use "Low" severity
+            if is_log:
+                severity_value = 'Low'
+            else:
+                severity_value = issue.get('severity', 'Medium')
+                # Ensure it matches one of the valid options
+                if severity_value not in ['Low', 'Medium', 'High', 'Critical']:
+                    severity_value = 'Medium'
             column_values[severity_col] = {"label": severity_value}
-            print(f"Setting Severity column to: {severity_value}")
+            print(f"Setting Severity column to: {severity_value}{' (log entry)' if is_log else ''}")
 
         # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards)
         issue_type_col = self._get_column_id('issue_type')
