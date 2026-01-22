@@ -2068,31 +2068,28 @@ class MondayClient:
         severity_col = self._get_column_id('severity')
         if severity_col:
             # Map our severity values to Monday.com labels
-            # For log entries (informational), always use "Low" severity
+            # For log entries (informational), use "Log" severity label
             if is_log:
-                severity_value = 'Low'
+                severity_value = 'Log'
             else:
                 severity_value = issue.get('severity', 'Medium')
                 # Ensure it matches one of the valid options
                 if severity_value not in ['Low', 'Medium', 'High', 'Critical']:
                     severity_value = 'Medium'
             column_values[severity_col] = {"label": severity_value}
-            print(f"Setting Severity column to: {severity_value}{' (log entry)' if is_log else ''}")
+            print(f"Setting Severity column to: {severity_value}")
 
-        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards, Log)
+        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards)
         issue_type_col = self._get_column_id('issue_type')
         if issue_type_col:
-            # Use "Log" issue type for log-type rules, otherwise map category to Monday.com label
-            if is_log:
-                issue_type_value = 'Log'
-            else:
-                category = issue.get('category', 'seo')
-                issue_type_map = {
-                    'seo': 'SEO/GEO',
-                    'voice': 'Tone/Voice',
-                    'brand': 'Brand Standards'
-                }
-                issue_type_value = issue_type_map.get(category, 'SEO/GEO')
+            # Map category to Monday.com label
+            category = issue.get('category', 'seo')
+            issue_type_map = {
+                'seo': 'SEO/GEO',
+                'voice': 'Tone/Voice',
+                'brand': 'Brand Standards'
+            }
+            issue_type_value = issue_type_map.get(category, 'SEO/GEO')
             column_values[issue_type_col] = {"label": issue_type_value}
             print(f"Setting Issue Type column to: {issue_type_value}")
 
