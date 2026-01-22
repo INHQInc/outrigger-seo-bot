@@ -477,6 +477,55 @@ class ConfigManager:
         """Check if there are any LLM-based rules to evaluate"""
         return len(self._llm_rules) > 0
 
+    def filter_by_specific_rules(self, specific_rules):
+        """
+        Filter loaded rules to only include those with IDs in specific_rules.
+
+        Args:
+            specific_rules: Dict with keys 'seo', 'voice', 'brand', each containing list of rule IDs.
+                           Example: {'seo': ['rule1', 'rule2'], 'voice': [], 'brand': ['brand1']}
+
+        If a category has an empty list, all rules in that category are excluded.
+        If a category has rule IDs, only those specific rules are kept.
+        """
+        if not specific_rules:
+            return  # Nothing to filter
+
+        print(f"Filtering rules by specific IDs: {specific_rules}")
+
+        # Filter SEO rules
+        seo_ids = specific_rules.get('seo', [])
+        if seo_ids:
+            original_count = len(self.seo_rules)
+            self.seo_rules = [r for r in self.seo_rules if r.get('id') in seo_ids]
+            print(f"  SEO rules: {original_count} -> {len(self.seo_rules)}")
+
+        # Filter Voice rules
+        voice_ids = specific_rules.get('voice', [])
+        if voice_ids:
+            original_count = len(self.voice_rules)
+            self.voice_rules = [r for r in self.voice_rules if r.get('id') in voice_ids]
+            print(f"  Voice rules: {original_count} -> {len(self.voice_rules)}")
+
+        # Filter Brand standards
+        brand_ids = specific_rules.get('brand', [])
+        if brand_ids:
+            original_count = len(self.brand_standards)
+            self.brand_standards = [r for r in self.brand_standards if r.get('id') in brand_ids]
+            print(f"  Brand standards: {original_count} -> {len(self.brand_standards)}")
+
+        # Rebuild LLM and legacy rule lists based on filtered rules
+        self._llm_rules = [r for r in self.seo_rules if r.get('prompt')]
+        self._legacy_rules = [r for r in self.seo_rules if r.get('checkType')]
+
+        # Add voice and brand LLM rules
+        voice_llm = [r for r in self.voice_rules if r.get('prompt')]
+        brand_llm = [r for r in self.brand_standards if r.get('prompt')]
+        self._llm_rules.extend(voice_llm)
+        self._llm_rules.extend(brand_llm)
+
+        print(f"  After filtering: {len(self._llm_rules)} LLM rules, {len(self._legacy_rules)} legacy rules")
+
 
 # Global config manager
 config_manager = ConfigManager()
@@ -2491,6 +2540,10 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             run_voice = audit_types.get('voice', True)
             run_brand = audit_types.get('brand', True)
 
+            # Get specific rule IDs (optional - if empty, run all enabled rules)
+            # Format: { seo: ['rule_id1', 'rule_id2'], voice: ['rule_id3'], brand: ['rule_id4'] }
+            specific_rules = request_json.get('specific_rules', None)
+
             # Check for single URL audit and subfolder option
             single_url = request_json.get('single_url', None)
             include_subfolders = request_json.get('include_subfolders', False)
@@ -2503,6 +2556,8 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
 
             print(f"=== Starting audit for site: {site_id} ===")
             print(f"Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
+            if specific_rules:
+                print(f"Specific rules selected: SEO={len(specific_rules.get('seo', []))}, Voice={len(specific_rules.get('voice', []))}, Brand={len(specific_rules.get('brand', []))}")
             print(f"Sitemap: {'force refresh' if force_refresh else 'use cache if available'}")
             if single_url:
                 print(f"Single URL mode: {single_url}")
@@ -2525,6 +2580,7 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                 'duplicatesSkipped': 0,
                 'recentIssues': [],
                 'auditTypes': audit_types,
+                'specificRules': specific_rules,
                 'startedAt': firestore.SERVER_TIMESTAMP,
                 'completedAt': None,
                 'error': None
@@ -2543,6 +2599,11 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             config_loaded = site_config_manager.load_config()
             print(f"Config loaded from Firestore: {config_loaded}")
             print(f"SEO rules: {len(site_config_manager.seo_rules)}, Voice rules: {len(site_config_manager.voice_rules)}, Brand standards: {len(site_config_manager.brand_standards)}")
+
+            # Filter to specific rules if provided
+            if specific_rules:
+                site_config_manager.filter_by_specific_rules(specific_rules)
+                print(f"After filtering: SEO={len(site_config_manager.seo_rules)}, Voice={len(site_config_manager.voice_rules)}, Brand={len(site_config_manager.brand_standards)}")
 
             # Initialize with site-specific settings
             parser = SitemapParser(site_config.sitemap_url)
@@ -2648,6 +2709,7 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                 'brand_issues': 0,
                 'config_loaded': config_loaded,
                 'audit_types': audit_types,
+                'specific_rules': specific_rules,
                 'rules_used': {
                     'seo': len(site_config_manager.seo_rules) if run_seo else 0,
                     'voice': len(site_config_manager.voice_rules) if run_voice else 0,
@@ -2776,6 +2838,7 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                         'brandIssues': results['brand_issues'],
                         'rulesUsed': results['rules_used'],
                         'auditTypes': audit_types,  # Store which audit types were run
+                        'specificRules': specific_rules,  # Store which specific rules were selected (if any)
                         'issues': all_issues_list  # Store all individual issues
                     }
                     # Store in site-specific subcollection

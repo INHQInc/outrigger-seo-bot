@@ -587,6 +587,61 @@
                             </div>
                         </div>
 
+                        <!-- Specific Rules Selection for Schedule -->
+                        <div>
+                            <button type="button" onclick="toggleScheduleRuleSelection()" class="flex items-center gap-2 text-sm text-secondary hover:text-cyan-400 transition">
+                                <svg id="scheduleRuleSelectionArrow" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                                <span>Select specific rules (optional)</span>
+                                <span id="scheduleSelectedRulesCount" class="hidden px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full"></span>
+                            </button>
+
+                            <div id="scheduleRuleSelectionPanel" class="hidden mt-3 p-3 bg-dark rounded-lg border border-card max-h-48 overflow-y-auto">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span class="text-xs text-secondary">Select rules to run (leave empty to run all)</span>
+                                    <div class="flex gap-2">
+                                        <button type="button" onclick="selectAllScheduleRules()" class="text-xs text-cyan-400 hover:text-cyan-300">Select All</button>
+                                        <span class="text-secondary">|</span>
+                                        <button type="button" onclick="clearAllScheduleRules()" class="text-xs text-cyan-400 hover:text-cyan-300">Clear All</button>
+                                    </div>
+                                </div>
+
+                                <!-- SEO Rules -->
+                                <div id="scheduleSeoRulesSection" class="mb-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                        <span class="text-xs font-medium text-purple-400">SEO/GEO</span>
+                                    </div>
+                                    <div id="scheduleSeoRulesList" class="space-y-1 pl-4">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+
+                                <!-- Voice Rules -->
+                                <div id="scheduleVoiceRulesSection" class="mb-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                        <span class="text-xs font-medium text-green-400">Voice</span>
+                                    </div>
+                                    <div id="scheduleVoiceRulesList" class="space-y-1 pl-4">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+
+                                <!-- Brand Rules -->
+                                <div id="scheduleBrandRulesSection" class="mb-2">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                        <span class="text-xs font-medium text-orange-400">Brand</span>
+                                    </div>
+                                    <div id="scheduleBrandRulesList" class="space-y-1 pl-4">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Schedule Summary -->
                         <div class="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
                             <div class="flex items-start gap-3">
@@ -1062,6 +1117,61 @@
                     </label>
                 </div>
 
+                <!-- Specific Rules Selection -->
+                <div class="mb-6">
+                    <button type="button" onclick="toggleRuleSelection()" class="flex items-center gap-2 text-sm text-secondary hover:text-cyan-400 transition">
+                        <svg id="ruleSelectionArrow" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span>Select specific rules (optional)</span>
+                        <span id="selectedRulesCount" class="hidden px-2 py-0.5 text-xs bg-cyan-500/20 text-cyan-400 rounded-full"></span>
+                    </button>
+
+                    <div id="ruleSelectionPanel" class="hidden mt-3 p-3 bg-dark rounded-lg border border-card max-h-64 overflow-y-auto">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs text-secondary">Select rules to run (leave empty to run all enabled rules)</span>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="selectAllRulesInModal()" class="text-xs text-cyan-400 hover:text-cyan-300">Select All</button>
+                                <span class="text-secondary">|</span>
+                                <button type="button" onclick="clearAllRulesInModal()" class="text-xs text-cyan-400 hover:text-cyan-300">Clear All</button>
+                            </div>
+                        </div>
+
+                        <!-- SEO Rules -->
+                        <div id="modalSeoRules" class="mb-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                                <span class="text-xs font-medium text-purple-400">SEO/GEO Rules</span>
+                            </div>
+                            <div id="modalSeoRulesList" class="space-y-1 pl-4">
+                                <span class="text-xs text-secondary">Loading...</span>
+                            </div>
+                        </div>
+
+                        <!-- Voice Rules -->
+                        <div id="modalVoiceRules" class="mb-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                <span class="text-xs font-medium text-green-400">Voice & Tone Rules</span>
+                            </div>
+                            <div id="modalVoiceRulesList" class="space-y-1 pl-4">
+                                <span class="text-xs text-secondary">Loading...</span>
+                            </div>
+                        </div>
+
+                        <!-- Brand Rules -->
+                        <div id="modalBrandRules" class="mb-3">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+                                <span class="text-xs font-medium text-orange-400">Brand Standards</span>
+                            </div>
+                            <div id="modalBrandRulesList" class="space-y-1 pl-4">
+                                <span class="text-xs text-secondary">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex gap-3">
                     <button type="button" onclick="startAuditWithOptions()" class="flex-1 btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1479,6 +1589,16 @@
             setAuditSource('sitemap');
             document.getElementById('auditSingleUrl').value = '';
 
+            // Reset rule selection panel
+            document.getElementById('ruleSelectionPanel').classList.add('hidden');
+            document.getElementById('ruleSelectionArrow').classList.remove('rotate-90');
+            document.getElementById('selectedRulesCount').classList.add('hidden');
+
+            // Reset audit type checkboxes to checked
+            document.getElementById('auditSeo').checked = true;
+            document.getElementById('auditVoice').checked = true;
+            document.getElementById('auditBrand').checked = true;
+
             var modal = document.getElementById('runAuditModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -1489,6 +1609,274 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
+
+        // ========== Rule Selection Functions ==========
+
+        // Cache for loaded rules
+        var cachedRules = {
+            seo: [],
+            voice: [],
+            brand: []
+        };
+
+        // Toggle rule selection panel in Run Audit modal
+        function toggleRuleSelection() {
+            var panel = document.getElementById('ruleSelectionPanel');
+            var arrow = document.getElementById('ruleSelectionArrow');
+
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                arrow.classList.add('rotate-90');
+                loadRulesForModal();
+            } else {
+                panel.classList.add('hidden');
+                arrow.classList.remove('rotate-90');
+            }
+        }
+
+        // Toggle rule selection panel in Scheduler
+        function toggleScheduleRuleSelection() {
+            var panel = document.getElementById('scheduleRuleSelectionPanel');
+            var arrow = document.getElementById('scheduleRuleSelectionArrow');
+
+            if (panel.classList.contains('hidden')) {
+                panel.classList.remove('hidden');
+                arrow.classList.add('rotate-90');
+                loadRulesForScheduler();
+            } else {
+                panel.classList.add('hidden');
+                arrow.classList.remove('rotate-90');
+            }
+        }
+
+        // Load rules into the modal checkboxes
+        function loadRulesForModal() {
+            if (!currentSiteId) return;
+
+            // Load SEO rules
+            getSiteCollection('seoRules').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    cachedRules.seo = [];
+                    var container = document.getElementById('modalSeoRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        cachedRules.seo.push({ id: doc.id, name: rule.name });
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-purple-500" data-rule-id="' + doc.id + '" data-rule-type="seo" onchange="updateSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+
+            // Load Voice rules
+            getSiteCollection('voiceRules').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    cachedRules.voice = [];
+                    var container = document.getElementById('modalVoiceRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        cachedRules.voice.push({ id: doc.id, name: rule.name });
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-green-500" data-rule-id="' + doc.id + '" data-rule-type="voice" onchange="updateSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+
+            // Load Brand rules
+            getSiteCollection('brandStandards').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    cachedRules.brand = [];
+                    var container = document.getElementById('modalBrandRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        cachedRules.brand.push({ id: doc.id, name: rule.name });
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-orange-500" data-rule-id="' + doc.id + '" data-rule-type="brand" onchange="updateSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+        }
+
+        // Load rules into the scheduler checkboxes
+        function loadRulesForScheduler() {
+            if (!currentSiteId) return;
+
+            // Load SEO rules
+            getSiteCollection('seoRules').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    var container = document.getElementById('scheduleSeoRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-purple-500" data-rule-id="' + doc.id + '" data-rule-type="seo" onchange="updateScheduleSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+
+            // Load Voice rules
+            getSiteCollection('voiceRules').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    var container = document.getElementById('scheduleVoiceRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-green-500" data-rule-id="' + doc.id + '" data-rule-type="voice" onchange="updateScheduleSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+
+            // Load Brand rules
+            getSiteCollection('brandStandards').where('enabled', '==', true).orderBy('name').get()
+                .then(function(snapshot) {
+                    var container = document.getElementById('scheduleBrandRulesList');
+                    if (snapshot.empty) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-orange-500" data-rule-id="' + doc.id + '" data-rule-type="brand" onchange="updateScheduleSelectedRulesCount()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                });
+        }
+
+        // Get selected rule IDs from modal
+        function getSelectedRuleIds() {
+            var selected = {
+                seo: [],
+                voice: [],
+                brand: []
+            };
+            document.querySelectorAll('.modal-rule-checkbox:checked').forEach(function(cb) {
+                var type = cb.getAttribute('data-rule-type');
+                var id = cb.getAttribute('data-rule-id');
+                if (type && id) {
+                    selected[type].push(id);
+                }
+            });
+            return selected;
+        }
+
+        // Get selected rule IDs from scheduler
+        function getScheduleSelectedRuleIds() {
+            var selected = {
+                seo: [],
+                voice: [],
+                brand: []
+            };
+            document.querySelectorAll('.schedule-rule-checkbox:checked').forEach(function(cb) {
+                var type = cb.getAttribute('data-rule-type');
+                var id = cb.getAttribute('data-rule-id');
+                if (type && id) {
+                    selected[type].push(id);
+                }
+            });
+            return selected;
+        }
+
+        // Update selected rules count badge in modal
+        function updateSelectedRulesCount() {
+            var count = document.querySelectorAll('.modal-rule-checkbox:checked').length;
+            var badge = document.getElementById('selectedRulesCount');
+            if (count > 0) {
+                badge.textContent = count + ' selected';
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Update selected rules count badge in scheduler
+        function updateScheduleSelectedRulesCount() {
+            var count = document.querySelectorAll('.schedule-rule-checkbox:checked').length;
+            var badge = document.getElementById('scheduleSelectedRulesCount');
+            if (count > 0) {
+                badge.textContent = count + ' selected';
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // Select all rules in modal
+        function selectAllRulesInModal() {
+            document.querySelectorAll('.modal-rule-checkbox').forEach(function(cb) {
+                cb.checked = true;
+            });
+            updateSelectedRulesCount();
+        }
+
+        // Clear all rules in modal
+        function clearAllRulesInModal() {
+            document.querySelectorAll('.modal-rule-checkbox').forEach(function(cb) {
+                cb.checked = false;
+            });
+            updateSelectedRulesCount();
+        }
+
+        // Select all rules in scheduler
+        function selectAllScheduleRules() {
+            document.querySelectorAll('.schedule-rule-checkbox').forEach(function(cb) {
+                cb.checked = true;
+            });
+            updateScheduleSelectedRulesCount();
+        }
+
+        // Clear all rules in scheduler
+        function clearAllScheduleRules() {
+            document.querySelectorAll('.schedule-rule-checkbox').forEach(function(cb) {
+                cb.checked = false;
+            });
+            updateScheduleSelectedRulesCount();
+        }
+
+        // Helper to escape HTML
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ========== End Rule Selection Functions ==========
 
         function setAuditSource(source) {
             currentAuditSource = source;
@@ -1528,6 +1916,10 @@
                 return;
             }
 
+            // Get selected specific rules (if any)
+            var selectedRules = getSelectedRuleIds();
+            var hasSpecificRules = selectedRules.seo.length > 0 || selectedRules.voice.length > 0 || selectedRules.brand.length > 0;
+
             // Get single URL if in URL mode
             var singleUrl = null;
             var includeSubfolders = false;
@@ -1548,12 +1940,12 @@
             // Close the modal
             closeRunAuditModal();
 
-            // Run the audit with options
-            runAuditNow(auditTypes, singleUrl, includeSubfolders);
+            // Run the audit with options (include specific rules if selected)
+            runAuditNow(auditTypes, singleUrl, includeSubfolders, hasSpecificRules ? selectedRules : null);
         }
 
         // Run audit now
-        function runAuditNow(auditTypes, singleUrl, includeSubfolders) {
+        function runAuditNow(auditTypes, singleUrl, includeSubfolders, specificRules) {
             if (!currentSiteId) {
                 showToast('Please select a site first', 'warning');
                 return;
@@ -1580,6 +1972,11 @@
                 site_id: currentSiteId,
                 audit_types: auditTypes
             };
+
+            // Add specific rules if provided
+            if (specificRules) {
+                requestBody.specific_rules = specificRules;
+            }
 
             // Add single URL if provided
             if (singleUrl) {
@@ -3262,6 +3659,13 @@
                 }
             };
 
+            // Add specific rules if any are selected
+            var selectedRules = getScheduleSelectedRuleIds();
+            var hasSpecificRules = selectedRules.seo.length > 0 || selectedRules.voice.length > 0 || selectedRules.brand.length > 0;
+            if (hasSpecificRules) {
+                config.specificRules = selectedRules;
+            }
+
             if (frequency === 'weekly') {
                 config.dayOfWeek = parseInt(document.getElementById('scheduleDayOfWeek').value);
             } else if (frequency === 'monthly') {
@@ -3317,9 +3721,62 @@
                 document.getElementById('scheduleBrand').checked = schedule.auditTypes.brand !== false;
             }
 
+            // Load specific rules if saved
+            if (schedule.specificRules) {
+                // Need to load rules first, then restore selections
+                loadRulesForScheduler();
+                // Restore selections after a brief delay to allow rules to load
+                setTimeout(function() {
+                    restoreScheduleRuleSelections(schedule.specificRules);
+                }, 500);
+            }
+
             toggleScheduleOptions();
             updateScheduleUI();
             toggleDateRangeInputs();
+        }
+
+        // Restore schedule rule selections from saved config
+        function restoreScheduleRuleSelections(specificRules) {
+            if (!specificRules) return;
+
+            // Clear all first
+            clearAllScheduleRules();
+
+            // Restore SEO rules
+            if (specificRules.seo && specificRules.seo.length > 0) {
+                specificRules.seo.forEach(function(ruleId) {
+                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Restore Voice rules
+            if (specificRules.voice && specificRules.voice.length > 0) {
+                specificRules.voice.forEach(function(ruleId) {
+                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Restore Brand rules
+            if (specificRules.brand && specificRules.brand.length > 0) {
+                specificRules.brand.forEach(function(ruleId) {
+                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
+                    if (cb) cb.checked = true;
+                });
+            }
+
+            // Show the panel if there are selections
+            var hasSelections = (specificRules.seo && specificRules.seo.length > 0) ||
+                               (specificRules.voice && specificRules.voice.length > 0) ||
+                               (specificRules.brand && specificRules.brand.length > 0);
+            if (hasSelections) {
+                document.getElementById('scheduleRuleSelectionPanel').classList.remove('hidden');
+                document.getElementById('scheduleRuleSelectionArrow').classList.add('rotate-90');
+            }
+
+            updateScheduleSelectedRulesCount();
         }
 
         // Save settings to Firestore (site-specific)
