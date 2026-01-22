@@ -1623,10 +1623,10 @@
             setAuditSource('sitemap');
             document.getElementById('auditSingleUrl').value = '';
 
-            // Reset audit type checkboxes to checked
-            document.getElementById('auditSeo').checked = true;
-            document.getElementById('auditVoice').checked = true;
-            document.getElementById('auditBrand').checked = true;
+            // Reset audit type checkboxes to unchecked - user must select
+            document.getElementById('auditSeo').checked = false;
+            document.getElementById('auditVoice').checked = false;
+            document.getElementById('auditBrand').checked = false;
 
             // Collapse all rule panels
             ['seo', 'voice', 'brand'].forEach(function(type) {
