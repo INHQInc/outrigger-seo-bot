@@ -1649,134 +1649,61 @@
             }
         }
 
+        // Helper to load and render rules for a collection
+        function loadRulesForCollection(collectionName, containerId, checkboxClass, accentColor, ruleType, cacheKey) {
+            getSiteCollection(collectionName).get()
+                .then(function(snapshot) {
+                    var container = document.getElementById(containerId);
+                    var rules = [];
+                    snapshot.forEach(function(doc) {
+                        var rule = doc.data();
+                        if (rule.enabled) {
+                            rules.push({ id: doc.id, name: rule.name || 'Unnamed Rule' });
+                        }
+                    });
+                    // Sort by name client-side
+                    rules.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+                    if (cacheKey) {
+                        cachedRules[cacheKey] = rules;
+                    }
+
+                    if (rules.length === 0) {
+                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                        return;
+                    }
+                    var html = '';
+                    rules.forEach(function(rule) {
+                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                            '<input type="checkbox" class="' + checkboxClass + ' w-3 h-3 accent-' + accentColor + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + ruleType + '" onchange="update' + (checkboxClass === 'modal-rule-checkbox' ? 'SelectedRulesCount' : 'ScheduleSelectedRulesCount') + '()">' +
+                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                            '</label>';
+                    });
+                    container.innerHTML = html;
+                })
+                .catch(function(error) {
+                    console.error('Error loading rules for ' + collectionName + ':', error);
+                    var container = document.getElementById(containerId);
+                    container.innerHTML = '<span class="text-xs text-red-400 italic">Error loading rules</span>';
+                });
+        }
+
         // Load rules into the modal checkboxes
         function loadRulesForModal() {
             if (!currentSiteId) return;
 
-            // Load SEO rules
-            getSiteCollection('seoRules').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    cachedRules.seo = [];
-                    var container = document.getElementById('modalSeoRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        cachedRules.seo.push({ id: doc.id, name: rule.name });
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-purple-500" data-rule-id="' + doc.id + '" data-rule-type="seo" onchange="updateSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
-
-            // Load Voice rules
-            getSiteCollection('voiceRules').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    cachedRules.voice = [];
-                    var container = document.getElementById('modalVoiceRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        cachedRules.voice.push({ id: doc.id, name: rule.name });
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-green-500" data-rule-id="' + doc.id + '" data-rule-type="voice" onchange="updateSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
-
-            // Load Brand rules
-            getSiteCollection('brandStandards').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    cachedRules.brand = [];
-                    var container = document.getElementById('modalBrandRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        cachedRules.brand.push({ id: doc.id, name: rule.name });
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="modal-rule-checkbox w-3 h-3 accent-orange-500" data-rule-id="' + doc.id + '" data-rule-type="brand" onchange="updateSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
+            loadRulesForCollection('seoRules', 'modalSeoRulesList', 'modal-rule-checkbox', 'purple', 'seo', 'seo');
+            loadRulesForCollection('voiceRules', 'modalVoiceRulesList', 'modal-rule-checkbox', 'green', 'voice', 'voice');
+            loadRulesForCollection('brandStandards', 'modalBrandRulesList', 'modal-rule-checkbox', 'orange', 'brand', 'brand');
         }
 
         // Load rules into the scheduler checkboxes
         function loadRulesForScheduler() {
             if (!currentSiteId) return;
 
-            // Load SEO rules
-            getSiteCollection('seoRules').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    var container = document.getElementById('scheduleSeoRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-purple-500" data-rule-id="' + doc.id + '" data-rule-type="seo" onchange="updateScheduleSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
-
-            // Load Voice rules
-            getSiteCollection('voiceRules').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    var container = document.getElementById('scheduleVoiceRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-green-500" data-rule-id="' + doc.id + '" data-rule-type="voice" onchange="updateScheduleSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
-
-            // Load Brand rules
-            getSiteCollection('brandStandards').where('enabled', '==', true).orderBy('name').get()
-                .then(function(snapshot) {
-                    var container = document.getElementById('scheduleBrandRulesList');
-                    if (snapshot.empty) {
-                        container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
-                        return;
-                    }
-                    var html = '';
-                    snapshot.forEach(function(doc) {
-                        var rule = doc.data();
-                        html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
-                            '<input type="checkbox" class="schedule-rule-checkbox w-3 h-3 accent-orange-500" data-rule-id="' + doc.id + '" data-rule-type="brand" onchange="updateScheduleSelectedRulesCount()">' +
-                            '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
-                            '</label>';
-                    });
-                    container.innerHTML = html;
-                });
+            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null);
+            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null);
+            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null);
         }
 
         // Get selected rule IDs from modal
