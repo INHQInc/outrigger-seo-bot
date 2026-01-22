@@ -2741,9 +2741,6 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             all_issues_list = []
             recent_issues = []  # Track last 10 issues for progress panel
 
-            # TESTING: Limit to 3 pages for faster testing
-            MAX_PAGES_FOR_TESTING = 3
-            urls = urls[:MAX_PAGES_FOR_TESTING]
             total_pages = len(urls)
 
             for page_index, u in enumerate(urls):
