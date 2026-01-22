@@ -1740,6 +1740,10 @@ class MondayClient:
                     # This allows LLM-generated titles to vary while still detecting duplicates
                     duplicate_identifier = rule_name or name
 
+                    # Debug logging for duplicate detection
+                    if rule_name:
+                        print(f"  Item '{name[:40]}...' -> Rule: '{rule_name}' | URL: {url[:50] if url else 'N/A'}")
+
                     # Create duplicate key matching the format we use when creating
                     if url:
                         self.existing_issues.add(f"{duplicate_identifier}|{url}")
@@ -1751,7 +1755,7 @@ class MondayClient:
                         if url:
                             self.existing_issues.add(f"{name}|{url}")
 
-                print(f"Found {len(self.existing_issues)} existing items/keys")
+                print(f"Found {len(self.existing_issues)} existing items/duplicate keys")
         except Exception as e:
             print(f"Error fetching existing items: {e}")
 
@@ -1795,7 +1799,7 @@ class MondayClient:
         if not self.api_token:
             return None
 
-        # Task title is ONLY the issue - URL goes in the Page URL column
+        # Task title uses the LLM-generated title for context
         task_title = issue['title']
 
         # For duplicate detection, prefer rule_name over title for LLM rules
