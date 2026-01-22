@@ -1887,14 +1887,12 @@ class MondayClient:
                         print(f"  Item '{name[:40]}...' -> Rule: '{rule_name}' | URL: {url[:50] if url else 'N/A'}")
 
                     # Create duplicate key matching the format we use when creating
+                    # IMPORTANT: Only add keys WITH URL to prevent false positives
+                    # Without this, the same rule on different pages would be flagged as duplicates
                     if url:
                         self.existing_issues.add(f"{duplicate_identifier}|{url}")
-                    # Also add just the identifier for backward compatibility
-                    self.existing_issues.add(duplicate_identifier)
-                    # And the name for legacy items
-                    if name != duplicate_identifier:
-                        self.existing_issues.add(name)
-                        if url:
+                        # Also add with task name for legacy items
+                        if name != duplicate_identifier:
                             self.existing_issues.add(f"{name}|{url}")
 
                 print(f"Found {len(self.existing_issues)} existing items/duplicate keys")
@@ -2063,9 +2061,8 @@ class MondayClient:
             print(f"Monday API response: {data}")
             if 'data' in data and 'create_item' in data['data']:
                 # Add to existing issues to prevent duplicates in same run
-                # Use the same duplicate_key format we use for detection
+                # Use the same duplicate_key format we use for detection (rule|url)
                 self.existing_issues.add(duplicate_key)
-                self.existing_issues.add(duplicate_identifier)  # Also add without URL
                 return data['data']['create_item']['id']
             elif 'errors' in data:
                 print(f"Monday API errors: {data['errors']}")
@@ -2084,7 +2081,6 @@ class MondayClient:
                         print(f"Retry response: {data2}")
                         if 'data' in data2 and 'create_item' in data2['data']:
                             self.existing_issues.add(duplicate_key)
-                            self.existing_issues.add(duplicate_identifier)
                             return data2['data']['create_item']['id']
                 # Try simpler create without column_values if it fails
                 return self._create_simple_task(task_title, duplicate_key, duplicate_identifier)
@@ -2103,13 +2099,9 @@ class MondayClient:
                                headers=self._get_headers(), timeout=30)
             data = resp.json()
             if 'data' in data and 'create_item' in data['data']:
-                # Add duplicate keys if provided, otherwise fall back to title
+                # Add duplicate key if provided (rule|url format)
                 if duplicate_key:
                     self.existing_issues.add(duplicate_key)
-                if duplicate_identifier:
-                    self.existing_issues.add(duplicate_identifier)
-                if not duplicate_key and not duplicate_identifier:
-                    self.existing_issues.add(title)
                 return data['data']['create_item']['id']
         except Exception as e:
             print(f"Error in fallback task creation: {e}")
