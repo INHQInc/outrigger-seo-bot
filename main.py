@@ -921,18 +921,73 @@ def fetch_with_scraper_api(url):
     return requests.get(api_url, timeout=90)
 
 class SitemapParser:
-    def __init__(self, sitemap_url=None):
+    # Class-level cache for sitemap data
+    _sitemap_cache = {}  # {sitemap_url: {'urls': [...], 'cached_at': datetime}}
+    CACHE_DURATION_HOURS = 24
+
+    def __init__(self, sitemap_url=None, site_id=None):
         """Initialize with a sitemap URL. Required for multi-site support."""
         self.sitemap_url = sitemap_url or DEFAULT_SITEMAP_URL
+        self.site_id = site_id
 
-    def get_urls(self, days=7):
+    def _get_cached_urls(self):
+        """Get URLs from cache if valid, otherwise return None."""
+        cache_key = self.sitemap_url
+        if cache_key in self._sitemap_cache:
+            cached = self._sitemap_cache[cache_key]
+            age_hours = (datetime.now() - cached['cached_at']).total_seconds() / 3600
+            if age_hours < self.CACHE_DURATION_HOURS:
+                print(f"Using cached sitemap ({age_hours:.1f} hours old, {len(cached['urls'])} URLs)")
+                return cached['urls']
+            else:
+                print(f"Sitemap cache expired ({age_hours:.1f} hours old)")
+        return None
+
+    def _cache_urls(self, urls):
+        """Cache the parsed URLs."""
+        cache_key = self.sitemap_url
+        self._sitemap_cache[cache_key] = {
+            'urls': urls,
+            'cached_at': datetime.now()
+        }
+        print(f"Cached {len(urls)} URLs from sitemap")
+
+    def get_urls(self, days=7, force_refresh=False):
         """
         Get URLs from sitemap.
 
         Args:
             days: Number of days to look back for modified pages.
                   If None, returns ALL URLs without date filtering.
+            force_refresh: If True, bypass cache and fetch fresh sitemap.
         """
+        # Check cache first (unless force_refresh)
+        cached_urls = None if force_refresh else self._get_cached_urls()
+
+        if cached_urls is not None:
+            # Apply date filter to cached URLs
+            if days is None:
+                return cached_urls
+            # Filter by lastmod date if available
+            cutoff = datetime.now() - timedelta(days=days)
+            filtered = []
+            for u in cached_urls:
+                lastmod = u.get('lastmod')
+                if lastmod:
+                    try:
+                        mod_date = datetime.fromisoformat(lastmod.replace('Z', '+00:00'))
+                        if mod_date.replace(tzinfo=None) > cutoff:
+                            filtered.append(u)
+                    except:
+                        filtered.append(u)  # Include if date can't be parsed
+                else:
+                    filtered.append(u)  # Include if no lastmod
+            print(f"Filtered to {len(filtered)} URLs (within {days} days) from cache")
+            return filtered if filtered else cached_urls  # Return all if none match filter
+
+        # Fetch fresh sitemap
+        if force_refresh:
+            print("Force refresh: fetching fresh sitemap")
         try:
             resp = fetch_with_scraper_api(self.sitemap_url)
             print(f"Response status: {resp.status_code}")
@@ -957,41 +1012,41 @@ class SitemapParser:
 
             print(f"Found {len(matches)} URL entries with loc tags")
 
-            # If days is None, return ALL URLs without date filtering
-            if days is None:
-                for match in matches:
-                    loc = match[0].strip()
-                    if loc:
-                        urls.append({'url': loc})
-                print(f"Returning all {len(urls)} URLs from sitemap (no date filter)")
-                return urls
-
-            # Apply date filter
-            cutoff = datetime.now() - timedelta(days=days)
+            # Build full URL list with lastmod for caching
+            all_urls = []
             for match in matches:
                 loc = match[0].strip()
                 lastmod = match[1].strip() if match[1] else None
-
                 if loc:
-                    if lastmod:
-                        try:
-                            mod_date = datetime.fromisoformat(lastmod.replace('Z', '+00:00'))
-                            if mod_date.replace(tzinfo=None) > cutoff:
-                                urls.append({'url': loc})
-                        except:
-                            pass
-                    else:
-                        urls.append({'url': loc})
+                    all_urls.append({'url': loc, 'lastmod': lastmod})
+
+            # Cache the full list
+            self._cache_urls(all_urls)
+
+            # If days is None, return ALL URLs without date filtering
+            if days is None:
+                print(f"Returning all {len(all_urls)} URLs from sitemap (no date filter)")
+                return all_urls
+
+            # Apply date filter
+            cutoff = datetime.now() - timedelta(days=days)
+            for u in all_urls:
+                lastmod = u.get('lastmod')
+                if lastmod:
+                    try:
+                        mod_date = datetime.fromisoformat(lastmod.replace('Z', '+00:00'))
+                        if mod_date.replace(tzinfo=None) > cutoff:
+                            urls.append(u)
+                    except:
+                        pass
+                else:
+                    urls.append(u)
 
             print(f"Found {len(urls)} recent URLs (within {days} days)")
 
             if len(urls) == 0:
                 print("No recent URLs found within date range, returning all URLs from sitemap")
-                # Return all URLs if none match the date filter
-                for match in matches:
-                    loc = match[0].strip()
-                    if loc:
-                        urls.append({'url': loc})
+                urls = all_urls
                 print(f"Returning {len(urls)} total URLs from sitemap")
 
             return urls  # Return all matching URLs
@@ -2439,9 +2494,16 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
             # Check for single URL audit and subfolder option
             single_url = request_json.get('single_url', None)
             include_subfolders = request_json.get('include_subfolders', False)
+            refresh_sitemap = request_json.get('refresh_sitemap', False)
+
+            # Scheduled jobs always refresh sitemap (they don't have refresh_sitemap param)
+            # Only manual audits have the option to use cached sitemap
+            is_scheduled = request_json.get('scheduled', False)
+            force_refresh = refresh_sitemap or is_scheduled
 
             print(f"=== Starting audit for site: {site_id} ===")
             print(f"Audit types: SEO={run_seo}, Voice={run_voice}, Brand={run_brand}")
+            print(f"Sitemap: {'force refresh' if force_refresh else 'use cache if available'}")
             if single_url:
                 print(f"Single URL mode: {single_url}")
                 if include_subfolders:
@@ -2509,7 +2571,7 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                 })
 
                 # Get all URLs from sitemap (no date filter for subfolder scan)
-                all_sitemap_urls = parser.get_urls(days=None)  # No date filter
+                all_sitemap_urls = parser.get_urls(days=None, force_refresh=force_refresh)
                 print(f"Found {len(all_sitemap_urls)} total URLs in sitemap")
 
                 # Extract the path from single_url to match against
@@ -2547,12 +2609,13 @@ Format the output as a ready-to-use audit prompt. Do NOT include any preamble or
                 print(f"Single URL mode - auditing: {single_url}")
             else:
                 # Sitemap mode - fetch URLs from sitemap
+                cache_msg = ' (refreshing)' if force_refresh else ' (using cache if available)'
                 update_audit_progress(site_id, {
                     'phase': 'fetching_sitemap',
-                    'phaseLabel': f'Fetching sitemap from {site_config.sitemap_url}...',
+                    'phaseLabel': f'Fetching sitemap{cache_msg}...',
                     'sitemapUrl': site_config.sitemap_url
                 })
-                urls = parser.get_urls(days=site_config.days_to_check)
+                urls = parser.get_urls(days=site_config.days_to_check, force_refresh=force_refresh)
 
             # Check if we got any URLs
             if not urls or len(urls) == 0:

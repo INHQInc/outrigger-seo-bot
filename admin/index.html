@@ -1007,13 +1007,20 @@
 
                 <!-- Sitemap Info (shown by default) -->
                 <div id="sitemapInfo" class="mb-4 p-3 bg-dark rounded-lg border border-card">
-                    <div class="flex items-center gap-2 text-sm">
-                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                        <span class="text-secondary">Will audit pages from configured sitemap</span>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2 text-sm">
+                            <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <span class="text-secondary">Will audit pages from configured sitemap</span>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="refreshSitemap" class="w-4 h-4 rounded bg-dark border-card accent-cyan-500">
+                            <span class="text-xs text-secondary">Refresh sitemap</span>
+                        </label>
                     </div>
                 </div>
+
 
                 <p class="text-secondary text-sm mb-3">Select audit types:</p>
 
@@ -1578,6 +1585,12 @@
             if (singleUrl) {
                 requestBody.single_url = singleUrl;
                 requestBody.include_subfolders = includeSubfolders;
+            } else {
+                // For sitemap mode, check if refresh is requested
+                var refreshSitemap = document.getElementById('refreshSitemap');
+                if (refreshSitemap && refreshSitemap.checked) {
+                    requestBody.refresh_sitemap = true;
+                }
             }
 
             // Make POST request to trigger audit for current site with audit type options
