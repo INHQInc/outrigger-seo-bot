@@ -2015,9 +2015,8 @@ class MondayClient:
             return None
 
         # Task title uses the LLM-generated title for context
-        # Add [LOG] prefix for informational findings (not failures)
         is_log = issue.get('is_log', False)
-        task_title = f"[LOG] {issue['title']}" if is_log else issue['title']
+        task_title = issue['title']
 
         # For duplicate detection, prefer rule_name over title for LLM rules
         # This prevents duplicates when LLM generates slightly different titles
@@ -2080,17 +2079,20 @@ class MondayClient:
             column_values[severity_col] = {"label": severity_value}
             print(f"Setting Severity column to: {severity_value}{' (log entry)' if is_log else ''}")
 
-        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards)
+        # Issue Type (status column with labels: SEO/GEO, Tone/Voice, Brand Standards, Log)
         issue_type_col = self._get_column_id('issue_type')
         if issue_type_col:
-            # Map category to Monday.com label values
-            category = issue.get('category', 'seo')
-            issue_type_map = {
-                'seo': 'SEO/GEO',
-                'voice': 'Tone/Voice',
-                'brand': 'Brand Standards'
-            }
-            issue_type_value = issue_type_map.get(category, 'SEO/GEO')
+            # Use "Log" issue type for log-type rules, otherwise map category to Monday.com label
+            if is_log:
+                issue_type_value = 'Log'
+            else:
+                category = issue.get('category', 'seo')
+                issue_type_map = {
+                    'seo': 'SEO/GEO',
+                    'voice': 'Tone/Voice',
+                    'brand': 'Brand Standards'
+                }
+                issue_type_value = issue_type_map.get(category, 'SEO/GEO')
             column_values[issue_type_col] = {"label": issue_type_value}
             print(f"Setting Issue Type column to: {issue_type_value}")
 
