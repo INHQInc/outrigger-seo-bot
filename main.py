@@ -174,19 +174,22 @@ class LLMAuditor:
             print("LLMAuditor: No rules provided, skipping audit")
             return []
 
+        # Check if specific strings exist in FULL HTML before truncation (for debugging)
+        original_length = len(html_content)
+        if 'bluehawaiianconcierge' in html_content.lower():
+            print(f"LLMAuditor: DEBUG - Found 'bluehawaiianconcierge' in FULL HTML (length={original_length})!")
+        else:
+            print(f"LLMAuditor: DEBUG - 'bluehawaiianconcierge' NOT found in FULL HTML (length={original_length})")
+
         # Truncate HTML if too long (Claude has context limits)
-        # Increased to 100000 to capture more content like carousels/lazy-loaded sections
-        max_html_length = 100000
+        # Increased to 150000 to capture more content
+        max_html_length = 150000
         if len(html_content) > max_html_length:
             html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
+            print(f"LLMAuditor: HTML truncated from {original_length} to {max_html_length}")
 
         # Log first part of HTML for debugging
         print(f"LLMAuditor: HTML length={len(html_content)}")
-        print(f"LLMAuditor: First 1000 chars of HTML: {html_content[:1000]}")
-
-        # Check if specific strings exist in HTML (for debugging log-type rules)
-        if 'bluehawaiianconcierge' in html_content.lower():
-            print(f"LLMAuditor: DEBUG - Found 'bluehawaiianconcierge' in HTML content!")
         else:
             print(f"LLMAuditor: DEBUG - 'bluehawaiianconcierge' NOT found in HTML content")
 
