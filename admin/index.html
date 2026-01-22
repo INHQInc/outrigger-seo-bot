@@ -134,6 +134,32 @@
                         <p class="text-sm text-secondary">Configure audit rules and brand standards</p>
                     </div>
                 </div>
+                <div class="flex items-center gap-2">
+                    <span id="userEmail" class="text-sm text-secondary"></span>
+                    <button onclick="logout()" class="text-secondary hover:text-primary px-3 py-1 rounded text-sm transition">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Site Selector Bar -->
+    <div class="bg-card border-b border-card">
+        <div class="max-w-7xl mx-auto px-4 py-2">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <label class="text-secondary text-sm">Site:</label>
+                    <select id="siteSelector" onchange="switchSite()" class="input-dark border rounded-lg px-3 py-1.5 text-sm min-w-[200px]">
+                        <option value="">Loading sites...</option>
+                    </select>
+                    <button onclick="openAddSiteModal()" class="btn-primary px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                        </svg>
+                        Add Site
+                    </button>
+                </div>
                 <div class="flex items-center gap-4">
                     <!-- Last Run Status -->
                     <div id="lastRunStatus" class="flex items-center gap-2 text-sm">
@@ -159,31 +185,7 @@
                     <div id="connectionStatus" class="flex items-center gap-1 text-xs text-secondary" title="Firestore connection">
                         <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
                     </div>
-                    <div class="flex items-center gap-2 border-l border-card pl-4">
-                        <span id="userEmail" class="text-sm text-secondary"></span>
-                        <button onclick="logout()" class="text-secondary hover:text-primary px-3 py-1 rounded text-sm transition">
-                            Logout
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </div>
-    </header>
-
-    <!-- Site Selector Bar -->
-    <div class="bg-card border-b border-card">
-        <div class="max-w-7xl mx-auto px-4 py-2">
-            <div class="flex items-center gap-3">
-                <label class="text-secondary text-sm">Site:</label>
-                <select id="siteSelector" onchange="switchSite()" class="input-dark border rounded-lg px-3 py-1.5 text-sm min-w-[200px]">
-                    <option value="">Loading sites...</option>
-                </select>
-                <button onclick="openAddSiteModal()" class="btn-primary px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                    </svg>
-                    Add Site
-                </button>
             </div>
         </div>
     </div>
