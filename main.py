@@ -1017,28 +1017,15 @@ Add Offer schema within your Hotel schema including:
 }
 
 def fetch_with_scraper_api(url):
-    """Fetch URL using ScraperAPI to bypass Cloudflare"""
-    if not SCRAPER_API_KEY:
-        print("No ScraperAPI key configured, using direct request")
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        }
-        return requests.get(url, timeout=60, headers=headers)
-
-    # Use ScraperAPI with additional options for better compatibility
-    # - render=true: JavaScript rendering
-    # - country_code=us: Use US-based proxy
-    # - wait=20000: Wait 20 seconds for JavaScript to fully render (carousels, lazy content)
-    # - premium=true: Use residential proxies with better JS rendering
-    # - device_type=desktop: Emulate desktop browser
-    # - keep_headers=true: Preserve headers for better compatibility
-    # - session_number: Random session to bypass caching
-    import random
-    session = random.randint(1, 1000000)
-    api_url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={url}&render=true&country_code=us&wait=20000&premium=true&device_type=desktop&keep_headers=true&session_number={session}"
-    print(f"Fetching via ScraperAPI (premium + desktop, 20s wait, session={session}): {url}")
-    return requests.get(api_url, timeout=150)
+    """Fetch URL using custom User-Agent (whitelisted in Cloudflare)"""
+    # Use custom User-Agent that should be whitelisted in Cloudflare
+    headers = {
+        'User-Agent': 'OutriggerSEOBot/1.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+    }
+    print(f"Fetching with OutriggerSEOBot/1.0: {url}")
+    return requests.get(url, timeout=60, headers=headers)
 
 class SitemapParser:
     # Class-level cache for sitemap data
