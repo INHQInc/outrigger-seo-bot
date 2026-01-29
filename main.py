@@ -1024,8 +1024,12 @@ def fetch_with_scraper_api(url):
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
     }
-    print(f"Fetching with OutriggerSEOBot/1.0: {url}")
-    return requests.get(url, timeout=60, headers=headers)
+    print(f"Fetching with headers: {headers}")
+    print(f"URL: {url}")
+    response = requests.get(url, timeout=60, headers=headers)
+    print(f"Response status: {response.status_code}")
+    print(f"Request headers sent: {response.request.headers}")
+    return response
 
 class SitemapParser:
     # Class-level cache for sitemap data
