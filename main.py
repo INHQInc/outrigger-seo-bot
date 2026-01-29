@@ -190,8 +190,6 @@ class LLMAuditor:
 
         # Log first part of HTML for debugging
         print(f"LLMAuditor: HTML length={len(html_content)}")
-        else:
-            print(f"LLMAuditor: DEBUG - 'bluehawaiianconcierge' NOT found in HTML content")
 
         # Check for common error page indicators
         error_indicators = ['401', '403', 'Unauthorized', 'Access Denied', 'Forbidden', 'blocked', 'rate limit']
