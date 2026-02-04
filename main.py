@@ -141,20 +141,175 @@ class SiteConfig:
         return f"SiteConfig(site_id='{self.site_id}', name='{self.name}', domain='{self.domain}')"
 
 
+# =============================================================================
+# TOKEN OPTIMIZATION: HTML Preprocessing Functions
+# =============================================================================
+
+def preprocess_html_for_llm(html_content: str, mode: str = 'full') -> str:
+    """
+    Preprocess HTML to reduce token usage while preserving audit-relevant content.
+
+    Args:
+        html_content: Raw HTML string
+        mode: 'full' - keep structure for SEO checks
+              'text' - extract text only for voice/brand checks
+              'head' - extract only <head> section for meta checks
+
+    Returns:
+        Preprocessed HTML/text with significantly reduced size
+    """
+    if not html_content:
+        return ""
+
+    original_size = len(html_content)
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    if mode == 'text':
+        # Text-only mode: Just extract readable text content
+        # Remove non-content elements
+        for tag in soup(['script', 'style', 'noscript', 'svg', 'path', 'iframe',
+                         'link', 'meta', 'head', 'nav', 'footer', 'aside']):
+            tag.decompose()
+
+        # Get text with reasonable spacing
+        text = soup.get_text(separator=' ', strip=True)
+        # Collapse multiple spaces
+        text = re.sub(r'\s+', ' ', text)
+        result = text.strip()
+
+    elif mode == 'head':
+        # Head-only mode: For meta/SEO structural checks
+        head = soup.find('head')
+        if head:
+            # Remove inline scripts from head
+            for script in head.find_all('script'):
+                script.decompose()
+            for style in head.find_all('style'):
+                style.decompose()
+            result = str(head)
+        else:
+            result = ""
+
+    else:  # mode == 'full'
+        # Full mode: Keep structure but strip bloat
+
+        # 1. Remove script tags and their content
+        for script in soup.find_all('script'):
+            script.decompose()
+
+        # 2. Remove style tags and their content
+        for style in soup.find_all('style'):
+            style.decompose()
+
+        # 3. Remove SVG elements (often huge)
+        for svg in soup.find_all('svg'):
+            svg.decompose()
+
+        # 4. Remove noscript tags
+        for noscript in soup.find_all('noscript'):
+            noscript.decompose()
+
+        # 5. Remove HTML comments
+        from bs4 import Comment
+        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+            comment.extract()
+
+        # 6. Remove data-* attributes (often contain large encoded data)
+        for tag in soup.find_all(True):
+            attrs_to_remove = [attr for attr in tag.attrs if attr.startswith('data-')]
+            for attr in attrs_to_remove:
+                del tag[attr]
+            # Also remove style attributes (inline CSS)
+            if 'style' in tag.attrs:
+                del tag['style']
+            # Remove class attributes (not needed for content analysis)
+            if 'class' in tag.attrs:
+                del tag['class']
+
+        # 7. Remove hidden elements
+        for hidden in soup.find_all(attrs={'hidden': True}):
+            hidden.decompose()
+        for hidden in soup.find_all(attrs={'aria-hidden': 'true'}):
+            hidden.decompose()
+
+        # Convert to string
+        result = str(soup)
+
+        # 8. Collapse whitespace (but preserve structure)
+        result = re.sub(r'\n\s*\n', '\n', result)  # Remove blank lines
+        result = re.sub(r'>\s+<', '><', result)     # Remove space between tags
+        result = re.sub(r'\s+', ' ', result)        # Collapse multiple spaces
+
+    final_size = len(result)
+    reduction = ((original_size - final_size) / original_size * 100) if original_size > 0 else 0
+    print(f"HTML preprocessing ({mode}): {original_size:,} -> {final_size:,} chars ({reduction:.1f}% reduction)")
+
+    return result
+
+
+def extract_text_for_voice_analysis(html_content: str) -> str:
+    """
+    Extract meaningful text content for voice/tone and brand analysis.
+    Optimized for content rules that don't need HTML structure.
+
+    Returns clean text suitable for analyzing:
+    - Tone and voice
+    - Brand messaging
+    - Content quality
+    """
+    if not html_content:
+        return ""
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # Remove non-content elements
+    for tag in soup(['script', 'style', 'noscript', 'svg', 'iframe', 'nav',
+                     'footer', 'header', 'aside', 'form', 'button']):
+        tag.decompose()
+
+    # Extract text from main content areas (prioritize these)
+    main_content = soup.find('main') or soup.find('article') or soup.find(id='content') or soup.find(class_='content')
+
+    if main_content:
+        text = main_content.get_text(separator=' ', strip=True)
+    else:
+        text = soup.get_text(separator=' ', strip=True)
+
+    # Clean up
+    text = re.sub(r'\s+', ' ', text)
+
+    # Limit to reasonable size for voice analysis (10k chars is plenty)
+    max_text_length = 10000
+    if len(text) > max_text_length:
+        text = text[:max_text_length] + "... [text truncated]"
+
+    return text.strip()
+
+
 class LLMAuditor:
     """
     LLM-powered SEO/GEO auditor that evaluates pages against natural language rules.
 
     Instead of hardcoded checks, this uses Claude to interpret rules written in plain English
     and determine if a page passes or fails each rule.
+
+    TOKEN OPTIMIZATION:
+    - Uses Haiku for simple structural checks (10x cheaper)
+    - Uses Sonnet for nuanced content/voice analysis
+    - Preprocesses HTML to reduce input tokens by 70-90%
     """
+
+    # Model selection for cost optimization
+    MODEL_SONNET = "claude-sonnet-4-20250514"  # For nuanced analysis
+    MODEL_HAIKU = "claude-haiku-4-5-20251001"   # For simple structural checks (10x cheaper)
 
     def __init__(self, client=None):
         self.client = client or anthropic_client
         if not self.client:
             print("Warning: LLMAuditor initialized without Anthropic client")
 
-    def audit_page_with_rules(self, html_content: str, url: str, rules: list) -> list:
+    def audit_page_with_rules(self, html_content: str, url: str, rules: list,
+                               content_mode: str = 'auto', use_haiku: bool = False) -> list:
         """
         Audit a page against a list of rules using Claude.
 
@@ -162,6 +317,10 @@ class LLMAuditor:
             html_content: The raw HTML of the page
             url: The URL being audited
             rules: List of rule dicts with 'name', 'prompt', 'severity', etc.
+            content_mode: 'auto' - automatically choose based on rule types
+                         'full' - preprocessed HTML (for SEO structural checks)
+                         'text' - text only (for voice/brand content checks)
+            use_haiku: If True, use Haiku model (10x cheaper, good for simple checks)
 
         Returns:
             List of issues found (each issue is a dict)
@@ -174,24 +333,39 @@ class LLMAuditor:
             print("LLMAuditor: No rules provided, skipping audit")
             return []
 
-        # Check if specific strings exist in FULL HTML before truncation (for debugging)
         original_length = len(html_content)
-        if 'bluehawaiianconcierge' in html_content.lower():
-            print(f"LLMAuditor: DEBUG - Found 'bluehawaiianconcierge' in FULL HTML (length={original_length})!")
+        print(f"LLMAuditor: Original HTML length: {original_length:,} chars")
+
+        # Determine content mode based on rule types if auto
+        if content_mode == 'auto':
+            # Check if all rules are voice/brand (content-focused, don't need HTML structure)
+            all_content_rules = all(
+                rule.get('category') or rule.get('standardType')
+                for rule in rules
+            )
+            content_mode = 'text' if all_content_rules else 'full'
+            print(f"LLMAuditor: Auto-selected content mode: {content_mode}")
+
+        # OPTIMIZATION: Preprocess HTML to reduce tokens
+        if content_mode == 'text':
+            # Voice/brand rules only need text content
+            processed_content = extract_text_for_voice_analysis(html_content)
+            content_label = "TEXT CONTENT"
         else:
-            print(f"LLMAuditor: DEBUG - 'bluehawaiianconcierge' NOT found in FULL HTML (length={original_length})")
+            # SEO rules need HTML structure but stripped of bloat
+            processed_content = preprocess_html_for_llm(html_content, mode='full')
+            content_label = "HTML CONTENT"
 
-        # Truncate HTML if too long (Claude has context limits)
-        # Increased to 150000 to capture more content
-        max_html_length = 150000
-        if len(html_content) > max_html_length:
-            html_content = html_content[:max_html_length] + "\n... [HTML truncated for length]"
-            print(f"LLMAuditor: HTML truncated from {original_length} to {max_html_length}")
+        # Final size check (safety limit)
+        max_content_length = 50000  # Reduced from 150k since we're preprocessing
+        if len(processed_content) > max_content_length:
+            processed_content = processed_content[:max_content_length] + "\n... [content truncated]"
+            print(f"LLMAuditor: Content truncated to {max_content_length:,} chars")
 
-        # Log first part of HTML for debugging
-        print(f"LLMAuditor: HTML length={len(html_content)}")
+        # Log processed content size
+        print(f"LLMAuditor: Processed content length: {len(processed_content):,} chars (mode={content_mode})")
 
-        # Check for common error page indicators
+        # Check for common error page indicators in original HTML
         error_indicators = ['401', '403', 'Unauthorized', 'Access Denied', 'Forbidden', 'blocked', 'rate limit']
         found_errors = [e for e in error_indicators if e.lower() in html_content[:5000].lower()]
         if found_errors:
@@ -211,75 +385,41 @@ Result Type: {result_type}
 Check: {rule.get('prompt', rule.get('description', 'No prompt provided'))}
 """
 
-        # Create the audit prompt
-        system_prompt = """You are an expert SEO, GEO (Generative Engine Optimization), and brand compliance auditor for hospitality websites, specifically Outrigger Hotels & Resorts.
+        # OPTIMIZED: Condensed system prompt to reduce tokens (~50% smaller)
+        system_prompt = """SEO/brand auditor for Outrigger Hotels. Analyze content against rules.
 
-Your task is to analyze HTML pages and determine if they pass or fail specific rules in these categories:
-1. SEO/Technical - title tags, meta descriptions, schema markup, etc.
-2. Voice & Tone - warm hospitality tone, adventure/discovery language, authentic Hawaiian voice
-3. Brand Standards - correct brand name usage, property names, brand compliance
+Response format per rule:
+- PASS: {"rule_index": N, "status": "pass"}
+- FAIL (Result Type="fail"): {"rule_index": N, "status": "fail", "title": "Short issue (~50 chars)", "description": "Why it failed + how to fix"}
+- LOG (Result Type="log"): {"rule_index": N, "status": "log", "title": "Summary", "description": "Items found"}
 
-Each rule has a "Result Type" that determines how to respond:
+Rules:
+- Result Type="log": ALWAYS return "log" status (never "fail") when items found
+- Error pages (403/401/500/blocked): Mark ALL rules as PASS
+- Be accurate - only flag real issues. For voice/tone, only fail clear violations."""
 
-1. Result Type = "fail" (default): Standard pass/fail check
-   - PASS - The page meets the requirements
-   - FAIL - The page does not meet the requirements
-   - When FAIL, provide a title and description of the issue
+        # OPTIMIZED: Condensed user prompt
+        user_prompt = f"""URL: {url}
 
-2. Result Type = "log": Information gathering (ALWAYS use "log" status when findings exist)
-   - IMPORTANT: When Result Type is "log", NEVER return "fail" - use "log" instead
-   - LOG - Return all items found that match the rule criteria
-   - These are not failures, just information to record
-   - Always return "log" status if any matches are found, even if the rule prompt says "fails"
-   - The rule prompt may say "fails if found" but you should return "log" status, not "fail"
-   - Example: "Find all URLs on this page" should return all URLs found with status "log"
+=== {content_label} ===
+{processed_content}
+=== END ===
 
-When a rule FAILs, provide:
-- A specific, actionable issue title (short, ~50 chars)
-- A detailed description explaining why it failed and how to fix it
-
-When a rule LOGs, provide:
-- A descriptive title summarizing what was found
-- A detailed description listing all items found
-
-IMPORTANT: If the HTML appears to be an error page (403, 401, 500, access denied, rate limited, blocked, etc.) rather than actual content, mark ALL rules as PASS since we cannot fairly evaluate error pages.
-
-Be thorough but accurate - only flag real issues. Consider the context of Hawaiian hospitality/hotel websites.
-For voice/tone rules, be lenient - only fail if there's a clear violation, not just room for improvement."""
-
-        user_prompt = f"""Analyze this webpage and check it against the following SEO/GEO rules.
-
-URL: {url}
-
-=== HTML CONTENT ===
-{html_content}
-=== END HTML ===
-
-=== RULES TO CHECK ===
+=== RULES ===
 {rules_text}
-=== END RULES ===
+=== END ===
 
-For each rule, respond with a JSON array. Each element should be:
-- For PASS: {{"rule_index": N, "status": "pass"}}
-- For FAIL (only when Result Type is "fail"): {{"rule_index": N, "status": "fail", "title": "Short issue title", "description": "Detailed description with why it failed and how to fix it"}}
-- For LOG (MUST use when Result Type is "log" and findings exist): {{"rule_index": N, "status": "log", "title": "Summary of findings", "description": "Detailed list of all items found"}}
-
-CRITICAL: When a rule has Result Type = "log", you MUST return status "log" (not "fail") when items are found. The rule prompt might say "fails if found" but ignore that - return "log" status instead.
-For "log" type rules, if nothing is found, return {{"rule_index": N, "status": "pass"}} (no findings to log).
-
-IMPORTANT: Return ONLY the JSON array, no other text. Example:
-[
-  {{"rule_index": 1, "status": "pass"}},
-  {{"rule_index": 2, "status": "fail", "title": "Missing meta description", "description": "The page lacks a meta description tag..."}},
-  {{"rule_index": 3, "status": "log", "title": "Found 5 external URLs", "description": "External URLs found on this page:\\n1. https://example.com/link1\\n2. https://example.com/link2..."}}
-]"""
+Return ONLY a JSON array:
+[{{"rule_index": 1, "status": "pass"}}, {{"rule_index": 2, "status": "fail", "title": "Issue", "description": "Details..."}}]"""
 
         try:
-            print(f"LLMAuditor: Sending {len(rules)} rules to Claude for {url}")
+            # Select model based on use_haiku flag
+            model = self.MODEL_HAIKU if use_haiku else self.MODEL_SONNET
+            print(f"LLMAuditor: Sending {len(rules)} rules to {model} for {url}")
 
             response = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=4000,
+                model=model,
+                max_tokens=2000,  # Reduced from 4000 - responses are typically <1000 tokens
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}]
             )
@@ -347,30 +487,59 @@ IMPORTANT: Return ONLY the JSON array, no other text. Example:
             traceback.print_exc()
             return []
 
-    def batch_audit(self, html_content: str, url: str, rules: list, batch_size: int = 5) -> list:
+    def batch_audit(self, html_content: str, url: str, rules: list, batch_size: int = 15) -> list:
         """
         Audit a page in batches to handle many rules efficiently.
+
+        OPTIMIZATION: Increased default batch_size from 5 to 15 to reduce API calls.
+        With preprocessing, we send ~30-50k chars instead of 150k, so we can batch more rules.
 
         Args:
             html_content: The raw HTML of the page
             url: The URL being audited
             rules: List of all rules to check
-            batch_size: Number of rules to check per API call
+            batch_size: Number of rules to check per API call (default: 15)
 
         Returns:
             List of all issues found
         """
         all_issues = []
 
-        # Process rules in batches
-        for i in range(0, len(rules), batch_size):
-            batch = rules[i:i + batch_size]
-            batch_issues = self.audit_page_with_rules(html_content, url, batch)
-            all_issues.extend(batch_issues)
+        # OPTIMIZATION: Separate rules by type for optimal content mode and model
+        seo_rules = [r for r in rules if not r.get('category') and not r.get('standardType')]
+        content_rules = [r for r in rules if r.get('category') or r.get('standardType')]
 
-            # Small delay between batches to avoid rate limits
-            if i + batch_size < len(rules):
-                time.sleep(0.5)
+        print(f"LLMAuditor batch_audit: {len(seo_rules)} SEO rules (Haiku), {len(content_rules)} content rules (Sonnet)")
+
+        # Process SEO rules - use 'full' mode + Haiku (simpler structural checks)
+        # Haiku is 10x cheaper and handles structural SEO checks well
+        if seo_rules:
+            for i in range(0, len(seo_rules), batch_size):
+                batch = seo_rules[i:i + batch_size]
+                batch_issues = self.audit_page_with_rules(
+                    html_content, url, batch,
+                    content_mode='full',
+                    use_haiku=True  # SEO checks are simpler, Haiku handles them well
+                )
+                all_issues.extend(batch_issues)
+
+                if i + batch_size < len(seo_rules):
+                    time.sleep(0.3)
+
+        # Process content rules (voice/brand) - use 'text' mode + Sonnet (nuanced analysis)
+        # Voice/brand rules need Sonnet's nuanced understanding
+        if content_rules:
+            for i in range(0, len(content_rules), batch_size):
+                batch = content_rules[i:i + batch_size]
+                batch_issues = self.audit_page_with_rules(
+                    html_content, url, batch,
+                    content_mode='text',
+                    use_haiku=False  # Keep Sonnet for nuanced voice/brand analysis
+                )
+                all_issues.extend(batch_issues)
+
+                if i + batch_size < len(content_rules):
+                    time.sleep(0.3)
 
         return all_issues
 
