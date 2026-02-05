@@ -1197,22 +1197,81 @@
                         </div>
                     </div>
 
-                    <!-- Audit Types -->
+                    <!-- Audit Types with Expandable Rules -->
                     <div>
-                        <label class="block text-sm font-medium text-secondary mb-2">Audit Types</label>
+                        <label class="block text-sm font-medium text-secondary mb-2">Audit Types & Rules</label>
                         <div class="space-y-2">
-                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
-                                <input type="checkbox" id="scheduleModalSeo" class="w-4 h-4 rounded accent-purple-500" checked>
-                                <span class="text-sm text-primary">SEO/GEO Rules</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
-                                <input type="checkbox" id="scheduleModalVoice" class="w-4 h-4 rounded accent-green-500" checked>
-                                <span class="text-sm text-primary">Brand Rules</span>
-                            </label>
-                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
-                                <input type="checkbox" id="scheduleModalBrand" class="w-4 h-4 rounded accent-orange-500" checked>
-                                <span class="text-sm text-primary">Specialty Rules</span>
-                            </label>
+                            <!-- SEO/GEO Rules with expandable list -->
+                            <div class="rounded-lg bg-dark border border-card hover:border-purple-500/50 transition">
+                                <div class="flex items-center gap-3 p-3">
+                                    <input type="checkbox" id="scheduleModalSeo" class="w-5 h-5 rounded bg-dark border-card accent-purple-500" checked onclick="event.stopPropagation()" onchange="toggleAllScheduleRulesForType('seo', this.checked)">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-purple-500"></span>
+                                            <span class="text-primary font-medium text-sm">SEO/GEO Rules</span>
+                                            <span id="scheduleModalSeoCount" class="text-xs text-purple-400"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="toggleScheduleModalRules('seo')" class="p-1 hover:bg-card rounded transition">
+                                        <svg id="scheduleModalSeoArrow" class="w-4 h-4 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="scheduleModalSeoPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-32 overflow-y-auto">
+                                    <div id="scheduleModalSeoRulesList" class="space-y-1">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Brand Rules with expandable list -->
+                            <div class="rounded-lg bg-dark border border-card hover:border-green-500/50 transition">
+                                <div class="flex items-center gap-3 p-3">
+                                    <input type="checkbox" id="scheduleModalVoice" class="w-5 h-5 rounded bg-dark border-card accent-green-500" checked onclick="event.stopPropagation()" onchange="toggleAllScheduleRulesForType('voice', this.checked)">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-green-500"></span>
+                                            <span class="text-primary font-medium text-sm">Brand Rules</span>
+                                            <span id="scheduleModalVoiceCount" class="text-xs text-green-400"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="toggleScheduleModalRules('voice')" class="p-1 hover:bg-card rounded transition">
+                                        <svg id="scheduleModalVoiceArrow" class="w-4 h-4 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="scheduleModalVoicePanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-32 overflow-y-auto">
+                                    <div id="scheduleModalVoiceRulesList" class="space-y-1">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Specialty Rules with expandable list -->
+                            <div class="rounded-lg bg-dark border border-card hover:border-orange-500/50 transition">
+                                <div class="flex items-center gap-3 p-3">
+                                    <input type="checkbox" id="scheduleModalBrand" class="w-5 h-5 rounded bg-dark border-card accent-orange-500" checked onclick="event.stopPropagation()" onchange="toggleAllScheduleRulesForType('brand', this.checked)">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="w-3 h-3 rounded-full bg-orange-500"></span>
+                                            <span class="text-primary font-medium text-sm">Specialty Rules</span>
+                                            <span id="scheduleModalBrandCount" class="text-xs text-orange-400"></span>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="toggleScheduleModalRules('brand')" class="p-1 hover:bg-card rounded transition">
+                                        <svg id="scheduleModalBrandArrow" class="w-4 h-4 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="scheduleModalBrandPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-32 overflow-y-auto">
+                                    <div id="scheduleModalBrandRulesList" class="space-y-1">
+                                        <span class="text-xs text-secondary">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -2469,6 +2528,7 @@
             document.getElementById('scheduleModalSeo').checked = true;
             document.getElementById('scheduleModalVoice').checked = true;
             document.getElementById('scheduleModalBrand').checked = true;
+            loadRulesForScheduleModal(null); // Load all rules, all checked by default
             updateScheduleModalUI();
             updateScheduleModalSummary();
             document.getElementById('scheduleModal').classList.remove('hidden');
@@ -2500,6 +2560,9 @@
                     document.getElementById('scheduleModalVoice').checked = data.auditTypes?.voice !== false;
                     document.getElementById('scheduleModalBrand').checked = data.auditTypes?.brand !== false;
 
+                    // Load rules with saved selections
+                    loadRulesForScheduleModal(data.specificRules || null);
+
                     updateScheduleModalUI();
                     updateScheduleModalSummary();
                     document.getElementById('scheduleModal').classList.remove('hidden');
@@ -2517,6 +2580,9 @@
             var editId = document.getElementById('scheduleEditId').value;
             var frequency = document.querySelector('input[name="scheduleModalFrequency"]:checked').value;
 
+            // Get selected specific rules
+            var selectedRules = getScheduleModalSelectedRuleIds();
+
             var scheduleData = {
                 name: document.getElementById('scheduleName').value,
                 enabled: document.getElementById('scheduleModalEnabled').checked,
@@ -2529,6 +2595,7 @@
                     voice: document.getElementById('scheduleModalVoice').checked,
                     brand: document.getElementById('scheduleModalBrand').checked
                 },
+                specificRules: selectedRules,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -2592,6 +2659,100 @@
         function closeScheduleModal() {
             document.getElementById('scheduleModal').classList.add('hidden');
             document.getElementById('scheduleModal').classList.remove('flex');
+            // Reset rule panels to hidden state
+            ['Seo', 'Voice', 'Brand'].forEach(function(type) {
+                document.getElementById('scheduleModal' + type + 'Panel').classList.add('hidden');
+                document.getElementById('scheduleModal' + type + 'Arrow').classList.remove('rotate-180');
+            });
+        }
+
+        // Load rules into schedule modal checkboxes
+        function loadRulesForScheduleModal(savedRules) {
+            if (!currentSiteId) return;
+
+            var collections = [
+                { name: 'seoRules', listId: 'scheduleModalSeoRulesList', countId: 'scheduleModalSeoCount', type: 'seo', color: 'purple' },
+                { name: 'voiceRules', listId: 'scheduleModalVoiceRulesList', countId: 'scheduleModalVoiceCount', type: 'voice', color: 'green' },
+                { name: 'brandStandards', listId: 'scheduleModalBrandRulesList', countId: 'scheduleModalBrandCount', type: 'brand', color: 'orange' }
+            ];
+
+            collections.forEach(function(col) {
+                getSiteCollection(col.name).get()
+                    .then(function(snapshot) {
+                        var container = document.getElementById(col.listId);
+                        var countBadge = document.getElementById(col.countId);
+                        var rules = [];
+
+                        snapshot.forEach(function(doc) {
+                            var rule = doc.data();
+                            if (rule.enabled) {
+                                rules.push({ id: doc.id, name: rule.name || 'Unnamed Rule' });
+                            }
+                        });
+
+                        rules.sort(function(a, b) { return a.name.localeCompare(b.name); });
+
+                        if (countBadge) {
+                            countBadge.textContent = '(' + rules.length + ')';
+                        }
+
+                        if (rules.length === 0) {
+                            container.innerHTML = '<span class="text-xs text-secondary italic">No enabled rules</span>';
+                            return;
+                        }
+
+                        var html = '';
+                        rules.forEach(function(rule) {
+                            var isChecked = !savedRules || !savedRules[col.type] || savedRules[col.type].length === 0 || savedRules[col.type].includes(rule.id);
+                            html += '<label class="flex items-center gap-2 cursor-pointer hover:bg-card/50 p-1 rounded">' +
+                                '<input type="checkbox" class="schedule-modal-rule-checkbox w-3 h-3 accent-' + col.color + '-500" data-rule-id="' + rule.id + '" data-rule-type="' + col.type + '"' + (isChecked ? ' checked' : '') + '>' +
+                                '<span class="text-xs text-primary truncate">' + escapeHtml(rule.name) + '</span>' +
+                                '</label>';
+                        });
+                        container.innerHTML = html;
+                    })
+                    .catch(function(error) {
+                        console.error('Error loading rules for schedule modal:', error);
+                        document.getElementById(col.listId).innerHTML = '<span class="text-xs text-red-400 italic">Error loading</span>';
+                    });
+            });
+        }
+
+        // Toggle schedule modal rule panel visibility
+        function toggleScheduleModalRules(type) {
+            var typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+            var panel = document.getElementById('scheduleModal' + typeCapitalized + 'Panel');
+            var arrow = document.getElementById('scheduleModal' + typeCapitalized + 'Arrow');
+
+            if (panel && arrow) {
+                panel.classList.toggle('hidden');
+                arrow.classList.toggle('rotate-180');
+            }
+        }
+
+        // Toggle all rules for a schedule audit type
+        function toggleAllScheduleRulesForType(type, checked) {
+            var typeCapitalized = type.charAt(0).toUpperCase() + type.slice(1);
+            var container = document.getElementById('scheduleModal' + typeCapitalized + 'RulesList');
+            if (container) {
+                var checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(cb) {
+                    cb.checked = checked;
+                });
+            }
+        }
+
+        // Get selected rule IDs from schedule modal
+        function getScheduleModalSelectedRuleIds() {
+            var selected = { seo: [], voice: [], brand: [] };
+            document.querySelectorAll('.schedule-modal-rule-checkbox:checked').forEach(function(cb) {
+                var type = cb.getAttribute('data-rule-type');
+                var id = cb.getAttribute('data-rule-id');
+                if (type && id) {
+                    selected[type].push(id);
+                }
+            });
+            return selected;
         }
 
         // Update schedule modal UI based on frequency
