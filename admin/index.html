@@ -209,6 +209,12 @@
 
                 <!-- System Section -->
                 <div class="sidebar-section mt-4">System</div>
+                <div onclick="showTab('schedules')" data-tab="schedules" class="sidebar-item">
+                    <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Schedules</span>
+                </div>
                 <div onclick="showTab('logs')" data-tab="logs" class="sidebar-item">
                     <svg class="sidebar-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
@@ -312,6 +318,24 @@
                 </div>
                 <div id="brandStandardsList" class="space-y-3">
                     <p class="text-secondary text-center py-8">Loading rules...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedules Tab -->
+        <div id="panel-schedules" class="tab-panel hidden">
+            <div class="card rounded-xl p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-primary">Audit Schedules</h2>
+                        <p class="text-sm text-secondary mt-1">Configure automated audit runs for this site</p>
+                    </div>
+                    <button onclick="addSchedule()" class="btn-cyan text-black px-4 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
+                        <span>+</span> Add Schedule
+                    </button>
+                </div>
+                <div id="schedulesList" class="space-y-3">
+                    <p class="text-secondary text-center py-8">Loading schedules...</p>
                 </div>
             </div>
         </div>
@@ -483,240 +507,6 @@
                             <option value="0">Unlimited</option>
                         </select>
                         <p class="text-xs text-secondary mt-1">Limit pages per audit run to control API costs</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Scheduler Settings Card -->
-            <div class="card rounded-xl p-6 mb-6">
-                <h2 class="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-                    <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                    Audit Schedule
-                </h2>
-                <div class="space-y-4">
-                    <!-- Schedule Enable Toggle -->
-                    <div class="flex items-center gap-3 p-3 bg-dark rounded-lg">
-                        <input type="checkbox" id="scheduleEnabled" class="w-5 h-5 rounded bg-dark border-card accent-cyan-500" onchange="toggleScheduleOptions()">
-                        <div class="flex-1">
-                            <label for="scheduleEnabled" class="text-primary font-medium cursor-pointer">Enable Scheduled Audits</label>
-                            <p class="text-xs text-secondary">Automatically run audits on a recurring schedule</p>
-                        </div>
-                        <span id="scheduleStatusBadge" class="px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400">Disabled</span>
-                    </div>
-
-                    <!-- Schedule Options (hidden until enabled) -->
-                    <div id="scheduleOptions" class="hidden space-y-4 pt-2">
-                        <!-- Frequency Selection -->
-                        <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Frequency</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
-                                    <input type="radio" name="scheduleFrequency" value="daily" class="sr-only" onchange="updateScheduleUI()">
-                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    <span class="text-primary text-sm">Daily</span>
-                                </label>
-                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
-                                    <input type="radio" name="scheduleFrequency" value="weekly" class="sr-only" checked onchange="updateScheduleUI()">
-                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                    <span class="text-primary text-sm">Weekly</span>
-                                </label>
-                                <label class="flex items-center justify-center gap-2 p-3 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition has-[:checked]:border-cyan-500 has-[:checked]:bg-cyan-500/10">
-                                    <input type="radio" name="scheduleFrequency" value="monthly" class="sr-only" onchange="updateScheduleUI()">
-                                    <svg class="w-4 h-4 text-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                    </svg>
-                                    <span class="text-primary text-sm">Monthly</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Day of Week (for weekly) -->
-                        <div id="weeklyDaySelect">
-                            <label class="block text-sm font-medium text-secondary mb-2">Day of Week</label>
-                            <select id="scheduleDayOfWeek" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
-                                <option value="0">Sunday</option>
-                                <option value="1" selected>Monday</option>
-                                <option value="2">Tuesday</option>
-                                <option value="3">Wednesday</option>
-                                <option value="4">Thursday</option>
-                                <option value="5">Friday</option>
-                                <option value="6">Saturday</option>
-                            </select>
-                        </div>
-
-                        <!-- Day of Month (for monthly) -->
-                        <div id="monthlyDaySelect" class="hidden">
-                            <label class="block text-sm font-medium text-secondary mb-2">Day of Month</label>
-                            <select id="scheduleDayOfMonth" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
-                                <option value="1">1st</option>
-                                <option value="7">7th</option>
-                                <option value="14">14th</option>
-                                <option value="15" selected>15th</option>
-                                <option value="21">21st</option>
-                                <option value="28">28th</option>
-                                <option value="last">Last day</option>
-                            </select>
-                        </div>
-
-                        <!-- Time of Day -->
-                        <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Time (24-hour)</label>
-                            <div class="flex gap-2 items-center">
-                                <select id="scheduleHour" class="input-dark border rounded-lg px-4 py-2" onchange="updateScheduleSummary()">
-                                    <option value="0">00:00</option>
-                                    <option value="1">01:00</option>
-                                    <option value="2">02:00</option>
-                                    <option value="3">03:00</option>
-                                    <option value="4">04:00</option>
-                                    <option value="5">05:00</option>
-                                    <option value="6" selected>06:00</option>
-                                    <option value="7">07:00</option>
-                                    <option value="8">08:00</option>
-                                    <option value="9">09:00</option>
-                                    <option value="10">10:00</option>
-                                    <option value="11">11:00</option>
-                                    <option value="12">12:00</option>
-                                    <option value="13">13:00</option>
-                                    <option value="14">14:00</option>
-                                    <option value="15">15:00</option>
-                                    <option value="16">16:00</option>
-                                    <option value="17">17:00</option>
-                                    <option value="18">18:00</option>
-                                    <option value="19">19:00</option>
-                                    <option value="20">20:00</option>
-                                    <option value="21">21:00</option>
-                                    <option value="22">22:00</option>
-                                    <option value="23">23:00</option>
-                                </select>
-                                <span class="text-secondary text-sm">UTC</span>
-                            </div>
-                            <p class="text-xs text-secondary mt-1">Audit will run at this time in UTC timezone</p>
-                        </div>
-
-                        <!-- Date Range -->
-                        <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Date Range</label>
-                            <div class="flex items-center gap-3 mb-2">
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="scheduleDateRange" value="always" class="w-4 h-4 accent-cyan-500" checked onchange="toggleDateRangeInputs()">
-                                    <span class="text-primary text-sm">Run indefinitely</span>
-                                </label>
-                                <label class="flex items-center gap-2 cursor-pointer">
-                                    <input type="radio" name="scheduleDateRange" value="range" class="w-4 h-4 accent-cyan-500" onchange="toggleDateRangeInputs()">
-                                    <span class="text-primary text-sm">Set date range</span>
-                                </label>
-                            </div>
-                            <div id="dateRangeInputs" class="hidden grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs text-secondary mb-1">Start Date</label>
-                                    <input type="date" id="scheduleStartDate" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-secondary mb-1">End Date</label>
-                                    <input type="date" id="scheduleEndDate" class="input-dark border rounded-lg px-4 py-2 w-full" onchange="updateScheduleSummary()">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Audit Types for Schedule -->
-                        <div>
-                            <label class="block text-sm font-medium text-secondary mb-2">Audit Types & Rules</label>
-                            <div class="space-y-3">
-                                <!-- SEO/GEO Checkbox with expandable rules -->
-                                <div class="rounded-lg bg-dark border border-card hover:border-purple-500/50 transition">
-                                    <div class="flex items-center gap-3 p-3">
-                                        <input type="checkbox" id="scheduleSeo" checked class="w-5 h-5 rounded bg-dark border-card accent-purple-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('seo', this.checked)">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                                                <span class="text-primary font-medium">SEO/GEO Rules</span>
-                                                <span id="scheduleSeoRulesCount" class="text-xs text-purple-400"></span>
-                                            </div>
-                                            <p class="text-secondary text-xs mt-1">Title tags, meta descriptions, schema markup, etc.</p>
-                                        </div>
-                                        <button type="button" onclick="toggleScheduleAuditTypeRules('seo')" class="p-1 hover:bg-card rounded transition">
-                                            <svg id="scheduleSeoRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div id="scheduleSeoRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
-                                        <div id="scheduleSeoRulesList" class="space-y-1">
-                                            <span class="text-xs text-secondary">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Brand Rules Checkbox with expandable rules -->
-                                <div class="rounded-lg bg-dark border border-card hover:border-green-500/50 transition">
-                                    <div class="flex items-center gap-3 p-3">
-                                        <input type="checkbox" id="scheduleVoice" checked class="w-5 h-5 rounded bg-dark border-card accent-green-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('voice', this.checked)">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-3 h-3 rounded-full bg-green-500"></span>
-                                                <span class="text-primary font-medium">Brand Rules</span>
-                                                <span id="scheduleVoiceRulesCount" class="text-xs text-green-400"></span>
-                                            </div>
-                                            <p class="text-secondary text-xs mt-1">Voice, tone, and brand compliance checks</p>
-                                        </div>
-                                        <button type="button" onclick="toggleScheduleAuditTypeRules('voice')" class="p-1 hover:bg-card rounded transition">
-                                            <svg id="scheduleVoiceRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div id="scheduleVoiceRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
-                                        <div id="scheduleVoiceRulesList" class="space-y-1">
-                                            <span class="text-xs text-secondary">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Specialty Rules Checkbox with expandable rules -->
-                                <div class="rounded-lg bg-dark border border-card hover:border-orange-500/50 transition">
-                                    <div class="flex items-center gap-3 p-3">
-                                        <input type="checkbox" id="scheduleBrand" checked class="w-5 h-5 rounded bg-dark border-card accent-orange-500" onclick="event.stopPropagation()" onchange="toggleAllRulesForScheduleType('brand', this.checked)">
-                                        <div class="flex-1">
-                                            <div class="flex items-center gap-2">
-                                                <span class="w-3 h-3 rounded-full bg-orange-500"></span>
-                                                <span class="text-primary font-medium">Specialty Rules</span>
-                                                <span id="scheduleBrandRulesCount" class="text-xs text-orange-400"></span>
-                                            </div>
-                                            <p class="text-secondary text-xs mt-1">Custom non-SEO, non-brand rules</p>
-                                        </div>
-                                        <button type="button" onclick="toggleScheduleAuditTypeRules('brand')" class="p-1 hover:bg-card rounded transition">
-                                            <svg id="scheduleBrandRulesArrow" class="w-5 h-5 text-secondary transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div id="scheduleBrandRulesPanel" class="hidden border-t border-card px-3 pb-3 pt-2 max-h-40 overflow-y-auto">
-                                        <div id="scheduleBrandRulesList" class="space-y-1">
-                                            <span class="text-xs text-secondary">Loading...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Schedule Summary -->
-                        <div class="p-4 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
-                            <div class="flex items-start gap-3">
-                                <svg class="w-5 h-5 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <div>
-                                    <p class="text-cyan-300 text-sm font-medium">Schedule Summary</p>
-                                    <p id="scheduleSummary" class="text-cyan-200/80 text-sm mt-1">Audits will run every Monday at 06:00 UTC</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1298,6 +1088,150 @@
         </div>
     </div>
 
+    <!-- Schedule Modal for Adding/Editing Schedules -->
+    <div id="scheduleModal" class="fixed inset-0 bg-black bg-opacity-70 hidden items-center justify-center z-50">
+        <div class="card rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 id="scheduleModalTitle" class="text-xl font-bold text-primary">Add Schedule</h3>
+                    <button onclick="closeScheduleModal()" class="text-secondary hover:text-primary transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                <form id="scheduleModalForm" onsubmit="saveSchedule(event)" class="space-y-4">
+                    <input type="hidden" id="scheduleEditId" value="">
+
+                    <!-- Schedule Name -->
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-1">Schedule Name</label>
+                        <input type="text" id="scheduleName" class="w-full input-dark border rounded-lg px-3 py-2" placeholder="e.g., Daily SEO Check" required>
+                    </div>
+
+                    <!-- Enable Toggle -->
+                    <div class="flex items-center justify-between p-3 bg-dark rounded-lg border border-card">
+                        <div>
+                            <span class="text-sm font-medium text-primary">Schedule Enabled</span>
+                            <p class="text-xs text-secondary">When enabled, audits will run automatically</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="scheduleModalEnabled" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                        </label>
+                    </div>
+
+                    <!-- Frequency -->
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-2">Frequency</label>
+                        <div class="flex gap-3">
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="scheduleModalFrequency" value="daily" class="w-4 h-4 accent-cyan-500" onchange="updateScheduleModalUI()">
+                                <span class="text-sm text-primary">Daily</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="scheduleModalFrequency" value="weekly" class="w-4 h-4 accent-cyan-500" checked onchange="updateScheduleModalUI()">
+                                <span class="text-sm text-primary">Weekly</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="scheduleModalFrequency" value="monthly" class="w-4 h-4 accent-cyan-500" onchange="updateScheduleModalUI()">
+                                <span class="text-sm text-primary">Monthly</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Day/Time Selection -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div id="scheduleModalDayOfWeekContainer">
+                            <label class="block text-sm font-medium text-secondary mb-1">Day of Week</label>
+                            <select id="scheduleModalDayOfWeek" class="w-full input-dark border rounded-lg px-3 py-2">
+                                <option value="0">Sunday</option>
+                                <option value="1" selected>Monday</option>
+                                <option value="2">Tuesday</option>
+                                <option value="3">Wednesday</option>
+                                <option value="4">Thursday</option>
+                                <option value="5">Friday</option>
+                                <option value="6">Saturday</option>
+                            </select>
+                        </div>
+                        <div id="scheduleModalDayOfMonthContainer" class="hidden">
+                            <label class="block text-sm font-medium text-secondary mb-1">Day of Month</label>
+                            <select id="scheduleModalDayOfMonth" class="w-full input-dark border rounded-lg px-3 py-2">
+                                <option value="1">1st</option>
+                                <option value="7">7th</option>
+                                <option value="14">14th</option>
+                                <option value="15">15th</option>
+                                <option value="21">21st</option>
+                                <option value="28">28th</option>
+                                <option value="last">Last day</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-secondary mb-1">Time (UTC)</label>
+                            <select id="scheduleModalHour" class="w-full input-dark border rounded-lg px-3 py-2">
+                                <option value="0">00:00</option>
+                                <option value="1">01:00</option>
+                                <option value="2">02:00</option>
+                                <option value="3">03:00</option>
+                                <option value="4">04:00</option>
+                                <option value="5">05:00</option>
+                                <option value="6" selected>06:00</option>
+                                <option value="7">07:00</option>
+                                <option value="8">08:00</option>
+                                <option value="9">09:00</option>
+                                <option value="10">10:00</option>
+                                <option value="11">11:00</option>
+                                <option value="12">12:00</option>
+                                <option value="13">13:00</option>
+                                <option value="14">14:00</option>
+                                <option value="15">15:00</option>
+                                <option value="16">16:00</option>
+                                <option value="17">17:00</option>
+                                <option value="18">18:00</option>
+                                <option value="19">19:00</option>
+                                <option value="20">20:00</option>
+                                <option value="21">21:00</option>
+                                <option value="22">22:00</option>
+                                <option value="23">23:00</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Audit Types -->
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-2">Audit Types</label>
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
+                                <input type="checkbox" id="scheduleModalSeo" class="w-4 h-4 rounded accent-purple-500" checked>
+                                <span class="text-sm text-primary">SEO/GEO Rules</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
+                                <input type="checkbox" id="scheduleModalVoice" class="w-4 h-4 rounded accent-green-500" checked>
+                                <span class="text-sm text-primary">Brand Rules</span>
+                            </label>
+                            <label class="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-card-hover">
+                                <input type="checkbox" id="scheduleModalBrand" class="w-4 h-4 rounded accent-orange-500" checked>
+                                <span class="text-sm text-primary">Specialty Rules</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Schedule Summary Preview -->
+                    <div class="p-3 bg-dark rounded-lg border border-card">
+                        <p class="text-xs text-secondary">Schedule Preview:</p>
+                        <p id="scheduleModalSummary" class="text-sm text-cyan-400 font-medium mt-1">Audits will run every Monday at 06:00 UTC</p>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-3 pt-4">
+                        <button type="submit" class="btn-cyan text-black px-6 py-2 rounded-lg flex-1 font-medium">Save Schedule</button>
+                        <button type="button" onclick="closeScheduleModal()" class="bg-card border border-card text-secondary hover:text-primary px-6 py-2 rounded-lg transition">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ============ AUTHENTICATION ============
         const AUTH_COOKIE_NAME = 'outrigger_auth';
@@ -1732,21 +1666,6 @@
             }
         }
 
-        // Toggle rule selection panel in Scheduler
-        function toggleScheduleRuleSelection() {
-            var panel = document.getElementById('scheduleRuleSelectionPanel');
-            var arrow = document.getElementById('scheduleRuleSelectionArrow');
-
-            if (panel.classList.contains('hidden')) {
-                panel.classList.remove('hidden');
-                arrow.classList.add('rotate-90');
-                loadRulesForScheduler();
-            } else {
-                panel.classList.add('hidden');
-                arrow.classList.remove('rotate-90');
-            }
-        }
-
         // Toggle all rules for a given audit type when parent checkbox changes
         function toggleAllRulesForType(type, checked) {
             var containerId = type === 'seo' ? 'modalSeoRulesList' :
@@ -1817,39 +1736,6 @@
             loadRulesForCollection('brandStandards', 'modalBrandRulesList', 'modal-rule-checkbox', 'orange', 'brand', 'brand', 'brandRulesCount');
         }
 
-        // Load rules into the scheduler checkboxes
-        function loadRulesForScheduler() {
-            if (!currentSiteId) return;
-
-            loadRulesForCollection('seoRules', 'scheduleSeoRulesList', 'schedule-rule-checkbox', 'purple', 'seo', null, 'scheduleSeoRulesCount');
-            loadRulesForCollection('voiceRules', 'scheduleVoiceRulesList', 'schedule-rule-checkbox', 'green', 'voice', null, 'scheduleVoiceRulesCount');
-            loadRulesForCollection('brandStandards', 'scheduleBrandRulesList', 'schedule-rule-checkbox', 'orange', 'brand', null, 'scheduleBrandRulesCount');
-        }
-
-        // Toggle schedule audit type rules panel visibility
-        function toggleScheduleAuditTypeRules(type) {
-            var panelId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesPanel';
-            var arrowId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesArrow';
-            var panel = document.getElementById(panelId);
-            var arrow = document.getElementById(arrowId);
-            if (panel && arrow) {
-                panel.classList.toggle('hidden');
-                arrow.classList.toggle('rotate-180');
-            }
-        }
-
-        // Toggle all rules for a given schedule audit type when parent checkbox changes
-        function toggleAllRulesForScheduleType(type, checked) {
-            var containerId = 'schedule' + type.charAt(0).toUpperCase() + type.slice(1) + 'RulesList';
-            var container = document.getElementById(containerId);
-            if (container) {
-                var checkboxes = container.querySelectorAll('input[type="checkbox"]');
-                checkboxes.forEach(function(cb) {
-                    cb.checked = checked;
-                });
-            }
-        }
-
         // Get selected rule IDs from modal
         function getSelectedRuleIds() {
             var selected = {
@@ -1867,39 +1753,10 @@
             return selected;
         }
 
-        // Get selected rule IDs from scheduler
-        function getScheduleSelectedRuleIds() {
-            var selected = {
-                seo: [],
-                voice: [],
-                brand: []
-            };
-            document.querySelectorAll('.schedule-rule-checkbox:checked').forEach(function(cb) {
-                var type = cb.getAttribute('data-rule-type');
-                var id = cb.getAttribute('data-rule-id');
-                if (type && id) {
-                    selected[type].push(id);
-                }
-            });
-            return selected;
-        }
-
         // Update selected rules count badge in modal
         function updateSelectedRulesCount() {
             // No longer needed for global badge, but kept for compatibility
             // Individual rule counts are shown per audit type
-        }
-
-        // Update selected rules count badge in scheduler
-        function updateScheduleSelectedRulesCount() {
-            var count = document.querySelectorAll('.schedule-rule-checkbox:checked').length;
-            var badge = document.getElementById('scheduleSelectedRulesCount');
-            if (count > 0) {
-                badge.textContent = count + ' selected';
-                badge.classList.remove('hidden');
-            } else {
-                badge.classList.add('hidden');
-            }
         }
 
         // Select all rules in modal
@@ -1916,22 +1773,6 @@
                 cb.checked = false;
             });
             updateSelectedRulesCount();
-        }
-
-        // Select all rules in scheduler
-        function selectAllScheduleRules() {
-            document.querySelectorAll('.schedule-rule-checkbox').forEach(function(cb) {
-                cb.checked = true;
-            });
-            updateScheduleSelectedRulesCount();
-        }
-
-        // Clear all rules in scheduler
-        function clearAllScheduleRules() {
-            document.querySelectorAll('.schedule-rule-checkbox').forEach(function(cb) {
-                cb.checked = false;
-            });
-            updateScheduleSelectedRulesCount();
         }
 
         // Helper to escape HTML
@@ -2362,7 +2203,7 @@
         // Tab/Sidebar Navigation
         function showTab(tabName) {
             currentTab = tabName;
-            var allPanels = ['seo', 'voice', 'brand', 'logs', 'settings'];
+            var allPanels = ['seo', 'voice', 'brand', 'schedules', 'logs', 'settings'];
 
             // Update URL with current tab (without reloading)
             var urlParams = new URLSearchParams(window.location.search);
@@ -2395,6 +2236,9 @@
             });
 
             // Load data when switching to specific tabs
+            if (tabName === 'schedules') {
+                loadSchedules();
+            }
             if (tabName === 'logs') {
                 loadAuditLogs();
             }
@@ -2524,6 +2368,271 @@
             }
 
             return { startDate: startDate, endDate: endDate };
+        }
+
+        // ============ SCHEDULES MANAGEMENT ============
+
+        // Load Schedules (site-specific)
+        function loadSchedules() {
+            var container = document.getElementById('schedulesList');
+            container.innerHTML = '<p class="text-secondary text-center py-8">Loading schedules...</p>';
+
+            getSiteCollection('schedules').orderBy('createdAt', 'desc').get()
+                .then(function(snapshot) {
+                    updateConnectionStatus(true);
+                    if (snapshot.empty) {
+                        container.innerHTML = '<p class="text-secondary text-center py-8">No schedules configured. Click "Add Schedule" to create one.</p>';
+                        return;
+                    }
+                    container.innerHTML = '';
+                    snapshot.forEach(function(doc) {
+                        var schedule = doc.data();
+                        container.innerHTML += createScheduleCard(doc.id, schedule);
+                    });
+                })
+                .catch(function(error) {
+                    console.error('Error loading schedules:', error);
+                    updateConnectionStatus(false);
+                    container.innerHTML = '<p class="text-red-400 text-center py-8">Error loading schedules</p>';
+                });
+        }
+
+        // Create schedule card HTML
+        function createScheduleCard(id, data) {
+            var summary = generateScheduleSummaryText(data);
+            var enabledClass = data.enabled ? 'border-l-cyan-500' : 'border-l-gray-600';
+            var statusBadge = data.enabled
+                ? '<span class="px-2 py-0.5 text-xs rounded-full bg-green-500/20 text-green-400">Active</span>'
+                : '<span class="px-2 py-0.5 text-xs rounded-full bg-gray-500/20 text-gray-400">Disabled</span>';
+
+            var auditTypes = [];
+            if (data.auditTypes?.seo) auditTypes.push('SEO/GEO');
+            if (data.auditTypes?.voice) auditTypes.push('Brand');
+            if (data.auditTypes?.brand) auditTypes.push('Specialty');
+            var typesText = auditTypes.length > 0 ? auditTypes.join(', ') : 'None selected';
+
+            return '<div class="card p-4 border-l-4 ' + enabledClass + ' hover:bg-card-hover transition-colors">' +
+                '<div class="flex items-center justify-between">' +
+                    '<div class="flex items-center gap-3">' +
+                        '<label class="relative inline-flex items-center cursor-pointer">' +
+                            '<input type="checkbox" class="sr-only peer" onchange="toggleScheduleEnabled(\'' + id + '\', this.checked)" ' + (data.enabled ? 'checked' : '') + '>' +
+                            '<div class="w-9 h-5 bg-gray-600 rounded-full peer peer-checked:bg-green-500 after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>' +
+                        '</label>' +
+                        '<div>' +
+                            '<div class="flex items-center gap-2">' +
+                                '<h3 class="font-semibold text-primary">' + (data.name || 'Unnamed Schedule') + '</h3>' +
+                                statusBadge +
+                            '</div>' +
+                            '<p class="text-sm text-secondary">' + summary + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="flex items-center gap-2">' +
+                        '<button onclick="editSchedule(\'' + id + '\')" class="btn-cyan px-3 py-1 rounded text-xs">Edit</button>' +
+                        '<button onclick="deleteSchedule(\'' + id + '\', \'' + (data.name || 'this schedule').replace(/'/g, "\\'") + '\')" class="text-red-400 hover:text-red-300 p-1 transition">' +
+                            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="mt-2 text-xs text-secondary">Audit types: ' + typesText + '</div>' +
+            '</div>';
+        }
+
+        // Generate human-readable schedule summary
+        function generateScheduleSummaryText(data) {
+            var freq = data.frequency || 'weekly';
+            var hour = data.hour !== undefined ? data.hour : 6;
+            var hourStr = hour.toString().padStart(2, '0') + ':00 UTC';
+
+            if (freq === 'daily') {
+                return 'Every day at ' + hourStr;
+            } else if (freq === 'weekly') {
+                var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                var dayName = days[data.dayOfWeek || 1];
+                return 'Every ' + dayName + ' at ' + hourStr;
+            } else if (freq === 'monthly') {
+                var dayOfMonth = data.dayOfMonth || '1';
+                var dayText = dayOfMonth === 'last' ? 'last day' : 'day ' + dayOfMonth;
+                return 'Monthly on ' + dayText + ' at ' + hourStr;
+            }
+            return 'Custom schedule';
+        }
+
+        // Add new schedule
+        function addSchedule() {
+            document.getElementById('scheduleEditId').value = '';
+            document.getElementById('scheduleModalTitle').textContent = 'Add Schedule';
+            document.getElementById('scheduleName').value = '';
+            document.getElementById('scheduleModalEnabled').checked = true;
+            document.querySelector('input[name="scheduleModalFrequency"][value="weekly"]').checked = true;
+            document.getElementById('scheduleModalDayOfWeek').value = '1';
+            document.getElementById('scheduleModalHour').value = '6';
+            document.getElementById('scheduleModalSeo').checked = true;
+            document.getElementById('scheduleModalVoice').checked = true;
+            document.getElementById('scheduleModalBrand').checked = true;
+            updateScheduleModalUI();
+            updateScheduleModalSummary();
+            document.getElementById('scheduleModal').classList.remove('hidden');
+            document.getElementById('scheduleModal').classList.add('flex');
+        }
+
+        // Edit existing schedule
+        function editSchedule(id) {
+            getSiteCollection('schedules').doc(id).get()
+                .then(function(doc) {
+                    if (!doc.exists) {
+                        showToast('Schedule not found', 'error');
+                        return;
+                    }
+                    var data = doc.data();
+                    document.getElementById('scheduleEditId').value = id;
+                    document.getElementById('scheduleModalTitle').textContent = 'Edit Schedule';
+                    document.getElementById('scheduleName').value = data.name || '';
+                    document.getElementById('scheduleModalEnabled').checked = data.enabled !== false;
+
+                    var freqRadio = document.querySelector('input[name="scheduleModalFrequency"][value="' + (data.frequency || 'weekly') + '"]');
+                    if (freqRadio) freqRadio.checked = true;
+
+                    document.getElementById('scheduleModalDayOfWeek').value = data.dayOfWeek || '1';
+                    document.getElementById('scheduleModalDayOfMonth').value = data.dayOfMonth || '1';
+                    document.getElementById('scheduleModalHour').value = data.hour !== undefined ? data.hour : '6';
+
+                    document.getElementById('scheduleModalSeo').checked = data.auditTypes?.seo !== false;
+                    document.getElementById('scheduleModalVoice').checked = data.auditTypes?.voice !== false;
+                    document.getElementById('scheduleModalBrand').checked = data.auditTypes?.brand !== false;
+
+                    updateScheduleModalUI();
+                    updateScheduleModalSummary();
+                    document.getElementById('scheduleModal').classList.remove('hidden');
+                    document.getElementById('scheduleModal').classList.add('flex');
+                })
+                .catch(function(error) {
+                    console.error('Error loading schedule:', error);
+                    showToast('Error loading schedule', 'error');
+                });
+        }
+
+        // Save schedule
+        function saveSchedule(event) {
+            event.preventDefault();
+            var editId = document.getElementById('scheduleEditId').value;
+            var frequency = document.querySelector('input[name="scheduleModalFrequency"]:checked').value;
+
+            var scheduleData = {
+                name: document.getElementById('scheduleName').value,
+                enabled: document.getElementById('scheduleModalEnabled').checked,
+                frequency: frequency,
+                hour: parseInt(document.getElementById('scheduleModalHour').value),
+                dayOfWeek: parseInt(document.getElementById('scheduleModalDayOfWeek').value),
+                dayOfMonth: document.getElementById('scheduleModalDayOfMonth').value,
+                auditTypes: {
+                    seo: document.getElementById('scheduleModalSeo').checked,
+                    voice: document.getElementById('scheduleModalVoice').checked,
+                    brand: document.getElementById('scheduleModalBrand').checked
+                },
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            if (!editId) {
+                scheduleData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            }
+
+            var docRef = editId
+                ? getSiteCollection('schedules').doc(editId)
+                : getSiteCollection('schedules').doc();
+
+            docRef.set(scheduleData, { merge: true })
+                .then(function() {
+                    closeScheduleModal();
+                    loadSchedules();
+                    showToast(editId ? 'Schedule updated' : 'Schedule created', 'success');
+                })
+                .catch(function(error) {
+                    console.error('Error saving schedule:', error);
+                    showToast('Error saving schedule', 'error');
+                });
+        }
+
+        // Delete schedule
+        function deleteSchedule(id, name) {
+            showConfirm(
+                'Delete Schedule',
+                'Are you sure you want to delete "' + name + '"? This action cannot be undone.',
+                function() {
+                    getSiteCollection('schedules').doc(id).delete()
+                        .then(function() {
+                            loadSchedules();
+                            showToast('Schedule deleted', 'success');
+                        })
+                        .catch(function(error) {
+                            console.error('Error deleting schedule:', error);
+                            showToast('Error deleting schedule', 'error');
+                        });
+                },
+                'danger'
+            );
+        }
+
+        // Toggle schedule enabled/disabled
+        function toggleScheduleEnabled(id, enabled) {
+            getSiteCollection('schedules').doc(id).update({
+                enabled: enabled,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(function() {
+                loadSchedules();
+                showToast(enabled ? 'Schedule enabled' : 'Schedule disabled', 'info');
+            })
+            .catch(function(error) {
+                console.error('Error toggling schedule:', error);
+                showToast('Error updating schedule', 'error');
+            });
+        }
+
+        // Close schedule modal
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.add('hidden');
+            document.getElementById('scheduleModal').classList.remove('flex');
+        }
+
+        // Update schedule modal UI based on frequency
+        function updateScheduleModalUI() {
+            var frequency = document.querySelector('input[name="scheduleModalFrequency"]:checked').value;
+            var dayOfWeekContainer = document.getElementById('scheduleModalDayOfWeekContainer');
+            var dayOfMonthContainer = document.getElementById('scheduleModalDayOfMonthContainer');
+
+            if (frequency === 'daily') {
+                dayOfWeekContainer.classList.add('hidden');
+                dayOfMonthContainer.classList.add('hidden');
+            } else if (frequency === 'weekly') {
+                dayOfWeekContainer.classList.remove('hidden');
+                dayOfMonthContainer.classList.add('hidden');
+            } else if (frequency === 'monthly') {
+                dayOfWeekContainer.classList.add('hidden');
+                dayOfMonthContainer.classList.remove('hidden');
+            }
+            updateScheduleModalSummary();
+        }
+
+        // Update schedule modal summary preview
+        function updateScheduleModalSummary() {
+            var frequency = document.querySelector('input[name="scheduleModalFrequency"]:checked').value;
+            var hour = parseInt(document.getElementById('scheduleModalHour').value);
+            var hourStr = hour.toString().padStart(2, '0') + ':00 UTC';
+            var summary = '';
+
+            if (frequency === 'daily') {
+                summary = 'Audits will run every day at ' + hourStr;
+            } else if (frequency === 'weekly') {
+                var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                var dayName = days[parseInt(document.getElementById('scheduleModalDayOfWeek').value)];
+                summary = 'Audits will run every ' + dayName + ' at ' + hourStr;
+            } else if (frequency === 'monthly') {
+                var dayOfMonth = document.getElementById('scheduleModalDayOfMonth').value;
+                var dayText = dayOfMonth === 'last' ? 'last day of the month' : 'day ' + dayOfMonth;
+                summary = 'Audits will run monthly on ' + dayText + ' at ' + hourStr;
+            }
+
+            document.getElementById('scheduleModalSummary').textContent = summary;
         }
 
         // Load Audit Logs (site-specific)
@@ -3595,9 +3704,6 @@
                 return;
             }
 
-            // Load rules for scheduler audit type dropdowns
-            loadRulesForScheduler();
-
             // Display Site ID
             document.getElementById('displaySiteId').textContent = currentSiteId;
 
@@ -3613,8 +3719,6 @@
                         if (settings.aiModel) document.getElementById('configAiModel').value = settings.aiModel;
                         if (settings.rulesPerBatch) document.getElementById('configRulesPerBatch').value = settings.rulesPerBatch;
                         if (settings.enableLLM !== undefined) document.getElementById('configEnableLLM').checked = settings.enableLLM;
-                        // Load schedule configuration
-                        loadScheduleConfig(settings.schedule);
                     } else {
                         document.getElementById('displaySiteName').textContent = currentSiteId;
                         // Clear form if no settings exist for this site
@@ -3624,13 +3728,10 @@
                         document.getElementById('configAiModel').value = 'claude-sonnet-4-20250514';
                         document.getElementById('configRulesPerBatch').value = '5';
                         document.getElementById('configEnableLLM').checked = true;
-                        // Reset schedule to disabled
-                        loadScheduleConfig(null);
                     }
                 })
                 .catch(function(error) {
                     console.log('No saved settings found, using defaults');
-                    loadScheduleConfig(null);
                 });
         }
 
@@ -3646,260 +3747,12 @@
                 });
         }
 
-        // ============ SCHEDULER FUNCTIONS ============
-
-        // Toggle schedule options visibility
-        function toggleScheduleOptions() {
-            var enabled = document.getElementById('scheduleEnabled').checked;
-            var options = document.getElementById('scheduleOptions');
-            var badge = document.getElementById('scheduleStatusBadge');
-
-            if (enabled) {
-                options.classList.remove('hidden');
-                badge.textContent = 'Active';
-                badge.className = 'px-2 py-1 text-xs rounded-full bg-cyan-500/20 text-cyan-400';
-            } else {
-                options.classList.add('hidden');
-                badge.textContent = 'Disabled';
-                badge.className = 'px-2 py-1 text-xs rounded-full bg-gray-500/20 text-gray-400';
-            }
-            updateScheduleSummary();
-        }
-
-        // Update schedule UI when frequency changes
-        function updateScheduleUI() {
-            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
-            var weeklySelect = document.getElementById('weeklyDaySelect');
-            var monthlySelect = document.getElementById('monthlyDaySelect');
-
-            if (frequency === 'daily') {
-                weeklySelect.classList.add('hidden');
-                monthlySelect.classList.add('hidden');
-            } else if (frequency === 'weekly') {
-                weeklySelect.classList.remove('hidden');
-                monthlySelect.classList.add('hidden');
-            } else if (frequency === 'monthly') {
-                weeklySelect.classList.add('hidden');
-                monthlySelect.classList.remove('hidden');
-            }
-            updateScheduleSummary();
-        }
-
-        // Toggle date range inputs
-        function toggleDateRangeInputs() {
-            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
-            var inputs = document.getElementById('dateRangeInputs');
-
-            if (rangeMode === 'range') {
-                inputs.classList.remove('hidden');
-                // Set default dates if empty
-                var startInput = document.getElementById('scheduleStartDate');
-                var endInput = document.getElementById('scheduleEndDate');
-                if (!startInput.value) {
-                    var today = new Date();
-                    startInput.value = today.toISOString().split('T')[0];
-                }
-                if (!endInput.value) {
-                    var threeMonths = new Date();
-                    threeMonths.setMonth(threeMonths.getMonth() + 3);
-                    endInput.value = threeMonths.toISOString().split('T')[0];
-                }
-            } else {
-                inputs.classList.add('hidden');
-            }
-            updateScheduleSummary();
-        }
-
-        // Update schedule summary text
-        function updateScheduleSummary() {
-            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
-            var hour = document.getElementById('scheduleHour').value;
-            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
-
-            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            var summary = 'Audits will run ';
-
-            if (frequency === 'daily') {
-                summary += 'every day';
-            } else if (frequency === 'weekly') {
-                var dayOfWeek = document.getElementById('scheduleDayOfWeek').value;
-                summary += 'every ' + dayNames[parseInt(dayOfWeek)];
-            } else if (frequency === 'monthly') {
-                var dayOfMonth = document.getElementById('scheduleDayOfMonth').value;
-                if (dayOfMonth === 'last') {
-                    summary += 'on the last day of each month';
-                } else {
-                    var suffix = 'th';
-                    if (dayOfMonth === '1' || dayOfMonth === '21') suffix = 'st';
-                    else if (dayOfMonth === '2') suffix = 'nd';
-                    else if (dayOfMonth === '3') suffix = 'rd';
-                    summary += 'on the ' + dayOfMonth + suffix + ' of each month';
-                }
-            }
-
-            summary += ' at ' + hour.padStart(2, '0') + ':00 UTC';
-
-            if (rangeMode === 'range') {
-                var startDate = document.getElementById('scheduleStartDate').value;
-                var endDate = document.getElementById('scheduleEndDate').value;
-                if (startDate && endDate) {
-                    summary += ' (from ' + startDate + ' to ' + endDate + ')';
-                }
-            }
-
-            document.getElementById('scheduleSummary').textContent = summary;
-        }
-
-        // Get schedule configuration from UI
-        function getScheduleConfig() {
-            var enabled = document.getElementById('scheduleEnabled').checked;
-            if (!enabled) {
-                return { enabled: false };
-            }
-
-            var frequency = document.querySelector('input[name="scheduleFrequency"]:checked').value;
-            var hour = parseInt(document.getElementById('scheduleHour').value);
-            var rangeMode = document.querySelector('input[name="scheduleDateRange"]:checked').value;
-
-            var config = {
-                enabled: true,
-                frequency: frequency,
-                hour: hour,
-                auditTypes: {
-                    seo: document.getElementById('scheduleSeo').checked,
-                    voice: document.getElementById('scheduleVoice').checked,
-                    brand: document.getElementById('scheduleBrand').checked
-                }
-            };
-
-            // Add specific rules if any are selected
-            var selectedRules = getScheduleSelectedRuleIds();
-            var hasSpecificRules = selectedRules.seo.length > 0 || selectedRules.voice.length > 0 || selectedRules.brand.length > 0;
-            if (hasSpecificRules) {
-                config.specificRules = selectedRules;
-            }
-
-            if (frequency === 'weekly') {
-                config.dayOfWeek = parseInt(document.getElementById('scheduleDayOfWeek').value);
-            } else if (frequency === 'monthly') {
-                config.dayOfMonth = document.getElementById('scheduleDayOfMonth').value;
-            }
-
-            if (rangeMode === 'range') {
-                config.startDate = document.getElementById('scheduleStartDate').value;
-                config.endDate = document.getElementById('scheduleEndDate').value;
-            }
-
-            return config;
-        }
-
-        // Load schedule configuration into UI
-        function loadScheduleConfig(schedule) {
-            if (!schedule) {
-                document.getElementById('scheduleEnabled').checked = false;
-                toggleScheduleOptions();
-                return;
-            }
-
-            document.getElementById('scheduleEnabled').checked = schedule.enabled || false;
-
-            if (schedule.frequency) {
-                var freqRadio = document.querySelector('input[name="scheduleFrequency"][value="' + schedule.frequency + '"]');
-                if (freqRadio) freqRadio.checked = true;
-            }
-
-            if (schedule.dayOfWeek !== undefined) {
-                document.getElementById('scheduleDayOfWeek').value = schedule.dayOfWeek;
-            }
-
-            if (schedule.dayOfMonth) {
-                document.getElementById('scheduleDayOfMonth').value = schedule.dayOfMonth;
-            }
-
-            if (schedule.hour !== undefined) {
-                document.getElementById('scheduleHour').value = schedule.hour;
-            }
-
-            if (schedule.startDate && schedule.endDate) {
-                document.querySelector('input[name="scheduleDateRange"][value="range"]').checked = true;
-                document.getElementById('scheduleStartDate').value = schedule.startDate;
-                document.getElementById('scheduleEndDate').value = schedule.endDate;
-            } else {
-                document.querySelector('input[name="scheduleDateRange"][value="always"]').checked = true;
-            }
-
-            if (schedule.auditTypes) {
-                document.getElementById('scheduleSeo').checked = schedule.auditTypes.seo !== false;
-                document.getElementById('scheduleVoice').checked = schedule.auditTypes.voice !== false;
-                document.getElementById('scheduleBrand').checked = schedule.auditTypes.brand !== false;
-            }
-
-            // Load specific rules if saved
-            if (schedule.specificRules) {
-                // Need to load rules first, then restore selections
-                loadRulesForScheduler();
-                // Restore selections after a brief delay to allow rules to load
-                setTimeout(function() {
-                    restoreScheduleRuleSelections(schedule.specificRules);
-                }, 500);
-            }
-
-            toggleScheduleOptions();
-            updateScheduleUI();
-            toggleDateRangeInputs();
-        }
-
-        // Restore schedule rule selections from saved config
-        function restoreScheduleRuleSelections(specificRules) {
-            if (!specificRules) return;
-
-            // Clear all first
-            clearAllScheduleRules();
-
-            // Restore SEO rules
-            if (specificRules.seo && specificRules.seo.length > 0) {
-                specificRules.seo.forEach(function(ruleId) {
-                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
-                    if (cb) cb.checked = true;
-                });
-            }
-
-            // Restore Voice rules
-            if (specificRules.voice && specificRules.voice.length > 0) {
-                specificRules.voice.forEach(function(ruleId) {
-                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
-                    if (cb) cb.checked = true;
-                });
-            }
-
-            // Restore Brand rules
-            if (specificRules.brand && specificRules.brand.length > 0) {
-                specificRules.brand.forEach(function(ruleId) {
-                    var cb = document.querySelector('.schedule-rule-checkbox[data-rule-id="' + ruleId + '"]');
-                    if (cb) cb.checked = true;
-                });
-            }
-
-            // Show the panel if there are selections
-            var hasSelections = (specificRules.seo && specificRules.seo.length > 0) ||
-                               (specificRules.voice && specificRules.voice.length > 0) ||
-                               (specificRules.brand && specificRules.brand.length > 0);
-            if (hasSelections) {
-                document.getElementById('scheduleRuleSelectionPanel').classList.remove('hidden');
-                document.getElementById('scheduleRuleSelectionArrow').classList.add('rotate-90');
-            }
-
-            updateScheduleSelectedRulesCount();
-        }
-
         // Save settings to Firestore (site-specific)
         function saveSettings() {
             if (!currentSiteId) {
                 showToast('Please select a site first', 'warning');
                 return;
             }
-
-            var scheduleConfig = getScheduleConfig();
 
             var settings = {
                 sitemapUrl: document.getElementById('configSitemapUrl').value,
@@ -3908,30 +3761,17 @@
                 aiModel: document.getElementById('configAiModel').value,
                 rulesPerBatch: parseInt(document.getElementById('configRulesPerBatch').value) || 5,
                 enableLLM: document.getElementById('configEnableLLM').checked,
-                schedule: scheduleConfig,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             db.collection('sites').doc(currentSiteId).collection('config').doc('settings').set(settings, { merge: true })
                 .then(function() {
                     showToast('Settings saved successfully!', 'success');
-                    // If schedule is enabled, sync with Cloud Scheduler
-                    if (scheduleConfig.enabled) {
-                        syncCloudScheduler(currentSiteId, scheduleConfig);
-                    }
                 })
                 .catch(function(error) {
                     console.error('Error saving settings:', error);
                     showToast('Error saving settings: ' + error.message, 'error');
                 });
-        }
-
-        // Sync schedule configuration with Google Cloud Scheduler
-        function syncCloudScheduler(siteId, scheduleConfig) {
-            // This will call a Cloud Function to update Google Cloud Scheduler
-            // For now, we'll store the config and a Cloud Function can read it
-            console.log('Schedule config saved for site:', siteId, scheduleConfig);
-            showToast('Schedule configuration saved. Cloud Scheduler will be updated.', 'info');
         }
 
         // Test sitemap URL
