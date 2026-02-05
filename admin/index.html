@@ -1197,6 +1197,49 @@
                         </div>
                     </div>
 
+                    <!-- Audit Source Selection -->
+                    <div>
+                        <label class="block text-sm font-medium text-secondary mb-2">What to Audit</label>
+                        <div class="flex gap-2 mb-3">
+                            <button type="button" id="scheduleSourceSitemap" onclick="setScheduleSource('sitemap')" class="flex-1 px-3 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition">
+                                Use Sitemap
+                            </button>
+                            <button type="button" id="scheduleSourceUrl" onclick="setScheduleSource('url')" class="flex-1 px-3 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition">
+                                Single URL
+                            </button>
+                        </div>
+
+                        <!-- Sitemap Info (shown by default) -->
+                        <div id="scheduleSourceSitemapInfo" class="p-3 bg-dark rounded-lg border border-card">
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                <span class="text-secondary">Will audit pages from configured sitemap</span>
+                            </div>
+                        </div>
+
+                        <!-- Single URL Input (hidden by default) -->
+                        <div id="scheduleSourceUrlInput" class="hidden">
+                            <input type="url" id="scheduleModalUrl" class="w-full input-dark border rounded-lg px-3 py-2 text-sm" placeholder="https://example.com/folder/page">
+                            <p class="text-xs text-secondary mt-1">Enter a page URL or folder path</p>
+
+                            <!-- Include Subfolders Checkbox -->
+                            <label class="flex items-center gap-3 mt-2 p-2 rounded-lg bg-dark border border-card hover:border-cyan-500/50 cursor-pointer transition">
+                                <input type="checkbox" id="scheduleModalSubfolders" class="w-4 h-4 rounded bg-dark border-card accent-cyan-500">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+                                        </svg>
+                                        <span class="text-primary font-medium text-sm">Include Subfolders</span>
+                                    </div>
+                                    <p class="text-secondary text-xs">Scan all pages under this path</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Audit Types with Expandable Rules -->
                     <div>
                         <label class="block text-sm font-medium text-secondary mb-2">Audit Types & Rules</label>
@@ -2470,6 +2513,12 @@
             if (data.auditTypes?.brand) auditTypes.push('Specialty');
             var typesText = auditTypes.length > 0 ? auditTypes.join(', ') : 'None selected';
 
+            // Source info
+            var sourceText = 'Sitemap';
+            if (data.sourceType === 'url' && data.singleUrl) {
+                sourceText = data.singleUrl + (data.includeSubfolders ? ' (+ subfolders)' : '');
+            }
+
             return '<div class="card p-4 border-l-4 ' + enabledClass + ' hover:bg-card-hover transition-colors">' +
                 '<div class="flex items-center justify-between">' +
                     '<div class="flex items-center gap-3">' +
@@ -2492,7 +2541,10 @@
                         '</button>' +
                     '</div>' +
                 '</div>' +
-                '<div class="mt-2 text-xs text-secondary">Audit types: ' + typesText + '</div>' +
+                '<div class="mt-2 flex flex-wrap gap-4 text-xs text-secondary">' +
+                    '<span>Source: ' + sourceText + '</span>' +
+                    '<span>Types: ' + typesText + '</span>' +
+                '</div>' +
             '</div>';
         }
 
@@ -2528,6 +2580,10 @@
             document.getElementById('scheduleModalSeo').checked = true;
             document.getElementById('scheduleModalVoice').checked = true;
             document.getElementById('scheduleModalBrand').checked = true;
+            // Reset source to sitemap
+            setScheduleSource('sitemap');
+            document.getElementById('scheduleModalUrl').value = '';
+            document.getElementById('scheduleModalSubfolders').checked = false;
             loadRulesForScheduleModal(null); // Load all rules, all checked by default
             updateScheduleModalUI();
             updateScheduleModalSummary();
@@ -2560,6 +2616,11 @@
                     document.getElementById('scheduleModalVoice').checked = data.auditTypes?.voice !== false;
                     document.getElementById('scheduleModalBrand').checked = data.auditTypes?.brand !== false;
 
+                    // Restore source selection
+                    setScheduleSource(data.sourceType || 'sitemap');
+                    document.getElementById('scheduleModalUrl').value = data.singleUrl || '';
+                    document.getElementById('scheduleModalSubfolders').checked = data.includeSubfolders || false;
+
                     // Load rules with saved selections
                     loadRulesForScheduleModal(data.specificRules || null);
 
@@ -2580,6 +2641,19 @@
             var editId = document.getElementById('scheduleEditId').value;
             var frequency = document.querySelector('input[name="scheduleModalFrequency"]:checked').value;
 
+            // Validate URL if source is url
+            if (scheduleSourceType === 'url') {
+                var url = document.getElementById('scheduleModalUrl').value.trim();
+                if (!url) {
+                    showToast('Please enter a URL', 'warning');
+                    return;
+                }
+                if (!url.startsWith('http://') && !url.startsWith('https://')) {
+                    showToast('URL must start with http:// or https://', 'warning');
+                    return;
+                }
+            }
+
             // Get selected specific rules
             var selectedRules = getScheduleModalSelectedRuleIds();
 
@@ -2596,6 +2670,10 @@
                     brand: document.getElementById('scheduleModalBrand').checked
                 },
                 specificRules: selectedRules,
+                // Source settings
+                sourceType: scheduleSourceType,
+                singleUrl: scheduleSourceType === 'url' ? document.getElementById('scheduleModalUrl').value.trim() : null,
+                includeSubfolders: scheduleSourceType === 'url' ? document.getElementById('scheduleModalSubfolders').checked : false,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
@@ -2753,6 +2831,30 @@
                 }
             });
             return selected;
+        }
+
+        // Track schedule source selection
+        var scheduleSourceType = 'sitemap';
+
+        // Set schedule source (sitemap or url)
+        function setScheduleSource(source) {
+            scheduleSourceType = source;
+            var sitemapBtn = document.getElementById('scheduleSourceSitemap');
+            var urlBtn = document.getElementById('scheduleSourceUrl');
+            var sitemapInfo = document.getElementById('scheduleSourceSitemapInfo');
+            var urlInput = document.getElementById('scheduleSourceUrlInput');
+
+            if (source === 'sitemap') {
+                sitemapBtn.className = 'flex-1 px-3 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition';
+                urlBtn.className = 'flex-1 px-3 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition';
+                sitemapInfo.classList.remove('hidden');
+                urlInput.classList.add('hidden');
+            } else {
+                sitemapBtn.className = 'flex-1 px-3 py-2 rounded-lg border-2 border-card text-secondary font-medium text-sm hover:border-cyan-500/50 transition';
+                urlBtn.className = 'flex-1 px-3 py-2 rounded-lg border-2 border-cyan-500 bg-cyan-500/10 text-cyan-400 font-medium text-sm transition';
+                sitemapInfo.classList.add('hidden');
+                urlInput.classList.remove('hidden');
+            }
         }
 
         // Update schedule modal UI based on frequency
